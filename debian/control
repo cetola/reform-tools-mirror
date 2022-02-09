@@ -5,12 +5,25 @@ Maintainer: Lukas F. Hartmann <lukas@mntre.com>
 Uploaders: Johannes Schauer Marin Rodrigues <josch@debian.org>
 Homepage: https://source.mnt.re/reform/reform-tools/
 Standards-Version: 4.6.0.1
-Build-Depends: debhelper-compat (= 13),
+Build-Depends: debhelper-compat (= 13)
 Rules-Requires-Root: no
 
 Package: reform-tools
 Architecture: all
-Depends: ${misc:Depends}, python3
+Depends: alsa-utils,
+         connman-gtk,
+         console-setup,
+         debconf,
+         ircii,
+         keyboard-configuration,
+         mount,
+         pavucontrol,
+         procps,
+         python3,
+         rsync,
+         systemd,
+         tzdata,
+         ${misc:Depends}
 Description: MNT Reform System Tools
  A number of scripts for managing boot media, displays, standby, plus a few
  help texts and gadgets for the customized sway desktop. Also contains
