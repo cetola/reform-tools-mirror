@@ -1,0 +1,7 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+execute_after_dh_auto_build:
+	for d in Desktop Documents Downloads Music Pictures Videos; do mkdir -p etc/skel/$$d; done

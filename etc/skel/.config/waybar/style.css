@@ -1,0 +1,44 @@
+* {
+	font-size: 18px;
+	font-family: Inter;
+	font-weight: bold;
+	border-radius: 0;
+}
+
+window#waybar {
+	background: #000000;
+	color: #ffffff;
+}
+
+#sway-mode {
+	background-color: #330000;
+}
+
+widget label {
+	padding: 0px 20px;
+}
+
+#workspaces label {
+	padding: 0px 0px;
+}
+
+#workspaces button {
+	color: #ffffff;
+	font-size: 20px;
+	font-style: italic;
+}
+#workspaces button.focused {
+	background: #ffffff;
+	color: #000000;
+}
+#workspaces button:hover {
+	box-shadow: inherit;
+	text-shadow: inherit;
+}
+#workspaces button:hover {
+	background: #888888;
+}
+
+#clock {
+	padding-right: 0px;
+}

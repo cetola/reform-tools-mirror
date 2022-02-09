@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# fix Xwayland (and anything using modifiers) graphics problems
+gsettings set org.gnome.mutter experimental-features "['kms-modifiers']"
+# disable autosuspend, because we need to suspend with reform-standby only
+gsettings set org.gnome.desktop.session idle-delay 0
+
+# launch a GNOME session using mutter's wayland compositor
+export XDG_SESSION_TYPE=wayland
+dbus-run-session gnome-session

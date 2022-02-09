@@ -1,0 +1,19 @@
+Source: reform-tools
+Section: admin
+Priority: optional
+Maintainer: Lukas F. Hartmann <lukas@mntre.com>
+Uploaders: Johannes Schauer Marin Rodrigues <josch@debian.org>
+Homepage: https://source.mnt.re/reform/reform-tools/
+Standards-Version: 4.6.0.1
+Build-Depends: debhelper-compat (= 13),
+Rules-Requires-Root: no
+
+Package: reform-tools
+Architecture: all
+Depends: ${misc:Depends}, python3
+Description: MNT Reform System Tools
+ A number of scripts for managing boot media, displays, standby, plus a few
+ help texts and gadgets for the customized sway desktop. Also contains
+ /sbin/reform-init, a boot manager script that gets loaded by u-boot and which
+ in turn launches the real /sbin/init after mounting an (encrypted) boot
+ medium.
