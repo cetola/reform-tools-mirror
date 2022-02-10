@@ -6,7 +6,5 @@ audio/reform.conf               /usr/share/pulseaudio/alsa-mixer/profile-sets
 bin/*                           /usr/bin
 etc/*                           /etc
 sbin/*                          /usr/sbin
-systemd/reform-hw-setup.service /usr/lib/systemd/system
 systemd/reform-poweroff         /lib/systemd/system-shutdown
 systemd/reform-sleep.conf       /usr/lib/systemd/sleep.conf.d
-systemd/reform-sleep.service    /usr/lib/systemd/system
