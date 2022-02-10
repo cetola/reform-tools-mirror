@@ -1,1 +1,1 @@
-ACTION=="add", SUBSYSTEM=="sound", KERNEL=="card*", ATTRS{vendor}=="0xdead", ATTRS{device}=="0xbeef", ENV{PULSE_PROFILE_SET}="reform.conf"
+ACTION=="add", SUBSYSTEM=="sound", KERNEL=="card*", ATTRS{id}=="wm8960audio", ENV{PULSE_PROFILE_SET}="reform.conf"
