@@ -1,7 +1,13 @@
 #!/bin/bash
 
+# Workaround for WM8960 sometimes not coming out of reset
+echo 2-001a > /sys/bus/i2c/drivers/wm8960/bind
+
 # This switch in WM8960 needs to be on for the headset mic input to work
 amixer -c 0 sset 'Left Input Mixer Boost' on
+
+# Fix WM8960 being too quiet
+amixer -c 0 sset Playback 255
 
 # Enable wakeup from suspend on all UARTs
 echo enabled > /sys/devices/platform/soc@0/30800000.bus/30860000.serial/tty/ttymxc0/power/wakeup
