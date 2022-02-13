@@ -81,7 +81,7 @@ hide_edge_borders both
     bindsym $mod+Return exec $term
     bindsym $mod+Shift+s exec grim ~/Pictures/$(date +'screenshot-%Y-%m-%d-%H-%M-%S').png
     bindsym $mod+Shift+x exec grim -g "$(slurp)" ~/Pictures/$(date +'screenshot-%Y-%m-%d-%H-%M-%S').png
-    bindsym $mod+Shift+v exec reform-pavucontrol.sh
+    bindsym $mod+Shift+v exec reform-pavucontrol
     bindsym $mod+Shift+l exec swaylock
 
     # Kill focused window

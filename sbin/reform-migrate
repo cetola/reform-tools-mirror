@@ -12,6 +12,8 @@ echo ""
 echo "Before using this script, your target partition has to be formatted. You can use the gnome-disks program for that."
 echo "gnome-disks can also help you set up an encrypted disk."
 echo ""
+echo "You can also setup an encrypted NVMe SSD using reform-setup-encrypted-nvme"
+echo ""
 
 if [[ "x$TARGET" == "x" ]]
 then
@@ -36,6 +38,13 @@ if [ "$EUID" -ne 0 ]
 fi
 
 command -v "rsync" >/dev/null 2>&1 || { echo >&2 "Please install \"rsync\" using: apt install rsync"; exit 1; }
+
+sed -i -e 's/^/#/' /etc/fstab
+{
+	echo $TARGET / auto errors=remount-ro 0 1;
+	echo /dev/mmcblk1p1 /boot auto errors=remount-ro 0 1; } >> /etc/fstab
+
+update-initramfs -u
 
 echo "Trying to mount $TARGET... (if this fails, format the disk/partition as explained above)"
 
