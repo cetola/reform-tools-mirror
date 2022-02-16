@@ -53,13 +53,13 @@
         "format-muted": "MUTED {format_source}",
         "format-source": "{volume}%",
         "format-source-muted": "MUTE",
-        "on-click": "reform-pavucontrol.sh"
+        "on-click": "reform-pavucontrol"
     },
     "custom/stat": {
         "format": "{}",
         "max-length": 20,
         "interval": 0,
-        "exec": "reform-compstat.sh",
+        "exec": "reform-compstat",
         "on-click": "gnome-system-monitor"
     }
 }

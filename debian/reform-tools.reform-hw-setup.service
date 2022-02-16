@@ -3,7 +3,7 @@ Description=MNT Reform Hardware Defaults Setup
 
 [Service]
 Type=oneshot
-ExecStart=/usr/sbin/reform-hw-setup.sh
+ExecStart=/usr/sbin/reform-hw-setup
 StandardOutput=journal
 
 [Install]

@@ -1,0 +1,47 @@
+#!/bin/bash
+
+set -e
+
+if [ "$EUID" -ne 0 ]
+  then echo "reform-setup-encrypted-nvme has to be run as root / using sudo."
+  exit
+fi
+
+command -v "cryptsetup" >/dev/null 2>&1 || { echo >&2 "Please install \"cryptsetup\" using: apt install cryptsetup"; exit 1; }
+command -v "lvchange" >/dev/null 2>&1 || { echo >&2 "Please install \"lvm2\" using: apt install lvm2"; exit 1; }
+command -v "mkfs.ext4" >/dev/null 2>&1 || { echo >&2 "Please install \"e2fsprogs\" using: apt install e2fsprogs"; exit 1; }
+
+echo "This will ERASE ALL DATA from your NVMe SSD."
+
+echo ""
+
+read -r -p "Are you sure you want to proceed? [y/N] " response
+
+if [[ "$response" != "y" ]]
+then
+        echo "Exiting."
+        exit
+fi
+
+cryptsetup luksFormat /dev/nvme0n1
+cryptsetup luksOpen /dev/nvme0n1 reform_crypt
+pvcreate /dev/mapper/reform_crypt
+vgcreate reformvg /dev/mapper/reform_crypt
+lvcreate --name swap --size 8G reformvg
+mkswap /dev/reformvg/swap
+lvcreate --name root --extents 100%FREE reformvg
+mkfs.ext4 /dev/reformvg/root
+SWAPUUID=$(blkid -s UUID -o value /dev/reformvg/swap)
+CRYPTUUID=$(blkid -s UUID -o value /dev/nvme0n1)
+vgchange -an reformvg
+cryptsetup luksClose reform_crypt
+
+echo "If you want to migrate this system to NVMe SSD you can now run:"
+echo ""
+echo "echo RESUME=UUID=$SWAPUUID > /etc/initramfs-tools/conf.d/resume"
+echo "echo reform_crypt UUID=$CRYPTUUID none luks > /etc/crypttab"
+echo "cryptsetup luksOpen /dev/nvme0n1 reform_crypt"
+echo "vgchange -ay reformvg"
+echo "reform-migrate /dev/reformvg/root"
+echo "vgchange -an reformvg"
+echo "cryptsetup luksClose reform_crypt"

@@ -21,8 +21,8 @@ then
 fi
 
 case "$CHOICE" in
-	dual) DTB="imx8mq-mnt-reform2-dual-display.dtb";;
-	single) DTB="imx8mq-mnt-reform2-single-display.dtb";;
+	dual) echo "MNT Reform 2 HDMI" > /etc/flash-kernel/machine;;
+	single) echo "MNT Reform 2" > /etc/flash-kernel/machine;;
 esac
 
 if [[ "$DTB" == "x" ]]
@@ -37,15 +37,8 @@ fi
 MOUNTED_AT=$(mount | grep $BOOTPART | grep "on /" | cut -d ' ' -s -f 3)
 if [[ "x$MOUNTED_AT" != "x" ]]
 then
-	if [[ -e "${MOUNTED_AT}/${DTB_TARGET}" ]] && [[ -e "${MOUNTED_AT}/${DTB}" ]]
-	then
-		echo "Found source and target files in $MOUNTED_AT."
-		cp -v "${MOUNTED_AT}/${DTB}" "${MOUNTED_AT}/${DTB_TARGET}"
-		echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."
-		exit
-	fi
-
-	echo "Error: the $BOOTDISK is already mounted at $MOUNTED_AT, but the DTB files ($DTB_TARGET and $DTB) are not there."
+	update-initramfs -u
+	echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."
 	exit
 fi
 
@@ -53,15 +46,6 @@ echo "Assuming boot files are on $BOOTDISK, but your system is not. Mounting /de
 
 mount /dev/$BOOTPART /boot
 
-if [[ -e "/boot/$DTB_TARGET" ]] && [[ -e "/boot/$DTB" ]]
-then
-	echo "Found source and target files in the root directory of $BOOTPART."
-	cp -v "/boot/$DTB" "/boot/$DTB_TARGET"
-	echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."
-	umount /boot
-	exit
-fi
-
-echo "Error: could not find the DTB files ($DTB_TARGET and $DTB) in any of the expected places."
-
+update-initramfs -u
+echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."
 umount /boot

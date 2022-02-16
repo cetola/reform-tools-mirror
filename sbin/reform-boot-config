@@ -5,8 +5,7 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
-echo "This script selects your preferred boot medium. It writes your choice to the file /reform-boot-medium on the SD card (or eMMC). This file is interpreted by reform-init at boot."
-echo "If the preferred boot medium is not available at boot time, reform-init will fall back to booting from the SD card (or eMMC)."
+echo "This script selects your preferred boot medium. It writes your choice to the file /etc/fstab"
 echo
 
 BOOTPREF="$1"
@@ -32,12 +31,19 @@ then
 	exit 1
 fi
 
+sed -i -e 's/^/#/' /etc/fstab
+echo /dev/$BOOTPART /boot auto errors=remount-ro 0 1 >> /etc/fstab
+case BOOTPREF in
+	nvme) echo /dev/nvme0n1p2 / auto errors=remount-ro 0 1 >> /etc/fstab;;
+	usb) echo /dev/sda1 / auto errors=remount-ro 0 1 >> /etc/fstab;;
+	*) echo /dev/mmcblk1p1 / auto errors=remount-ro 0 1 >> /etc/fstab;;
+esac
+
 MOUNTED_AT=$(mount | grep $BOOTPART | grep "on /" | cut -d ' ' -s -f 3)
 if [[ "x$MOUNTED_AT" != "x" ]]
 then
 	echo "Found $BOOTDISK mounted at $MOUNTED_AT."
-	echo "$BOOTPREF" > "${MOUNTED_AT}/reform-boot-medium"
-	echo "Boot medium choice $BOOTPREF recorded in ${MOUNTED_AT}/reform-boot-medium."
+	update-initramfs -u
 	echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."
 	exit
 fi
@@ -48,8 +54,7 @@ mount /dev/$BOOTPART /boot
 
 if [ $? -eq 0 ]
 then
-	echo "$BOOTPREF" > "/boot/reform-boot-medium"
-	echo "Boot medium choice $BOOTPREF recorded in /reform-boot-medium on $BOOTPART."
+	update-initramfs -u
 	echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."
 	umount /boot
 	exit
