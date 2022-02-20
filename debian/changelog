@@ -1,5 +1,17 @@
-reform-tools (1.1) UNRELEASED; urgency=medium
+reform-tools (1.2) reform; urgency=medium
 
-  * Initial release. (Closes: #XXXXXX)
+  * rename etc/motd -> etc/motd-full to avoid conflict with existing /etc/motd
+  * debian/control: add package dependencies
+  * reform-hw-setup: some bits got lost when moving from reform-system-image to
+    reform-tools
+  * choose our pulse profile set when udev finds wm8960audio
+  * enable systemd services after installation
+  * fixup scripts to work with sysimage-v3
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Fri, 28 Jan 2022 15:13:12 +0100
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sun, 20 Feb 2022 17:22:42 +0100
+
+reform-tools (1.1) reform; urgency=medium
+
+  * Initial release for sysimage-v3
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sun, 20 Feb 2022 17:21:02 +0100
