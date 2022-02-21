@@ -59,7 +59,7 @@
         "format": "{}",
         "max-length": 20,
         "interval": 0,
-        "exec": "reform-compstat",
+        "exec": "reform-compstat -d 1 -i 0.3",
         "on-click": "gnome-system-monitor"
     }
 }
