@@ -11,7 +11,6 @@ Rules-Requires-Root: no
 Package: reform-tools
 Architecture: all
 Depends: alsa-utils,
-         connman-gtk,
          console-setup,
          debconf,
          ircii,
