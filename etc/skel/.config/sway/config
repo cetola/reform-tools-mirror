@@ -64,12 +64,6 @@ exec swaybg -c "#000000"
 # Read `man 5 sway-input` for more information about this section.
 #
 
-# change to de if you have a QWERTZ keyboard, for example
-input * {
-	xkb_layout us
-	xkb_options compose:menu,lv3:ralt_switch
-}
-
 default_border pixel 10
 hide_edge_borders both
 
@@ -280,3 +274,5 @@ exec gsettings set org.gnome.desktop.interface font-name 'Inter 14'
 exec gsettings set org.gnome.desktop.interface monospace-font-name 'Iosevka Term Light 14'
 exec gsettings set org.gnome.desktop.interface gtk-theme 'Arc-Dark'
 exec gsettings set org.gnome.gedit.preferences.editor scheme 'cobalt'
+
+include config.d/*
