@@ -40,13 +40,25 @@ kbd_backlight_on() {
   done
 }
 
+hid_bind() {
+  echo 0003:03EB:2041.0002 > /sys/bus/hid/drivers/hid-generic/bind
+  echo 0003:03EB:2042.0001 > /sys/bus/hid/drivers/hid-generic/bind
+}
+
+hid_unbind() {
+  echo 0003:03EB:2041.0002 > /sys/bus/hid/drivers/hid-generic/unbind
+  echo 0003:03EB:2042.0001 > /sys/bus/hid/drivers/hid-generic/unbind
+}
+
 if [[ $1 = "suspend" ]]; then
   setup_wake
   wifi_off
   kbd_backlight_off
+  hid_unbind
 fi
 
 if [[ $1 = "resume" ]]; then
   kbd_backlight_on
   wifi_on
+  hid_bind
 fi
