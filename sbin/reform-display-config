@@ -7,8 +7,6 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
-DTB="x"
-DTB_TARGET="imx8mq-mnt-reform2.dtb"
 CHOICE="$1"
 BOOTPART="mmcblk1p1"
 BOOTDISK="SD card"
@@ -23,16 +21,14 @@ fi
 case "$CHOICE" in
 	dual) echo "MNT Reform 2 HDMI" > /etc/flash-kernel/machine;;
 	single) echo "MNT Reform 2" > /etc/flash-kernel/machine;;
+	*)
+		echo "Usage: "
+		echo "  reform-display-config dual                Select dual-display support (internal + HDMI)."
+		echo "  reform-display-config single              Select only internal display (turns off HDMI)."
+		echo "  reform-display-config --emmc dual|single  Record choice on eMMC."
+		exit
+		;;
 esac
-
-if [[ "$DTB" == "x" ]]
-then
-	echo "Usage: "
-	echo "  reform-display-config dual                Select dual-display support (internal + HDMI)."
-	echo "  reform-display-config single              Select only internal display (turns off HDMI)."
-  echo "  reform-display-config --emmc dual|single  Record choice on eMMC."
-	exit
-fi
 
 MOUNTED_AT=$(mount | grep $BOOTPART | grep "on /" | cut -d ' ' -s -f 3)
 if [[ "x$MOUNTED_AT" != "x" ]]
