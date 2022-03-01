@@ -8,4 +8,3 @@ etc/*                           /etc
 sbin/*                          /usr/sbin
 systemd/reform-poweroff         /lib/systemd/system-shutdown
 systemd/reform-sleep.conf       /usr/lib/systemd/sleep.conf.d
-systemd/reform-suspend          /lib/systemd/system-sleep
