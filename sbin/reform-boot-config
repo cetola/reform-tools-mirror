@@ -1,6 +1,8 @@
-#!/bin/bash
+#!/bin/sh
 
-if [ "$EUID" -ne 0 ]
+set -eu
+
+if [ "$(id -u)" -ne 0 ]
   then echo "reform-boot-config has to be run as root / using sudo."
   exit
 fi
@@ -8,58 +10,72 @@ fi
 echo "This script selects your preferred boot medium. It writes your choice to the file /etc/fstab"
 echo
 
-BOOTPREF="$1"
-BOOTPART="mmcblk1p1"
-BOOTDISK="SD card"
+usage() {
+	echo "Usage: " >&2
+	echo "  reform-boot-config sd              Boot from SD card or eMMC (default)." >&2
+	echo "  reform-boot-config nvme            Boot from NVMe SSD (encrypted or plain)." >&2
+	echo "  reform-boot-config usb             Boot from USB storage device (encrypted or plain)." >&2
+	echo "" >&2
+	echo "  reform-boot-config --emmc nvme|usb Record boot preference on eMMC instead of SD card." >&2
+	echo "                                     This is only useful with SoM dip switch turned off." >&2
+}
 
-if [[ "--emmc" == "$1" ]]
-then
-    BOOTPREF="$2"
-    BOOTPART="mmcblk0p1"
-    BOOTDISK="eMMC"
-fi
-
-if [[ "$BOOTPREF" != "sd" && "$BOOTPREF" != "nvme" && "$BOOTPREF" != "usb" ]]
-then
-	echo "Usage: "
-	echo "  reform-boot-config sd              Boot from SD card or eMMC (default)."
-	echo "  reform-boot-config nvme            Boot from NVMe SSD (encrypted or plain)."
-	echo "  reform-boot-config usb             Boot from USB storage device (encrypted or plain)."
-	echo ""
-	echo "  reform-boot-config --emmc nvme|usb Record boot preference on eMMC instead of SD card."
-	echo "                                     This is only useful with SoM dip switch turned off."
+if [ $# -ne 1 ] && [ $# -ne 2 ]; then
+	usage
 	exit 1
 fi
 
-sed -i -e 's/^/#/' /etc/fstab
-echo /dev/$BOOTPART /boot auto errors=remount-ro 0 1 >> /etc/fstab
-case BOOTPREF in
-	nvme) echo /dev/nvme0n1p2 / auto errors=remount-ro 0 1 >> /etc/fstab;;
-	usb) echo /dev/sda1 / auto errors=remount-ro 0 1 >> /etc/fstab;;
-	*) echo /dev/mmcblk1p1 / auto errors=remount-ro 0 1 >> /etc/fstab;;
+BOOTPREF="$1"
+BOOTPART="mmcblk1p1"
+
+if [ "--emmc" = "$1" ]
+then
+    BOOTPREF="$2"
+    BOOTPART="mmcblk0p1"
+fi
+
+if mountpoint --quiet /mnt; then
+	echo "/mnt already has something mounted on it" >&2
+	exit 1
+fi
+
+case $BOOTPREF in
+	nvme) : "${ROOTPART:=nvme0n1p1}";;
+	usb)  : "${ROOTPART:=sda1}";;
+	sd)   : "${ROOTPART:=mmcblk1p2}";;
+	*) usage; exit 1;;
 esac
 
-MOUNTED_AT=$(mount | grep $BOOTPART | grep "on /" | cut -d ' ' -s -f 3)
-if [[ "x$MOUNTED_AT" != "x" ]]
-then
-	echo "Found $BOOTDISK mounted at $MOUNTED_AT."
-	update-initramfs -u
-	echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."
-	exit
+ROOTPART="${ROOTPART#/dev/}"
+
+cleanup() {
+	umount /mnt/boot || :
+	umount /mnt/dev || :
+	umount /mnt/sys || :
+	umount /mnt/proc || :
+	umount /mnt || :
+}
+
+trap cleanup EXIT INT TERM
+
+mount /dev/$ROOTPART /mnt
+mount /dev/$BOOTPART /mnt/boot
+mount -o bind /dev /mnt/dev
+mount -t sysfs sys /mnt/sys
+mount -t proc proc /mnt/proc
+
+
+if LIBMOUNT_FSTAB=/mnt/etc/fstab findmnt --fstab --noheadings --source "/dev/$ROOTPART" --mountpoint / >/dev/null && \
+	LIBMOUNT_FSTAB=/mnt/etc/fstab findmnt --fstab --noheadings --source "/dev/$BOOTPART" --mountpoint /boot >/dev/null; then
+	echo "/etc/fstab already contains the correct entries" >&2
+else
+	echo "commenting original /etc/fstab contents" >&2
+	sed -i -e 's/^/#/' /mnt/etc/fstab
+	cat << END >> /mnt/etc/fstab
+/dev/$ROOTPART / auto errors=remount-ro 0 1
+/dev/$BOOTPART /boot auto errors=remount-ro 0 1
+END
 fi
 
-echo "Assuming your system is not running from $BOOTDISK. Mounting /dev/$BOOTPART on /boot."
-
-mount /dev/$BOOTPART /boot
-
-if [ $? -eq 0 ]
-then
-	update-initramfs -u
-	echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."
-	umount /boot
-	exit
-fi
-
-echo "Error: could not mount the SD card."
-
-umount /boot
+chroot /mnt update-initramfs -u
+echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."
