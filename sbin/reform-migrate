@@ -20,7 +20,7 @@ echo ""
 echo "You can also setup an encrypted NVMe SSD by running reform-setup-encrypted-nvme"
 echo ""
 
-if [[ "x$TARGET" == "x" ]]
+if [ -z "$TARGET" ]
 then
 	echo "Usage:"
 	echo "  reform-migrate /dev/nvme0n1p1     Mounts the first partition of an NVMe disk and mirrors your system to it."
