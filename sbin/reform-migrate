@@ -42,6 +42,11 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
+if mountpoint --quiet /mnt; then
+	echo "/mnt already has something mounted on it" >&2
+	exit 1
+fi
+
 command -v "rsync" >/dev/null 2>&1 || { echo >&2 "Please install \"rsync\" using: apt install rsync"; exit 1; }
 
 sed -i -e 's/^/#/' /etc/fstab
