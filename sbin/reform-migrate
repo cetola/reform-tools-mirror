@@ -50,9 +50,10 @@ fi
 command -v "rsync" >/dev/null 2>&1 || { echo >&2 "Please install \"rsync\" using: apt install rsync"; exit 1; }
 
 sed -i -e 's/^/#/' /etc/fstab
-{
-	echo $TARGET / auto errors=remount-ro 0 1;
-	echo /dev/mmcblk1p1 /boot auto errors=remount-ro 0 1; } >> /etc/fstab
+cat << END >> /etc/fstab
+$TARGET / auto errors=remount-ro 0 1
+/dev/mmcblk1p1 /boot auto errors=remount-ro 0 1
+END
 
 update-initramfs -u
 
