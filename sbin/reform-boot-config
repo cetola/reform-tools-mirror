@@ -70,11 +70,21 @@ if LIBMOUNT_FSTAB=/mnt/etc/fstab findmnt --fstab --noheadings --source "/dev/$RO
 	echo "/etc/fstab already contains the correct entries" >&2
 else
 	echo "commenting original /etc/fstab contents" >&2
+
+	SWAP=
+	if LIBMOUNT_FSTAB=/mnt/etc/fstab findmnt --fstab --types swap >/dev/null; then
+		SWAP="$(LIBMOUNT_FSTAB=/mnt/etc/fstab findmnt --noheadings --fstab --types swap --output SOURCE,TARGET,FSTYPE,OPTIONS,FREQ,PASSNO)"
+	fi
+
 	sed -i -e 's/^/#/' /mnt/etc/fstab
 	cat << END >> /mnt/etc/fstab
 /dev/$ROOTPART / auto errors=remount-ro 0 1
 /dev/$BOOTPART /boot auto errors=remount-ro 0 1
 END
+
+	if [ -n "$SWAP" ]; then
+		echo "$SWAP" >> /mnt/etc/fstab
+	fi
 fi
 
 chroot /mnt update-initramfs -u
