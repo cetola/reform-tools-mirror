@@ -42,7 +42,7 @@ then
 	echo "If you want to migrate this system to NVMe SSD you can now run:"
 	echo ""
 	echo "echo RESUME=UUID=$SWAPUUID > /etc/initramfs-tools/conf.d/resume"
-	echo "echo reform_crypt UUID=$CRYPTUUID none luks > /etc/crypttab"
+	echo "echo reform_crypt UUID=$CRYPTUUID none luks,discard > /etc/crypttab"
 	echo "echo UUID=$SWAPUUID none swap sw 0 0 >> /etc/fstab"
 	echo "cryptsetup luksOpen /dev/nvme0n1 reform_crypt"
 	echo "vgchange -ay reformvg"
@@ -51,7 +51,7 @@ then
 	echo "cryptsetup luksClose reform_crypt"
 else
 	echo RESUME=UUID=$SWAPUUID > /etc/initramfs-tools/conf.d/resume
-	echo reform_crypt UUID=$CRYPTUUID none luks > /etc/crypttab
+	echo reform_crypt UUID=$CRYPTUUID none luks,discard > /etc/crypttab
 	echo UUID=$SWAPUUID none swap sw 0 0 >> /etc/fstab
 	reform-migrate /dev/reformvg/root
 fi
