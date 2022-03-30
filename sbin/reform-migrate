@@ -49,23 +49,6 @@ fi
 
 command -v "rsync" >/dev/null 2>&1 || { echo >&2 "Please install \"rsync\" using: apt install rsync"; exit 1; }
 
-SWAP=
-if findmnt --fstab --types swap >/dev/null; then
-	SWAP="$(findmnt --noheadings --fstab --types swap --output SOURCE,TARGET,FSTYPE,OPTIONS,FREQ,PASSNO)"
-fi
-
-sed -i -e 's/^/#/' /etc/fstab
-cat << END >> /etc/fstab
-$TARGET / auto errors=remount-ro 0 1
-/dev/mmcblk1p1 /boot auto errors=remount-ro 0 1
-END
-
-if [ -n "$SWAP" ]; then
-	echo "$SWAP" >> /etc/fstab
-fi
-
-update-initramfs -u
-
 echo "Trying to mount $TARGET... (if this fails, format the disk/partition as explained above)"
 
 mount "$TARGET" /mnt
@@ -91,3 +74,9 @@ echo "Files copied."
 umount /mnt
 
 echo "$TARGET unmounted."
+
+echo "Running reform-boot-config..."
+
+# when supplying the partition name via ROOTPART, the argument "sd" will be ignored
+ROOTPART="$TARGET" reform-boot-config sd
+
