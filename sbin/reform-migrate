@@ -10,12 +10,17 @@ echo ""
 echo "Warning: This will overwrite files on the target partition. Make sure you know what you're doing!"
 echo ""
 echo "Before using this script, your target partition has to be formatted. You can use the gnome-disks program for that."
-echo "gnome-disks can also help you set up an encrypted disk."
+echo "gnome-disks can also help you set up an encrypted disk. You can also run the following commands for one single"
+echo "partition on NVMe:"
 echo ""
-echo "You can also setup an encrypted NVMe SSD using reform-setup-encrypted-nvme"
+echo "    parted /dev/nvme0n1 \"mklabel msdos\""
+echo "    parted /dev/nvme0n1 \"mkpart primary ext4 4MiB -1\""
+echo "    mkfs.ext4 /dev/nvme0n1p1"
+echo ""
+echo "You can also setup an encrypted NVMe SSD by running reform-setup-encrypted-nvme"
 echo ""
 
-if [[ "x$TARGET" == "x" ]]
+if [ -z "$TARGET" ]
 then
 	echo "Usage:"
 	echo "  reform-migrate /dev/nvme0n1p1     Mounts the first partition of an NVMe disk and mirrors your system to it."
@@ -37,14 +42,12 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
+if mountpoint --quiet /mnt; then
+	echo "/mnt already has something mounted on it" >&2
+	exit 1
+fi
+
 command -v "rsync" >/dev/null 2>&1 || { echo >&2 "Please install \"rsync\" using: apt install rsync"; exit 1; }
-
-sed -i -e 's/^/#/' /etc/fstab
-{
-	echo $TARGET / auto errors=remount-ro 0 1;
-	echo /dev/mmcblk1p1 /boot auto errors=remount-ro 0 1; } >> /etc/fstab
-
-update-initramfs -u
 
 echo "Trying to mount $TARGET... (if this fails, format the disk/partition as explained above)"
 
@@ -71,3 +74,9 @@ echo "Files copied."
 umount /mnt
 
 echo "$TARGET unmounted."
+
+echo "Running reform-boot-config..."
+
+# when supplying the partition name via ROOTPART, the argument "sd" will be ignored
+ROOTPART="$TARGET" reform-boot-config sd
+

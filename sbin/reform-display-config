@@ -30,8 +30,7 @@ case "$CHOICE" in
 		;;
 esac
 
-MOUNTED_AT=$(mount | grep $BOOTPART | grep "on /" | cut -d ' ' -s -f 3)
-if [[ "x$MOUNTED_AT" != "x" ]]
+if findmnt --noheadings --source /dev/$BOOTPART --mountpoint /boot >/dev/null
 then
 	update-initramfs -u
 	echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."
