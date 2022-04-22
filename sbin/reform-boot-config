@@ -12,12 +12,21 @@ echo
 
 usage() {
 	echo "Usage: " >&2
-	echo "  reform-boot-config sd              Boot from SD card or eMMC (default)." >&2
-	echo "  reform-boot-config nvme            Boot from NVMe SSD (encrypted or plain)." >&2
-	echo "  reform-boot-config usb             Boot from USB storage device (encrypted or plain)." >&2
+	echo "  reform-boot-config [--emmc] sd   Boot from SD card (default)." >&2
+	echo "  reform-boot-config [--emmc] nvme Boot from NVMe SSD." >&2
+	echo "  reform-boot-config [--emmc] usb  Boot from USB storage device." >&2
+	echo "  reform-boot-config [--emmc] emmc Boot from eMMC." >&2
 	echo "" >&2
-	echo "  reform-boot-config --emmc nvme|usb Record boot preference on eMMC instead of SD card." >&2
-	echo "                                     This is only useful with SoM dip switch turned off." >&2
+	echo "      --emmc Record boot preference on eMMC instead of SD card." >&2
+	echo "             This is only useful with SoM dip switch turned off." >&2
+	echo "" >&2
+	echo "Choosing sd, nvme, usb or emmc will set the root partition to" >&2
+	echo "/dev/mmcblk1p2, /dev/nvme0n1p1, /dev/sda1 or /dev/mmcblk0p2," >&2
+	echo "respectively. You can choose another root partition by running" >&2
+	echo "$0 with the ROOTPART environment variable set to" >&2
+	echo "the device path. For example, to boot from an LVM volume, run:" >&2
+	echo "" >&2
+	echo "    ROOTPART="/dev/reformvg/root" reform-boot-config sd" >&2
 }
 
 if [ $# -ne 1 ] && [ $# -ne 2 ]; then
@@ -40,9 +49,10 @@ if mountpoint --quiet /mnt; then
 fi
 
 case $BOOTPREF in
+	sd)   : "${ROOTPART:=mmcblk1p2}";;
 	nvme) : "${ROOTPART:=nvme0n1p1}";;
 	usb)  : "${ROOTPART:=sda1}";;
-	sd)   : "${ROOTPART:=mmcblk1p2}";;
+	emmc) : "${ROOTPART:=mmcblk0p2}";;
 	*) usage; exit 1;;
 esac
 
