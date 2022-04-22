@@ -1,6 +1,70 @@
-#!/bin/sh
+#!/bin/bash
 
-# WARNING: This overwrites the bootloader on the eMMC rescue disk!
+set -e
 
+if [ ! -e /sys/class/block/mmcblk0boot0/force_ro ]; then
+	echo "/sys/class/block/mmcblk0boot0/force_ro doesn't exist" >&2
+	exit 1
+fi
+
+if [ ! -w /sys/class/block/mmcblk0boot0/force_ro ]; then
+	echo "/sys/class/block/mmcblk0boot0/force_ro is not writable" >&2
+	exit 1
+fi
+
+if [ ! -e /boot/flash.bin ]; then
+	echo "/boot/flash.bin doesn't exist" >&2
+	exit 1
+fi
+
+echo "WARNING: This overwrites the bootloader on the eMMC rescue disk with the" >&2
+echo "backup stored as /boot/flash.bin!" >&2
+
+read -r -p "Are you sure you want to proceed? [y/N] " response
+
+if [[ "$response" != "y" ]]
+then
+        echo "Exiting."
+        exit
+fi
+
+echo 0 > /sys/class/block/mmcblk0boot0/force_ro
 dd if=/boot/flash.bin of=/dev/mmcblk0boot0 bs=1024 seek=33
-sync
+echo 1 > /sys/class/block/mmcblk0boot0/force_ro
+
+echo "Bootloader was successfully written to /dev/mmcblk0boot0." >&2
+echo "" >&2
+
+echo "Do you want to download and install the latest sysimage-v3 to eMMC as well?" >&2
+echo "This step needs a working internet connection and either wget or curl installed." >&2
+echo "" >&2
+echo "WARNING: This overwrites partitions on eMMC, deleting all data." >&2
+read -r -p "Are you sure you want to proceed? [y/N] " response
+
+if [[ "$response" != "y" ]]
+then
+        echo "Exiting."
+        exit
+fi
+
+URL="https://source.mnt.re/reform/reform-system-image/-/jobs/artifacts/sysimage-v3/raw/reform2-imx8mq/reform-rescue-system.img.gz?job=build"
+
+{
+if curl --version >/dev/null; then
+	curl --silent --location "$URL"
+elif wget --version >/dev/null; then
+	wget --quiet --output-document=- "$URL"
+else
+	echo "need curl or wget" >&2
+	exit 1
+fi; } | gzip --decompress --to-stdout | dd of=/dev/mmcblk0 status=progress
+partprobe /dev/mmcblk0
+
+# the downloadable SD-Card image has the SD-Card as a boot medium but we want
+# the initramfs on eMMC to boot the rootfs on eMMC by default
+reform-boot-config --emmc emmc
+
+echo "If the SoM dip switch is turned off and no SD-Card is present, your" >&2
+echo "system will now boot from eMMC and load the rootfs from there as well." >&2
+echo "If you want to boot from eMMC but load the rootfs from elsewhere, run" >&2
+echo "reform-boot-config with the --emmc switch." >&2
