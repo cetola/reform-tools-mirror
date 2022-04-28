@@ -1,3 +1,12 @@
+reform-tools (1.5) reform; urgency=medium
+
+  * sbin/reform-boot-config: add option to boot with rootfs on eMMC and
+    document ROOTPART envvar
+  * sbin/reform-flash-rescue: extend from one-liner to interactive flasher and
+    downloader to eMMC
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Fri, 22 Apr 2022 18:54:51 +0200
+
 reform-tools (1.4) reform; urgency=medium
 
   * sbin/reform-migrate: reuse reform-boot-config to reduce code duplication
