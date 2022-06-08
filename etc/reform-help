@@ -6,6 +6,7 @@ Move around:                       [1mls[0m, [1mcd[0m, [1mcd ..[0m
 Start a graphical environment:     [1msway[0m
                                    [1mgnome[0m
                                    [1mreform-windowmaker[0m
+                                   [1mkde[0m
 
 See all running processes:         [1mhtop[0m
 See system services:               [1msystemctl[0m
