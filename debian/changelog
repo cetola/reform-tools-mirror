@@ -1,3 +1,9 @@
+reform-tools (1.7) reform; urgency=medium
+
+  * sbin/reform-flash-rescue: download from main branch instead of old sysimage-v3
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Fri, 17 Jun 2022 17:01:38 +0200
+
 reform-tools (1.6) reform; urgency=medium
 
   * add etc/skel/.local/bin/kde for KDE Plasma desktop with wayland
