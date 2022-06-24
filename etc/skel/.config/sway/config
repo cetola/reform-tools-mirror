@@ -251,11 +251,13 @@ font pango: Inter, Icons Bold 14
 #}
 
 for_window [app_id="pavucontrol"] floating enable
-for_window [app_id="connman-gtk"] floating enable
 for_window [app_id="gnome-control-center"] floating enable
 
 exec systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK
 exec dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK XDG_CURRENT_DESKTOP=sway
+
+# fix KDE cursor appearing in sway
+seat seat0 xcursor_theme Adwaita 24
 
 # waybar
 exec waybar
