@@ -58,6 +58,16 @@ esac
 
 ROOTPART="${ROOTPART#/dev/}"
 
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/$ROOTPART)" ]; then
+	echo "/dev/$ROOTPART is still in use" >&2
+	exit 1
+fi
+
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/$BOOTPART)" ]; then
+	echo "/dev/$BOOTPART is still in use" >&2
+	exit 1
+fi
+
 cleanup() {
 	umount /mnt/boot || :
 	umount /mnt/dev || :

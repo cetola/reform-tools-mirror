@@ -23,6 +23,11 @@ then
         exit
 fi
 
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/nvme0n1)" ]; then
+	echo "/dev/nvme0n1 is still in use" >&2
+	exit 1
+fi
+
 cryptsetup luksFormat /dev/nvme0n1
 cryptsetup luksOpen /dev/nvme0n1 reform_crypt
 pvcreate /dev/mapper/reform_crypt

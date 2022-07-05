@@ -39,6 +39,11 @@ fi
 
 echo "Assuming boot files are on $BOOTDISK, but your system is not. Mounting /dev/$BOOTPART on /boot."
 
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/$BOOTPART)" ]; then
+	echo "/dev/$BOOTPART is still in use" >&2
+	exit 1
+fi
+
 mount /dev/$BOOTPART /boot
 
 update-initramfs -u

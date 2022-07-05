@@ -17,6 +17,16 @@ if [ ! -e /boot/flash.bin ]; then
 	exit 1
 fi
 
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/mmcblk0)" ]; then
+	echo "/dev/mmcblk0 is still in use" >&2
+	exit 1
+fi
+
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/mmcblk0boot0)" ]; then
+	echo "/dev/mmcblk0boot0 is still in use" >&2
+	exit 1
+fi
+
 echo "WARNING: This overwrites the bootloader on the eMMC rescue disk with the" >&2
 echo "backup stored as /boot/flash.bin!" >&2
 

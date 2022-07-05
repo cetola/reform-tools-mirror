@@ -37,6 +37,11 @@ then
 	exit
 fi
 
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "$TARGET")" ]; then
+	echo "$TARGET is still in use" >&2
+	exit 1
+fi
+
 if [ "$EUID" -ne 0 ]
   then echo "reform-migrate has to be run as root / using sudo."
   exit
