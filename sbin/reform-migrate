@@ -82,6 +82,6 @@ echo "$TARGET unmounted."
 
 echo "Running reform-boot-config..."
 
-# when supplying the partition name via ROOTPART, the argument "sd" will be ignored
-ROOTPART="$TARGET" reform-boot-config sd
+# FIXME need to choose emmc or sd
+reform-boot-config "$TARGET"
 
