@@ -28,6 +28,15 @@ wifi_on() {
   sleep 1
 }
 
+hantro_off() {
+  # with 5.18, hantro_vpu hangs on resume
+  rmmod hantro_vpu
+}
+
+hantro_on() {
+  modprobe hantro_vpu
+}
+
 kbd_backlight_off() {
   for d in /dev/hidraw*
     do echo -en "xLITE0" > $d
@@ -53,6 +62,7 @@ hid_unbind() {
 if [[ $1 = "suspend" ]]; then
   setup_wake
   wifi_off
+  hantro_off
   kbd_backlight_off
   hid_unbind
 fi
@@ -60,5 +70,6 @@ fi
 if [[ $1 = "resume" ]]; then
   kbd_backlight_on
   wifi_on
+  hantro_on
   hid_bind
 fi
