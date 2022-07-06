@@ -116,3 +116,7 @@ fi
 
 chroot /mnt update-initramfs -u
 echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."
+
+if [ "--emmc" = "$1" ]; then
+	echo "You used the --emmc option. Make sure that your DIP switch has been set to OFF."
+fi
