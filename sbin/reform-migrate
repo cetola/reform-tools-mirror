@@ -2,8 +2,6 @@
 
 set -e
 
-TARGET="$1"
-
 echo ""
 echo "This script can copy your current OS and files to a different disk, such as an SSD installed in MNT Reform."
 echo ""
@@ -20,15 +18,35 @@ echo ""
 echo "You can also setup an encrypted NVMe SSD by running reform-setup-encrypted-nvme"
 echo ""
 
-if [ -z "$TARGET" ]
-then
+usage() {
 	echo "Usage:"
-	echo "  reform-migrate /dev/nvme0n1p1     Mounts the first partition of an NVMe disk and mirrors your system to it."
-	echo "  reform-migrate /dev/mapper/crypt  Mounts encrypted disk 'crypt' and mirrors your system to it."
-	echo "                                    The disk has to be unlocked first with:"
-	echo "                                      cryptsetup luksOpen /dev/nvme0n1p1 crypt"
+	echo "  reform-migrate [--emmc] /dev/nvme0n1p1"
+	echo "          Mounts the first partition of an NVMe disk and mirrors your system to it."
+	echo "  reform-migrate [--emmc] /dev/mapper/crypt"
+	echo "          Mounts encrypted disk 'crypt' and mirrors your system to it."
+	echo "          The disk has to be unlocked first with: cryptsetup luksOpen /dev/nvme0n1p1 crypt"
 	echo ""
-	exit
+	echo "      --emmc Record boot preference on eMMC instead of SD card."
+	echo "             This is only useful with SoM dip switch turned off."
+	echo ""
+}
+
+if [ $# -ne 1 ] && [ $# -ne 2 ]; then
+	usage
+	exit 1
+fi
+
+EMMC=""
+TARGET="$1"
+
+if [ "--emmc" = "$1" ]; then
+	EMMC="--emmc"
+	TARGET="$2"
+fi
+
+if [ -z "$TARGET" ]; then
+	usage
+	exit 1
 fi
 
 if [ ! -e "$TARGET" ]
@@ -82,6 +100,4 @@ echo "$TARGET unmounted."
 
 echo "Running reform-boot-config..."
 
-# FIXME need to choose emmc or sd
-reform-boot-config "$TARGET"
-
+reform-boot-config $EMMC "$TARGET"
