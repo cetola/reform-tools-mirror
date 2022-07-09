@@ -39,8 +39,13 @@ BOOTPART="mmcblk1p1"
 
 if [ "--emmc" = "$1" ]
 then
-    BOOTPREF="$2"
-    BOOTPART="mmcblk0p1"
+	BOOTPREF="$2"
+	BOOTPART="mmcblk0p1"
+
+	if [ ! -b "/dev/mmcblk0p1" ]; then
+		echo "/dev/mmcblk0p1 doesn't exist -- run reform-flash-rescue" >&2
+		exit 1
+	fi
 fi
 
 if mountpoint --quiet /mnt; then

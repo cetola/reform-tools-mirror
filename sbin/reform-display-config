@@ -11,11 +11,15 @@ CHOICE="$1"
 BOOTPART="mmcblk1p1"
 BOOTDISK="SD card"
 
-if [[ "--emmc" == "$1" ]]
-then
-    CHOICE="$2"
-    BOOTPART="mmcblk0p1"
-    BOOTDISK="eMMC"
+if [[ "--emmc" == "$1" ]]; then
+	CHOICE="$2"
+	BOOTPART="mmcblk0p1"
+	BOOTDISK="eMMC"
+
+	if [ ! -b "/dev/mmcblk0p1" ]; then
+		echo "/dev/mmcblk0p1 doesn't exist -- run reform-flash-rescue" >&2
+		exit 1
+	fi
 fi
 
 case "$CHOICE" in
