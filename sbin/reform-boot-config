@@ -120,8 +120,13 @@ END
 fi
 
 chroot /mnt update-initramfs -u
-echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."
 
 if [ "--emmc" = "$1" ]; then
-	echo "You used the --emmc option. Make sure that your DIP switch has been set to OFF."
+	echo "Your /boot partition is on emmc (/dev/$BOOTPART)." >&2
+	echo "Make sure that your DIP switch has been set to OFF." >&2
+else
+	echo "Your /boot partition is on your SD-Card (/dev/$BOOTPART)." >&2
+	echo "Make sure that your DIP switch has been set to ON." >&2
 fi
+
+echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."

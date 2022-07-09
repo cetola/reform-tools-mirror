@@ -71,7 +71,6 @@ else
 		reform-boot-config /dev/reformvg/root
 	else
 		reform-boot-config --emmc /dev/reformvg/root
-		echo "Make sure that your DIP switch has been set to OFF."
 	fi
 fi
 

@@ -101,7 +101,3 @@ echo "$TARGET unmounted."
 echo "Running reform-boot-config..."
 
 reform-boot-config $EMMC "$TARGET"
-
-if [ "--emmc" = "$1" ]; then
-	echo "You used the --emmc option. Make sure that your DIP switch has been set to OFF."
-fi
