@@ -51,8 +51,10 @@ else
 		exit 1
 	fi
 
+	trap "umount /boot" EXIT INT TERM
 	mount /dev/$BOOTPART /boot
 	update-initramfs -u
+	trap - EXIT INT TERM
 	umount /boot
 fi
 

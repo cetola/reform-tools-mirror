@@ -59,12 +59,14 @@ else
 		echo "/mnt already has something mounted on it" >&2
 		exit 1
 	fi
+	trap "umount /mnt" EXIT INT TERM
 	mount /dev/reformvg/root /mnt
 	rsync -axHAWXS --numeric-ids --info=progress2 / /mnt/
 	echo RESUME=UUID=$SWAPUUID > /mnt/etc/initramfs-tools/conf.d/resume
 	echo reform_crypt UUID=$CRYPTUUID none luks,discard > /mnt/etc/crypttab
 	echo UUID=$SWAPUUID none swap sw 0 0 >> /mnt/etc/fstab
 	umount /mnt
+	trap - EXIT INT TERM
 
 	read -r -p "Your /boot partition will be on the SD-Card by default. Do you want it on eMMC instead? [y/N]" response
 	if [[ "$response" != "y" ]]; then
