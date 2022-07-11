@@ -22,11 +22,11 @@ usage() {
 	echo "" >&2
 	echo "Choosing sd, nvme, usb or emmc will set the root partition to" >&2
 	echo "/dev/mmcblk1p2, /dev/nvme0n1p1, /dev/sda1 or /dev/mmcblk0p2," >&2
-	echo "respectively. You can choose another root partition by running" >&2
-	echo "$0 with the ROOTPART environment variable set to" >&2
-	echo "the device path. For example, to boot from an LVM volume, run:" >&2
+	echo "respectively.i You can choose another root partition by passing" >&2
+	echo "the absolute device path starting with /dev/ explicitly." >&2
+	echo "For example, to boot from an LVM volume, run:" >&2
 	echo "" >&2
-	echo "    ROOTPART="/dev/reformvg/root" reform-boot-config sd" >&2
+	echo "    reform-boot-config /dev/reformvg/root" >&2
 }
 
 if [ $# -ne 1 ] && [ $# -ne 2 ]; then
@@ -39,8 +39,13 @@ BOOTPART="mmcblk1p1"
 
 if [ "--emmc" = "$1" ]
 then
-    BOOTPREF="$2"
-    BOOTPART="mmcblk0p1"
+	BOOTPREF="$2"
+	BOOTPART="mmcblk0p1"
+
+	if [ ! -b "/dev/mmcblk0p1" ]; then
+		echo "/dev/mmcblk0p1 doesn't exist -- run reform-flash-rescue" >&2
+		exit 1
+	fi
 fi
 
 if mountpoint --quiet /mnt; then
@@ -53,10 +58,27 @@ case $BOOTPREF in
 	nvme) : "${ROOTPART:=nvme0n1p1}";;
 	usb)  : "${ROOTPART:=sda1}";;
 	emmc) : "${ROOTPART:=mmcblk0p2}";;
+	/dev/*)
+		if [ ! -b "$BOOTPREF" ]; then
+			echo "there is no block device called $BOOTPREF" >&2
+			exit 1
+		fi
+		: "${ROOTPART:=$BOOTPREF}"
+		;;
 	*) usage; exit 1;;
 esac
 
 ROOTPART="${ROOTPART#/dev/}"
+
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/$ROOTPART)" ]; then
+	echo "/dev/$ROOTPART is still in use" >&2
+	exit 1
+fi
+
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/$BOOTPART)" ]; then
+	echo "/dev/$BOOTPART is still in use" >&2
+	exit 1
+fi
 
 cleanup() {
 	umount /mnt/boot || :
@@ -98,4 +120,13 @@ END
 fi
 
 chroot /mnt update-initramfs -u
+
+if [ "--emmc" = "$1" ]; then
+	echo "Your /boot partition is on emmc (/dev/$BOOTPART)." >&2
+	echo "Make sure that your DIP switch has been set to OFF." >&2
+else
+	echo "Your /boot partition is on your SD-Card (/dev/$BOOTPART)." >&2
+	echo "Make sure that your DIP switch has been set to ON." >&2
+fi
+
 echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."

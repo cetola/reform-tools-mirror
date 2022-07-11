@@ -2,8 +2,6 @@
 
 set -e
 
-TARGET="$1"
-
 echo ""
 echo "This script can copy your current OS and files to a different disk, such as an SSD installed in MNT Reform."
 echo ""
@@ -20,21 +18,46 @@ echo ""
 echo "You can also setup an encrypted NVMe SSD by running reform-setup-encrypted-nvme"
 echo ""
 
-if [ -z "$TARGET" ]
-then
+usage() {
 	echo "Usage:"
-	echo "  reform-migrate /dev/nvme0n1p1     Mounts the first partition of an NVMe disk and mirrors your system to it."
-	echo "  reform-migrate /dev/mapper/crypt  Mounts encrypted disk 'crypt' and mirrors your system to it."
-	echo "                                    The disk has to be unlocked first with:"
-	echo "                                      cryptsetup luksOpen /dev/nvme0n1p1 crypt"
+	echo "  reform-migrate [--emmc] /dev/nvme0n1p1"
+	echo "          Mounts the first partition of an NVMe disk and mirrors your system to it."
+	echo "  reform-migrate [--emmc] /dev/mapper/crypt"
+	echo "          Mounts encrypted disk 'crypt' and mirrors your system to it."
+	echo "          The disk has to be unlocked first with: cryptsetup luksOpen /dev/nvme0n1p1 crypt"
 	echo ""
-	exit
+	echo "      --emmc Record boot preference on eMMC instead of SD card."
+	echo "             This is only useful with SoM dip switch turned off."
+	echo ""
+}
+
+if [ $# -ne 1 ] && [ $# -ne 2 ]; then
+	usage
+	exit 1
+fi
+
+EMMC=""
+TARGET="$1"
+
+if [ "--emmc" = "$1" ]; then
+	EMMC="--emmc"
+	TARGET="$2"
+fi
+
+if [ -z "$TARGET" ]; then
+	usage
+	exit 1
 fi
 
 if [ ! -e "$TARGET" ]
 then
 	echo "Error: The partition $TARGET does not exist."
 	exit
+fi
+
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "$TARGET")" ]; then
+	echo "$TARGET is still in use" >&2
+	exit 1
 fi
 
 if [ "$EUID" -ne 0 ]
@@ -51,6 +74,8 @@ command -v "rsync" >/dev/null 2>&1 || { echo >&2 "Please install \"rsync\" using
 
 echo "Trying to mount $TARGET... (if this fails, format the disk/partition as explained above)"
 
+trap "umount /mnt" EXIT INT TERM
+
 mount "$TARGET" /mnt
 
 echo "Target partition successfully mounted. The next step will copy all your files over to the target, overwriting existing files in the process."
@@ -62,6 +87,7 @@ if [[ "$response" != "y" ]]
 then
 	echo "Exiting."
 	umount /mnt
+	trap - EXIT INT TERM
 	exit
 fi
 
@@ -72,11 +98,10 @@ rsync -axHAWXS --numeric-ids --info=progress2 / /mnt/
 echo "Files copied."
 
 umount /mnt
+trap - EXIT INT TERM
 
 echo "$TARGET unmounted."
 
 echo "Running reform-boot-config..."
 
-# when supplying the partition name via ROOTPART, the argument "sd" will be ignored
-ROOTPART="$TARGET" reform-boot-config sd
-
+reform-boot-config $EMMC "$TARGET"

@@ -23,6 +23,11 @@ then
         exit
 fi
 
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/nvme0n1)" ]; then
+	echo "/dev/nvme0n1 is still in use" >&2
+	exit 1
+fi
+
 cryptsetup luksFormat /dev/nvme0n1
 cryptsetup luksOpen /dev/nvme0n1 reform_crypt
 pvcreate /dev/mapper/reform_crypt
@@ -50,13 +55,28 @@ then
 	echo "vgchange -an reformvg"
 	echo "cryptsetup luksClose reform_crypt"
 else
-	echo RESUME=UUID=$SWAPUUID > /etc/initramfs-tools/conf.d/resume
-	echo reform_crypt UUID=$CRYPTUUID none luks,discard > /etc/crypttab
-	echo UUID=$SWAPUUID none swap sw 0 0 >> /etc/fstab
-	reform-migrate /dev/reformvg/root
+	if mountpoint --quiet /mnt; then
+		echo "/mnt already has something mounted on it" >&2
+		exit 1
+	fi
+	trap "umount /mnt" EXIT INT TERM
+	mount /dev/reformvg/root /mnt
+	rsync -axHAWXS --numeric-ids --info=progress2 / /mnt/
+	echo RESUME=UUID=$SWAPUUID > /mnt/etc/initramfs-tools/conf.d/resume
+	echo reform_crypt UUID=$CRYPTUUID none luks,discard > /mnt/etc/crypttab
+	echo UUID=$SWAPUUID none swap sw 0 0 >> /mnt/etc/fstab
+	umount /mnt
+	trap - EXIT INT TERM
+
+	read -r -p "Your /boot partition will be on the SD-Card by default. Do you want it on eMMC instead? [y/N]" response
+	if [[ "$response" != "y" ]]; then
+		reform-boot-config /dev/reformvg/root
+	else
+		reform-boot-config --emmc /dev/reformvg/root
+	fi
 fi
 
 vgchange -an reformvg
 cryptsetup luksClose reform_crypt
 
-echo "You can now reboot into your encrypted System. The first partition on your SD-Card is the boot medium."
+echo "You can now reboot into your encrypted System."

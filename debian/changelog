@@ -1,3 +1,24 @@
+reform-tools (1.8) reform; urgency=medium
+
+  * etc/skel/.config/mpv/mpv.conf: set maximum resolution of ytdl to 1080p
+  * sway: fix KDE cursor appearing in sway
+  * sbin/reform-{flash-rescue,boot-config,migrate,display-config,
+    setup-encrypted-nvme}: check if devices are in use before proceeding
+  * sbin/reform-boot-config: allow passing the device name explicitly
+  * sbin/reform-migrate: add --emmc option
+  * sbin/reform-{boot-config,display-config,migrate}: inform about the DIP
+    switch if --emmc option is used
+  * sbin/reform-setup-encrypted-nvme: replicate what reform-migrate does to
+    avoid modifying the currently running system and ask whether /boot should
+    be on emmc or sd-card
+  * sbin/reform-{boot,display}-config: output meaningful error if
+    /dev/mmcblk0p1 is missing
+  * sbin/reform-{boot,display}-config: inform about the DIP switch always
+  * sbin/reform-{display-config,migrate,setup-encrypted-nvme}: umount in a
+    shell trap
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sat, 09 Jul 2022 15:29:59 +0200
+
 reform-tools (1.7) reform; urgency=medium
 
   * sbin/reform-flash-rescue: download from main branch instead of old sysimage-v3

@@ -11,11 +11,15 @@ CHOICE="$1"
 BOOTPART="mmcblk1p1"
 BOOTDISK="SD card"
 
-if [[ "--emmc" == "$1" ]]
-then
-    CHOICE="$2"
-    BOOTPART="mmcblk0p1"
-    BOOTDISK="eMMC"
+if [[ "--emmc" == "$1" ]]; then
+	CHOICE="$2"
+	BOOTPART="mmcblk0p1"
+	BOOTDISK="eMMC"
+
+	if [ ! -b "/dev/mmcblk0p1" ]; then
+		echo "/dev/mmcblk0p1 doesn't exist -- run reform-flash-rescue" >&2
+		exit 1
+	fi
 fi
 
 case "$CHOICE" in
@@ -33,14 +37,33 @@ esac
 if findmnt --noheadings --source /dev/$BOOTPART --mountpoint /boot >/dev/null
 then
 	update-initramfs -u
-	echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."
-	exit
+else
+	echo "Assuming boot files are on $BOOTDISK, but your system doesn't have it mounted." >&2
+	echo "Mounting /dev/$BOOTPART on /boot." >&2
+
+	if mountpoint --quiet /boot; then
+		echo "/boot already has something mounted on it" >&2
+		exit 1
+	fi
+
+	if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/$BOOTPART)" ]; then
+		echo "/dev/$BOOTPART is still in use" >&2
+		exit 1
+	fi
+
+	trap "umount /boot" EXIT INT TERM
+	mount /dev/$BOOTPART /boot
+	update-initramfs -u
+	trap - EXIT INT TERM
+	umount /boot
 fi
 
-echo "Assuming boot files are on $BOOTDISK, but your system is not. Mounting /dev/$BOOTPART on /boot."
+if [ "--emmc" = "$1" ]; then
+	echo "Your /boot partition is on emmc (/dev/$BOOTPART)." >&2
+	echo "Make sure that your DIP switch has been set to OFF." >&2
+else
+	echo "Your /boot partition is on your SD-Card (/dev/$BOOTPART)." >&2
+	echo "Make sure that your DIP switch has been set to ON." >&2
+fi
 
-mount /dev/$BOOTPART /boot
-
-update-initramfs -u
 echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."
-umount /boot
