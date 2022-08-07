@@ -39,13 +39,13 @@ hantro_on() {
 
 kbd_backlight_off() {
   for d in /dev/hidraw*
-    do echo -en "xLITE0" > $d
+    do echo -en "xLITE0" > "$d"
   done
 }
 
 kbd_backlight_on() {
   for d in /dev/hidraw*
-    do echo -en "xLITE6" > $d
+    do echo -en "xLITE6" > "$d"
   done
 }
 
