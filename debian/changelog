@@ -1,3 +1,9 @@
+reform-tools (1.9) reform; urgency=medium
+
+  * install /usr/share/X11/xorg.conf.d/10-reform-etnaviv.conf
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Wed, 07 Sep 2022 17:02:24 +0200
+
 reform-tools (1.8) reform; urgency=medium
 
   * etc/skel/.config/mpv/mpv.conf: set maximum resolution of ytdl to 1080p
