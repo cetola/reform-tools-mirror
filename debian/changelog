@@ -1,3 +1,9 @@
+reform-tools (1.10) reform; urgency=medium
+
+  * add reform2-lpc-dkms package with the reform2_lpc module
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Mon, 12 Sep 2022 16:06:20 +0200
+
 reform-tools (1.9) reform; urgency=medium
 
   * install /usr/share/X11/xorg.conf.d/10-reform-etnaviv.conf

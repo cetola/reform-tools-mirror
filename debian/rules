@@ -1,5 +1,9 @@
 #!/usr/bin/make -f
 
+# for debian/reform-tools.install and for dkms
+include /usr/share/dpkg/pkg-info.mk
+export DEB_VERSION_UPSTREAM
+
 %:
 	dh $@
 
@@ -9,3 +13,6 @@ execute_after_dh_auto_build:
 override_dh_installsystemd:
 	dh_installsystemd --name=reform-hw-setup
 	dh_installsystemd --name=reform-sleep
+
+override_dh_dkms:
+	dh_dkms -V $(DEB_VERSION_UPSTREAM)
