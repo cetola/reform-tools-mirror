@@ -1,3 +1,12 @@
+reform-tools (1.11) reform; urgency=medium
+
+  * reform-{boot-config,setup-encrypted-nvme}: add more cleanup code to exit
+    traps and be verbose about script failure
+  * reform-boot-config: allow messing up the currently running system by using
+    an interactive prompt
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 13 Sep 2022 04:01:00 +0200
+
 reform-tools (1.10) reform; urgency=medium
 
   * add reform2-lpc-dkms package with the reform2_lpc module
