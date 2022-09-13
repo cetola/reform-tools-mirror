@@ -101,6 +101,7 @@ cleanup() {
 	umount /mnt/sys || :
 	umount /mnt/proc || :
 	umount /mnt || :
+	echo $0 FAILED to run >&2
 }
 
 trap cleanup EXIT INT TERM
@@ -145,3 +146,11 @@ else
 fi
 
 echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."
+
+umount /mnt/boot
+umount /mnt/dev
+umount /mnt/sys
+umount /mnt/proc
+umount /mnt
+
+trap - EXIT INT TERM
