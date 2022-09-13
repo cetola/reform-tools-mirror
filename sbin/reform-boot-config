@@ -77,6 +77,21 @@ fi
 
 if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/$BOOTPART)" ]; then
 	echo "/dev/$BOOTPART is still in use" >&2
+	echo "Proceeding will unmount /dev/$BOOTPART so that it can be used as your new /boot." >&2
+	echo "Since your current system is using it, this system might become unusable." >&2
+	echo "You might not want to proceed if you care about your currently running system." >&2
+	printf "Do you really want to continue? [y/N] " >&2
+	read answer
+	if [ "$answer" != "${answer#[Yy]}" ]; then
+		umount /dev/$BOOTPART
+	else
+		exit 1
+	fi
+fi
+
+# make sure it's unused now after unmounting
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/$BOOTPART)" ]; then
+	echo "/dev/$BOOTPART is still in use" >&2
 	exit 1
 fi
 
@@ -86,6 +101,7 @@ cleanup() {
 	umount /mnt/sys || :
 	umount /mnt/proc || :
 	umount /mnt || :
+	echo $0 FAILED to run >&2
 }
 
 trap cleanup EXIT INT TERM
@@ -130,3 +146,11 @@ else
 fi
 
 echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."
+
+umount /mnt/boot
+umount /mnt/dev
+umount /mnt/sys
+umount /mnt/proc
+umount /mnt
+
+trap - EXIT INT TERM

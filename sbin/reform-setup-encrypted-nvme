@@ -23,15 +23,23 @@ then
         exit
 fi
 
+cleanupvg() { vgchange -an reformvg; }
+cleanupluks() { cryptsetup luksClose reform_crypt; }
+error() { echo "$0 FAILED to run" >&2; }
+
+trap error EXIT INT TERM
+
 if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/nvme0n1)" ]; then
 	echo "/dev/nvme0n1 is still in use" >&2
 	exit 1
 fi
 
 cryptsetup luksFormat /dev/nvme0n1
+trap "cleanupluks; error" EXIT INT TERM
 cryptsetup luksOpen /dev/nvme0n1 reform_crypt
 pvcreate /dev/mapper/reform_crypt
 vgcreate reformvg /dev/mapper/reform_crypt
+trap "cleanupvg; cleanupluks; error" EXIT INT TERM
 lvcreate --name swap --size 8G reformvg
 mkswap /dev/reformvg/swap
 lvcreate --name root --extents 100%FREE reformvg
@@ -59,14 +67,14 @@ else
 		echo "/mnt already has something mounted on it" >&2
 		exit 1
 	fi
-	trap "umount /mnt" EXIT INT TERM
+	trap "umount /mnt; cleanupvg; cleanupluks; error" EXIT INT TERM
 	mount /dev/reformvg/root /mnt
 	rsync -axHAWXS --numeric-ids --info=progress2 / /mnt/
 	echo RESUME=UUID=$SWAPUUID > /mnt/etc/initramfs-tools/conf.d/resume
 	echo reform_crypt UUID=$CRYPTUUID none luks,discard > /mnt/etc/crypttab
 	echo UUID=$SWAPUUID none swap sw 0 0 >> /mnt/etc/fstab
+	trap "cleanupvg; cleanupluks; error" EXIT INT TERM
 	umount /mnt
-	trap - EXIT INT TERM
 
 	read -r -p "Your /boot partition will be on the SD-Card by default. Do you want it on eMMC instead? [y/N]" response
 	if [[ "$response" != "y" ]]; then
@@ -76,7 +84,12 @@ else
 	fi
 fi
 
-vgchange -an reformvg
-cryptsetup luksClose reform_crypt
+trap "cleanupluks; error" EXIT INT TERM
+cleanupvg
+
+trap "error" EXIT INT TERM
+cleanupluks
+
+trap - EXIT INT TERM
 
 echo "You can now reboot into your encrypted System."
