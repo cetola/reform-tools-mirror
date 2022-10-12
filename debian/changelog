@@ -1,3 +1,10 @@
+reform-tools (1.12) reform; urgency=medium
+
+  * install /usr/share/initramfs-tools/scripts/init-top/reform as a temporary
+    workaround to mxsfb producing a blank screen on roughly 50% of boots
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Wed, 12 Oct 2022 05:38:40 +0200
+
 reform-tools (1.11) reform; urgency=medium
 
   * reform-{boot-config,setup-encrypted-nvme}: add more cleanup code to exit
