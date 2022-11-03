@@ -1,3 +1,11 @@
+reform-tools (1.13) reform; urgency=medium
+
+  * install flash-kernel boot scripts to /usr/share instead of /etc
+  * flash-kernel/preboot.d/00reform2_preboot: even if ${fdtfile} is set, use
+    dtb-${fk_kvers} if it exists
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Thu, 03 Nov 2022 11:51:21 +0100
+
 reform-tools (1.12) reform; urgency=medium
 
   * install /usr/share/initramfs-tools/scripts/init-top/reform as a temporary
