@@ -1,1 +1,15 @@
-# place here any u-boot commands to be executed before boot
+# We need to set ${fdtfile} in uboot to select a default dtb for boot mediums
+# that are supposed to boot on multiple devices like the Debian installer.
+#
+# But if ${fdtfile} is set, then bootscr.uboot-generic will use that instead of
+# the dtb-${fk_kvers} symlink maintained by flash-kernel which will point to
+# either the normal or the hdmi dtb for the reform.
+#
+# This preboot script overwrites ${fdtpath} such that even when ${fdtfile} is
+# set to a reasonable default, u-boot will still use dtb-${fk_kvers} if it
+# exists -- which it does with sysimage-v3 after running flash-kernel.
+
+if test -e ${devtype} ${devnum}:${partition} ${prefix}dtb-${fk_kvers}; then
+  setenv fdtpath dtb-${fk_kvers}
+fi
+
