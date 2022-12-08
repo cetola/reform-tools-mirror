@@ -1,3 +1,22 @@
+reform-tools (1.15) reform; urgency=medium
+
+  * rework reform-boot-config
+     - support all combinations of:
+        * new root partition is already monted as /
+        * new root partition lives elsewhere
+        * new /boot partition is the same as the already configured one
+        * new /boot is already mounted
+        * new /boot device doesn't exist
+     - error out if anything is still mounted that shouldn't be mounted
+     - only mount when necessary
+     - only use chroot if new root device is not /
+     - use traps to always unmount everything and clean tmpfiles upon
+       failure
+     - consult /etc/fstab of new root for location of old /boot
+     - copy over contents of old /boot to new one if necessary
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sat, 03 Dec 2022 07:23:28 +0100
+
 reform-tools (1.14) reform; urgency=medium
 
   * Disable the raid456 kernel module to prevent losing wm8960audio
