@@ -1,0 +1,261 @@
+#!/bin/sh
+#
+# This script checks the integrity of your MNT reform setup. It is meant for
+# two main use-cases:
+#
+#  1. somebody has a problem with their reform and to debug the problem it
+#     would be useful to know how their system differs from the default
+#  2. somebody installed their system several months ago and now wants to find
+#     out which things have since been added or changed in the defaults that
+#     they might want to apply to their running setup as well
+#
+# Running this script as non-root will give you a diff between the files in
+# /etc/skel and those in your $HOME. Running this script as root performs the
+# system-wide checks.
+#
+# shellcheck disable=SC2059
+
+set -eu
+
+if [ "$(id -u)" -ne 0 ]; then
+	for path in $(cd /etc/skel && find . -type f); do
+		if [ ! -e "$HOME/$path" ]; then
+			echo "W: $path doesn't exist in current \$HOME" >&2
+		elif ! cmp --quiet "/etc/skel/$path" "$HOME/$path"; then
+			echo "W: local version of $path has modifications:" >&2
+			diff -u "/etc/skel/$path" "$HOME/$path" || true
+		fi
+	done
+	echo "I: Running reform-check as the normal user only diffs your current"
+	echo "I: configuration in your \$HOME against the contents in /etc/skel."
+	echo "I: To run a system-wide check, run this script as the root user."
+	exit 0
+fi
+
+if [ ! -e "/etc/flash-kernel/machine" ]; then
+	echo "E: /etc/flash-kernel/machine does not exist" >&2
+fi
+
+if [ ! -e "/proc/device-tree/model" ]; then
+	echo "E: /proc/device-tree/model does not exist" >&2
+fi
+
+if [ -e "/etc/flash-kernel/machine" ] && [ -e "/proc/device-tree/model" ] && [ "$(cat /proc/device-tree/model)" != "$(cat /etc/flash-kernel/machine)" ]; then
+	echo "E: your currently loaded dtb is not the one referenced by flash-kernel" >&2
+fi
+
+PKGSGUI="xwayland xterm xfce4-terminal sway waybar swayidle swaylock mesa-utils lxpolkit wayland-protocols rofi"
+PKGSNET="iproute2 iptables iputils-ping ircii elinks isc-dhcp-client netcat-traditional net-tools network-manager nfacct ntp ntpdate rsync telnet traceroute wpasupplicant curl wget w3m rfkill ifupdown netbase openssh-client"
+PKGSADMIN="apt apt-utils apt-listbugs apt-file cron cryptsetup lvm2 dbus-bin e2fsprogs fbset init-system-helpers ncdu parted pciutils policykit-1 procps sudo systemd systemd-sysv tmux u-boot-tools screen"
+PKGSUTILS="busybox console-data console-setup cpio file flash-kernel gnupg gpgv htop kbd lm-sensors readline-common usbutils xdg-utils bsdmainutils less nano micro vim alsa-utils dosfstools python3-psutil"
+PKGSMISC="brightnessctl brightness-udev ca-certificates debian-archive-keyring dialog gpm ncurses-term locales bash-completion man-db cryptsetup-initramfs linux-image-arm64 linux-headers-arm64 reform-tools reform-handbook"
+PKGDESKTOP1="git libreoffice libreoffice-gtk3 firefox-esr chromium emacs gimp wmaker x11-utils imagemagick-6.q16"
+PKGDESKTOP2="evolution freecad ardour sxiv minetest neverball scummvm dosbox wf-recorder wev linphone-desktop kicad"
+PKGPATCHED="cage wayvnc ffmpeg"
+PKGGNOME="gnome-control-center gnome-session openjdk-11-jre-headless gnome-disk-utility gnome-icon-theme breeze-icon-theme gnome-system-monitor gnome-settings-daemon mpv eog evince gedit thunar pavucontrol grim fonts-inter fonts-noto-color-emoji pulseaudio unicode-data engrampa slurp arc-theme"
+PKGKDE1="plasma-workspace-wayland kde-plasma-desktop plasma-nm systemsettings powerdevil qtwayland5"
+PKGKDE2="plasma-discover apt-config-icons-large"
+
+aptprefcontent="Package: *\nPin: release n=reform, l=reform\nPin-Priority: 990\n"
+if [ ! -e /etc/apt/preferences.d/reform.pref ]; then
+	echo "E: /etc/apt/preferences.d/reform.pref doesn't exist" >&2
+	echo "E: you should not install packages on this system unless you know what you are doing" >&2
+	echo "E: /etc/apt/preferences.d/reform.pref should contain the following lines:" >&2
+	printf "$aptprefcontent" >&2
+else
+	if ! printf "$aptprefcontent" | cmp --quiet - /etc/apt/preferences.d/reform.pref; then
+		echo "W: unexpected content in /etc/apt/preferences.d/reform.pref:" >&2
+		printf "$aptprefcontent" | diff -u - /etc/apt/preferences.d/reform.pref || true
+		echo "W: you should not install packages on this system unless you know what you are doing" >&2
+	fi
+fi
+
+notinstalled=
+for package in $PKGSGUI $PKGSNET $PKGSADMIN $PKGSUTILS $PKGSMISC $PKGDESKTOP1 $PKGDESKTOP2 $PKGPATCHED $PKGGNOME $PKGKDE1 $PKGKDE2; do
+	if ! dpkg-query --showformat '${db:Status-Status}\n' --show "$package" 2>/dev/null | grep -q '^installed$'; then
+		notinstalled="$notinstalled $package"
+	fi
+done
+if [ -n "$notinstalled" ]; then
+	echo "I: not installed: $(echo "$notinstalled" | tr " " "\n" | sort | tr "\n" " ")" >&2
+fi
+
+if [ -z "$(findmnt --fstab --noheadings --evaluate --mountpoint / --output SOURCE)" ]; then
+	echo "E: your /etc/fstab does not have an entry for /" >&2
+	echo "E: your / device probably is: $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE)" >&2
+	echo "E: add this to your /etc/fstab:" >&2
+	echo "$(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) / auto errors=remount-ro 0 1" >&2
+fi
+
+if [ -z "$(findmnt --fstab --noheadings --evaluate --mountpoint /boot --output SOURCE)" ]; then
+	echo "E: your /etc/fstab does not have an entry for /boot" >&2
+	echo "E: for eMMC booting, add:" >&2
+	echo "/dev/mmcblk0p1 /boot auto errors=remount-ro 0 1" >&2
+	echo "E: for SD-Card booting, add:" >&2
+	echo "/dev/mmcblk1p1 /boot auto errors=remount-ro 0 1" >&2
+fi
+
+if ! mountpoint --quiet /boot; then
+	echo "E: your /boot has nothing mounted on it -- fix your /etc/fstab" >&2
+fi
+
+ubooturl="https://source.mnt.re/reform/reform-boundary-uboot/-/jobs/artifacts/v3/raw/flash.bin?job=build"
+ubootsha1="b2c58c8052b0fb4dde000332baa2d703b033f0a9"
+ubootbin=$(mktemp)
+/usr/lib/apt/apt-helper download-file "$ubooturl" "$ubootbin" "SHA1:$ubootsha1" >/dev/null
+if [ ! -e /boot/flash.bin ]; then
+	echo "W: /boot/flash.bin doesn't exist" >&2
+	echo "W: You can download the latest version by running as root:" >&2
+	echo "/usr/lib/apt/apt-helper download-file \"$ubooturl\" /boot/flash.bin SHA1:$ubootsha1" >&2
+elif ! cmp --quiet /boot/flash.bin "$ubootbin"; then
+	echo "W: /boot/flash.bin is not the latest uboot" >&2
+	echo "W: You can update it to the latest version by running as root:" >&2
+	echo "/usr/lib/apt/apt-helper download-file \"$ubooturl\" /boot/flash.bin SHA1:$ubootsha1" >&2
+fi
+ubootoffset=$((1024*33))
+ubootsize=$(stat --format=%s "$ubootbin")
+if ! cmp --quiet --bytes="$ubootsize" --ignore-initial=0:$ubootoffset "$ubootbin" /dev/mmcblk0boot0 2>/dev/null; then
+	echo "W: eMMC does not contain latest uboot" >&2
+	echo "W: You can update it to the latest version by running as root:" >&2
+	echo "echo 0 > /sys/class/block/mmcblk0boot0/force_ro" >&2
+	echo "dd if=/boot/flash.bin of=/dev/mmcblk0boot0 bs=1024 seek=33" >&2
+	echo "echo 1 > /sys/class/block/mmcblk0boot0/force_ro" >&2
+fi
+if [ -e /dev/mmcblk1 ] && ! cmp --quiet --bytes="$ubootsize" --ignore-initial="0:$ubootoffset" "$ubootbin" /dev/mmcblk1 2>/dev/null; then
+	echo "W: SD-Card does not contain latest uboot" >&2
+	echo "W: You can update it to the latest version by running as root:" >&2
+	echo "dd if=/boot/flash.bin of=/dev/mmcblk1 bs=1024 seek=33" >&2
+	echo "W: Doing so will write $(stat -c "%s" /boot/flash.bin) bytes to the beginning of your sd-card." >&2
+	echo "W: Make sure your partitions only start after $((1024*33+$(stat -c "%s" /boot/flash.bin))) bytes." >&2
+fi
+rm "$ubootbin"
+
+if [ ! -e /dev/mmcblk0p2 ]; then
+	echo "W: /dev/mmcblk0p2 doesn't exist. Your eMMC still contains a sysimage before v3" >&2
+	echo "W: To update your eMMC to sysimage-v3 you can run reform-flash-rescue" >&2
+	echo "W: Only run reform-flash-rescue if you intend a factory-reset of your eMMC" >&2
+	echo "W: Do not use reform-flash-rescue if you boot from eMMC because this will overwrite your /boot partition" >&2
+fi
+
+if [ ! -e /etc/flash-kernel/machine ]; then
+	echo "E: /etc/flash-kernel/machine doesn't exist" >&2
+	echo "E: It should contain either 'MNT Reform 2' (for single display) or 'MNT Reform 2 HDMI' (for dual display)." >&2
+	echo "E: You can run reform-display-config as root to create a working version." >&2
+else
+	case "$(cat /etc/flash-kernel/machine)" in
+		"MNT Reform 2") : ;;
+		"MNT Reform 2 HDMI") : ;;
+		*) echo "E: unexpected content in /etc/flash-kernel/machine" >&2 ;;
+	esac
+fi
+
+flashkerneldefaultcontent="LINUX_KERNEL_CMDLINE=\"console=ttymxc0,115200 console=tty1\"\nLINUX_KERNEL_CMDLINE_DEFAULTS=\"ro no_console_suspend cma=512M pci=nomsi\"\n"
+if [ ! -e /etc/default/flash-kernel ]; then
+	echo "E: /etc/default/flash-kernel doesn't exist" >&2
+	echo "E: /etc/default/flash-kernel should contain the following lines:" >&2
+	printf "$flashkerneldefaultcontent" >&2
+else
+	if ! printf "$flashkerneldefaultcontent" | cmp --quiet - /etc/default/flash-kernel; then
+		echo "W: unexpected content in /etc/default/flash-kernel:" >&2
+		printf "$flashkerneldefaultcontent" | diff -u - /etc/default/flash-kernel || true
+	fi
+fi
+
+initramfstoolsmodulescontent="pwm_imx27\nnwl-dsi\nti-sn65dsi86\nimx-dcss\npanel-edp\nmux-mmio\nmxsfb\nusbhid\nimx8mq-interconnect\n"
+if [ ! -e /etc/initramfs-tools/modules ]; then
+	echo "E: /etc/initramfs-tools/modules doesn't exist" >&2
+	echo "E: /etc/initramfs-tools/modules should contain the following lines:" >&2
+	printf "$initramfstoolsmodulescontent" >&2
+else
+	if ! printf "$initramfstoolsmodulescontent" | cmp --quiet - /etc/initramfs-tools/modules; then
+		echo "W: unexpected content in /etc/initramfs-tools/modules:" >&2
+		printf "$initramfstoolsmodulescontent" | diff -u - /etc/initramfs-tools/modules || true
+	fi
+fi
+
+if [ ! -e /etc/motd ]; then
+	echo "I: /etc/motd does not exist" >&2
+elif [ ! -L /etc/motd ]; then
+	echo "I: /etc/motd does not exist" >&2
+elif [ "$(readlink /etc/motd)" != "motd-rescue" ] && [ "$(readlink /etc/motd)" != "motd-full" ]; then
+	echo "I: /etc/motd does neither point to motd-rescue nor to motd-full" >&2
+fi
+
+if grep --quiet '^root::' /etc/shadow; then
+	echo "E: root account has no password (maybe run passwd -l root)" >&2
+fi
+
+if [ ! -e /etc/skel/.profile ]; then
+	echo "E: /etc/skel/.profile doesn't exist" >&2
+	echo "E: install the package bash to create it" >&2
+else
+	# shellcheck disable=SC2016
+	skelprofilecontent='if [ "$(whoami)" = "root" ]; then cat /etc/reform-root-help; elif [ -z "$WAYLAND_DISPLAY" ]; then cat /etc/reform-help; fi'
+	if [ "$(tail -1 /etc/skel/.profile)" != "$skelprofilecontent" ]; then
+		echo "E: unexpected last line in /etc/skel/.profile, should be:" >&2
+		echo "$skelprofilecontent" >&2
+	fi
+fi
+
+if [ -n "$(dpkg --verify reform-tools)" ]; then
+	echo "I: the following files differ from how they are shipped by reform-tools:" >&2
+	dpkg --verify reform-tools
+fi
+
+# shellcheck disable=SC2016
+if [ "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://mntre.com/reform-debian-repo/' --format '$(RELEASE)')" != reform ]; then
+	echo "E: the reform repository is not known to apt" >&2
+	echo "E: add the following line to your /etc/apt/sources.list to fix this" >&2
+	echo "deb [trusted=yes] https://mntre.com/reform-debian-repo reform main" >&2
+fi
+
+if ! apt-cache policy linux-image-arm64 | grep --quiet mntre.com; then
+	echo "E: the linux-image-arm64 package cannot come from the MNT repos" >&2
+fi
+
+if ! dpkg-query --showformat '${Version}' --show linux-image-arm64 | grep --quiet reform; then
+	echo "E: the currently installed package linux-image-arm64 is not from the MNT repository" >&2
+fi
+
+for file in /boot/initrd.img-*-reform2-arm64 /boot/vmlinuz-*-reform2-arm64; do
+	suffix="${file##/boot/}"
+	suffix="${suffix##initrd.img-}"
+	suffix="${suffix##vmlinuz-}"
+	if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-$suffix" 2>/dev/null | grep -q '^installed$'; then
+		echo "I: $file does not belong to any installed kernel package" >&2
+	fi
+done
+
+
+if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-$(uname -r)" 2>/dev/null | grep -q '^installed$'; then
+	echo "E: the currently running kernel is not installed as a package" >&2
+fi
+
+if [ ! -e /boot/boot.scr ]; then
+	echo "E: /boot/boot.scr doesn't exist" >&2
+	echo "E: run update-initramfs -u to create it" >&2
+elif ! grep --quiet "setenv fk_kvers '$(uname -r)'" /boot/boot.scr; then
+	echo "E: /boot/boot.scr doesn't reference the currently running kernel" >&2
+fi
+
+if [ ! -e "/boot/vmlinuz-$(uname -r)" ]; then
+	echo "E: no vmlinuz in /boot for the currently running kernel" >&2
+fi
+
+if [ ! -e "/boot/initrd.img-$(uname -r)" ]; then
+	echo "E: no initrd.img in /boot for the currently running kernel" >&2
+fi
+
+if [ ! -e "/etc/modprobe.d/reform.conf" ]; then
+	echo "W: etc/modprobe.d/reform.conf doesn't exist" >&2
+	echo "W: it should at least contain the following lines:" >&2
+	echo blacklist imx8m-ddrc >&2
+	echo blacklist raid456 >&2
+else
+	if ! grep --quiet '^blacklist imx8m-ddrc$' /etc/modprobe.d/reform.conf; then
+		echo "E: imx8m-ddrc not blacklisted in /etc/modprobe.d/reform.conf" >&2
+	fi
+	if ! grep --quiet '^blacklist raid456$' /etc/modprobe.d/reform.conf; then
+		echo "W: raid456 not blacklisted in /etc/modprobe.d/reform.conf" >&2
+	fi
+fi
