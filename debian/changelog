@@ -1,3 +1,21 @@
+reform-tools (1.16) reform; urgency=medium
+
+  * add reform-check utility
+  * etc/profile.d/reform.sh: remove call to unicode_start as its functionality
+    is provided automatically by console-setup
+  * etc/motd-rescue: adjust message to not specifically talk about eMMC, SDcard
+    or NVMe anymore
+  * etc/motd: use reform-tools date in message
+  * etc/profile.d/reform.sh: export MOZ_ENABLE_WAYLAND and
+    _JAVA_AWT_WM_NONREPARENTING
+  * sbin/reform-flash-rescue: check all mmcblk0 partitions in a loop before
+    proceeding
+  * sbin/reform-migrate: expand usage message
+  * sbin/reform-setup-encrypted-nvme: mount to tmpdir instead of /mnt
+  * sbin/reform-migrate: mount to tmpdir instead of /mnt
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sun, 18 Dec 2022 14:36:56 +0100
+
 reform-tools (1.15) reform; urgency=medium
 
   * rework reform-boot-config
