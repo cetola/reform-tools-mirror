@@ -63,18 +63,18 @@ then
 	echo "vgchange -an reformvg"
 	echo "cryptsetup luksClose reform_crypt"
 else
-	if mountpoint --quiet /mnt; then
-		echo "/mnt already has something mounted on it" >&2
-		exit 1
-	fi
-	trap "umount /mnt; cleanupvg; cleanupluks; error" EXIT INT TERM
-	mount /dev/reformvg/root /mnt
-	rsync -axHAWXS --numeric-ids --info=progress2 / /mnt/
-	echo RESUME=UUID=$SWAPUUID > /mnt/etc/initramfs-tools/conf.d/resume
-	echo reform_crypt UUID=$CRYPTUUID none luks,discard > /mnt/etc/crypttab
-	echo UUID=$SWAPUUID none swap sw 0 0 >> /mnt/etc/fstab
+	# we are not really running reform-migrate but imitate what it does
+	# instead because we want to write out some files after the rsync but
+	# before running reform-boot-config
+	ROOTMNT="$(mktemp --tmpdir --directory reform-setup-encrypted-nvme.XXXXXXXXXX)"
+	trap 'umount $ROOTMNT; cleanupvg; cleanupluks; error' EXIT INT TERM
+	mount /dev/reformvg/root "$ROOTMNT"
+	rsync -axHAWXS --numeric-ids --info=progress2 / "$ROOTMNT"
+	echo "RESUME=UUID=$SWAPUUID" > "$ROOTMNT/etc/initramfs-tools/conf.d/resume"
+	echo "reform_crypt UUID=$CRYPTUUID none luks,discard" > "$ROOTMNT/etc/crypttab"
+	echo "UUID=$SWAPUUID none swap sw 0 0" >> "$ROOTMNT/etc/fstab"
 	trap "cleanupvg; cleanupluks; error" EXIT INT TERM
-	umount /mnt
+	umount "$ROOTMNT"
 
 	read -r -p "Your /boot partition will be on the SD-Card by default. Do you want it on eMMC instead? [y/N]" response
 	if [[ "$response" != "y" ]]; then
