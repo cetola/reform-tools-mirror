@@ -20,15 +20,27 @@ echo ""
 
 usage() {
 	echo "Usage:"
-	echo "  reform-migrate [--emmc] /dev/nvme0n1p1"
-	echo "          Mounts the first partition of an NVMe disk and mirrors your system to it."
-	echo "  reform-migrate [--emmc] /dev/mapper/crypt"
-	echo "          Mounts encrypted disk 'crypt' and mirrors your system to it."
-	echo "          The disk has to be unlocked first with: cryptsetup luksOpen /dev/nvme0n1p1 crypt"
+	echo "  reform-migrate [--emmc] TARGET"
+	echo ""
+	echo "Mounts TARGET and copies the currently running system to it using rsync. This will"
+	echo "overwrite all existing files in TARGET. At the end, reform-boot-config is run and"
+	echo "will set up the first partition of the SD-card or eMMC (depending on the --emmc"
+	echo "option) to load your newly copied rootfs and adjust /etc/fstab of TARGET accordingly."
+	echo ""
+	echo "Options:"
 	echo ""
 	echo "      --emmc Record boot preference on eMMC instead of SD card."
 	echo "             This is only useful with SoM dip switch turned off."
 	echo ""
+	echo "Examples:"
+	echo ""
+	echo "  reform-migrate --emmc /dev/nvme0n1p1"
+	echo "          Mounts the first partition of an NVMe disk and mirrors your system to it."
+	echo "          Configures booting from the first partition on eMMC."
+	echo "  reform-migrate /dev/mapper/crypt"
+	echo "          Mounts encrypted disk 'crypt' and mirrors your system to it."
+	echo "          The disk has to be unlocked first with: cryptsetup luksOpen /dev/nvme0n1p1 crypt"
+	echo "          Configures booting from the first partition on the SD-card as --emmc option is missing."
 }
 
 if [ $# -ne 1 ] && [ $# -ne 2 ]; then
@@ -65,18 +77,15 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
-if mountpoint --quiet /mnt; then
-	echo "/mnt already has something mounted on it" >&2
-	exit 1
-fi
-
 command -v "rsync" >/dev/null 2>&1 || { echo >&2 "Please install \"rsync\" using: apt install rsync"; exit 1; }
 
 echo "Trying to mount $TARGET... (if this fails, format the disk/partition as explained above)"
 
-trap "umount /mnt" EXIT INT TERM
+MOUNTPOINT="$(mktemp --tmpdir --directory reform-migrate.XXXXXXXXXX)"
 
-mount "$TARGET" /mnt
+trap 'umount $MOUNTPOINT' EXIT INT TERM
+
+mount "$TARGET" "$MOUNTPOINT"
 
 echo "Target partition successfully mounted. The next step will copy all your files over to the target, overwriting existing files in the process."
 echo ""
@@ -86,18 +95,18 @@ read -r -p "Are you sure you want to proceed? [y/N] " response
 if [[ "$response" != "y" ]]
 then
 	echo "Exiting."
-	umount /mnt
+	umount "$MOUNTPOINT"
 	trap - EXIT INT TERM
 	exit
 fi
 
 echo "Starting the copy. This can take a while."
 
-rsync -axHAWXS --numeric-ids --info=progress2 / /mnt/
+rsync -axHAWXS --numeric-ids --info=progress2 / "$MOUNTPOINT"
 
 echo "Files copied."
 
-umount /mnt
+umount "$MOUNTPOINT"
 trap - EXIT INT TERM
 
 echo "$TARGET unmounted."
