@@ -11,3 +11,4 @@ systemd/reform-sleep.conf       /usr/lib/systemd/sleep.conf.d
 xorg/10-reform-etnaviv.conf     /usr/share/X11/xorg.conf.d
 initramfs-tools/reform          /usr/share/initramfs-tools/scripts/init-top
 flash-kernel/*                  /usr/share/flash-kernel
+u-boot-menu/reform.conf         /usr/share/u-boot-menu/conf.d
