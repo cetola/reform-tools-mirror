@@ -1,4 +1,10 @@
-reform-tools (1.17) UNRELEASED; urgency=medium
+reform-tools (1.18) reform; urgency=medium
+
+  * install /usr/share/u-boot-menu/conf.d/reform.conf
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Fri, 27 Jan 2023 13:50:15 +0100
+
+reform-tools (1.17) reform; urgency=medium
 
   * bump uboot version to 2023-01-25
 
