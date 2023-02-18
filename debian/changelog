@@ -1,3 +1,9 @@
+reform-tools (1.19) reform; urgency=medium
+
+  * reform2-lpc-dkms.dkms: AUTOINSTALL="yes"
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sat, 18 Feb 2023 09:51:10 +0100
+
 reform-tools (1.18) reform; urgency=medium
 
   * install /usr/share/u-boot-menu/conf.d/reform.conf
