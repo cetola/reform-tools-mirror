@@ -35,9 +35,7 @@ then
         exit
 fi
 
-echo 0 > /sys/class/block/mmcblk0boot0/force_ro
-dd if=/boot/flash.bin of=/dev/mmcblk0boot0 bs=1024 seek=33
-echo 1 > /sys/class/block/mmcblk0boot0/force_ro
+reform-flash-uboot --offline emmc
 
 echo "Bootloader was successfully written to /dev/mmcblk0boot0." >&2
 echo "" >&2
