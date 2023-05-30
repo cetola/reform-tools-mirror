@@ -1,3 +1,10 @@
+reform-tools (1.21) reform; urgency=medium
+
+  * reform-check: check for old /etc/flash-kernel/preboot.d/00reform2_preboot
+    overwriting /usr/share/flash-kernel/preboot.d/00reform2_preboot
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 30 May 2023 07:53:00 +0200
+
 reform-tools (1.20) reform; urgency=medium
 
   * add reform-flash-uboot

@@ -157,6 +157,11 @@ else
 	fi
 fi
 
+if [ -e /etc/flash-kernel/preboot.d/00reform2_preboot ] && printf "# place here any u-boot commands to be executed before boot\n" | cmp --quiet - /etc/flash-kernel/preboot.d/00reform2_preboot; then
+	echo "E: /etc/flash-kernel/preboot.d/00reform2_preboot contains default content overwriting /usr/share/flash-kernel/preboot.d/00reform2_preboot" >&2
+	echo "E: consider deleting /etc/flash-kernel/preboot.d/00reform2_preboot in favour of /usr/share/flash-kernel/preboot.d/00reform2_preboot" >&2
+fi
+
 initramfstoolsmodulescontent="pwm_imx27\nnwl-dsi\nti-sn65dsi86\nimx-dcss\npanel-edp\nmux-mmio\nmxsfb\nusbhid\nimx8mq-interconnect\n"
 if [ ! -e /etc/initramfs-tools/modules ]; then
 	echo "E: /etc/initramfs-tools/modules doesn't exist" >&2
