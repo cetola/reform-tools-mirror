@@ -4,6 +4,7 @@
 #include <linux/spi/spi.h>
 #include <linux/delay.h>
 #include <linux/power_supply.h>
+#include <linux/of.h>
 
 static int lpcProbe(struct spi_device *spi);
 static void lpcRemove(struct spi_device *spi);
