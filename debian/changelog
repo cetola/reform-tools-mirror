@@ -1,3 +1,9 @@
+reform-tools (1.22) reform; urgency=medium
+
+  * bump uboot version to 2023-07-04
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 04 Jul 2023 19:19:43 +0200
+
 reform-tools (1.21) reform; urgency=medium
 
   * reform-check: check for old /etc/flash-kernel/preboot.d/00reform2_preboot

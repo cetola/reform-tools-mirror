@@ -99,8 +99,8 @@ if ! mountpoint --quiet /boot; then
 	echo "E: your /boot has nothing mounted on it -- fix your /etc/fstab" >&2
 fi
 
-ubooturl="https://source.mnt.re/reform/reform-boundary-uboot/-/jobs/artifacts/2023-01-25/raw/flash.bin?job=build"
-ubootsha1="9d1eacedd8ea32284395bdfed05d112a1c445815"
+ubooturl="https://source.mnt.re/reform/reform-boundary-uboot/-/jobs/artifacts/2023-07-04/raw/flash.bin?job=build"
+ubootsha1="41d2ba5fcc65f26224f7d1afed650e86662cea27"
 ubootbin=$(mktemp)
 /usr/lib/apt/apt-helper download-file "$ubooturl" "$ubootbin" "SHA1:$ubootsha1" >/dev/null
 if [ ! -e /boot/flash.bin ]; then

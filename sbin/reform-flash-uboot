@@ -24,8 +24,8 @@ usage() {
 if [ "$#" -eq 0 ] || [ "$1" != "--offline" ]; then
 	echo "Downloading uboot to /boot/flash.bin and comparing checksum" >&2
 
-	ubooturl="https://source.mnt.re/reform/reform-boundary-uboot/-/jobs/artifacts/2023-01-25/raw/flash.bin?job=build"
-	ubootsha1="9d1eacedd8ea32284395bdfed05d112a1c445815"
+	ubooturl="https://source.mnt.re/reform/reform-boundary-uboot/-/jobs/artifacts/2023-07-04/raw/flash.bin?job=build"
+	ubootsha1="41d2ba5fcc65f26224f7d1afed650e86662cea27"
 	/usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file "$ubooturl" "/boot/flash.bin" "SHA1:$ubootsha1"
 elif [ "$#" -gt 0 ] && [ "$1" = "--offline" ]; then
 	echo "Not downloading uboot but using /boot/flash.bin without updating it." >&2
