@@ -1,3 +1,9 @@
+reform-tools (1.24) reform; urgency=medium
+
+  * sbin/reform-flash-uboot: adjust checksum for u-boot 2023-07-04
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 11 Jul 2023 01:49:55 +0200
+
 reform-tools (1.23) reform; urgency=medium
 
   * reform2-lpc-dkms: add missing header for linux 6.4
