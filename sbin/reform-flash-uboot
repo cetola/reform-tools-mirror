@@ -37,7 +37,16 @@ if [ "$#" -eq 0 ]; then
 	exit 0
 fi
 
-if ! echo 9d1eacedd8ea32284395bdfed05d112a1c445815  /boot/flash.bin | sha1sum --quiet --strict --check; then
+version=
+for h in 9d1eacedd8ea32284395bdfed05d112a1c445815 ${version#2023-01-25} \
+	41d2ba5fcc65f26224f7d1afed650e86662cea27 ${version#2023-07-04}; do
+	if echo "$h  /boot/flash.bin" | sha1sum --strict --check >/dev/null 2>&1; then
+		version=1
+		break
+	fi
+done
+
+if [ -z "$version" ]; then
 	echo "Incorrect checksum for /boot/flash.bin" >&2
 	echo "Either flash manually, or run without --offline to download the latest uboot version" >&2
 	exit 1
