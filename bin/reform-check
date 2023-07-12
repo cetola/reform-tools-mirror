@@ -163,15 +163,10 @@ if [ -e /etc/flash-kernel/preboot.d/00reform2_preboot ] && printf "# place here 
 fi
 
 initramfstoolsmodulescontent="pwm_imx27\nnwl-dsi\nti-sn65dsi86\nimx-dcss\npanel-edp\nmux-mmio\nmxsfb\nusbhid\nimx8mq-interconnect\n"
-if [ ! -e /etc/initramfs-tools/modules ]; then
-	echo "E: /etc/initramfs-tools/modules doesn't exist" >&2
-	echo "E: /etc/initramfs-tools/modules should contain the following lines:" >&2
-	printf "$initramfstoolsmodulescontent" >&2
-else
-	if ! printf "$initramfstoolsmodulescontent" | cmp --quiet - /etc/initramfs-tools/modules; then
-		echo "W: unexpected content in /etc/initramfs-tools/modules:" >&2
-		printf "$initramfstoolsmodulescontent" | diff -u - /etc/initramfs-tools/modules || true
-	fi
+if [ -e /etc/initramfs-tools/modules ] && printf "$initramfstoolsmodulescontent" | cmp --quiet - /etc/initramfs-tools/modules; then
+	echo "W: /etc/initramfs-tools/modules contains default content superseded by /usr/share/initramfs-tools/modules.d/reform.conf" >&2
+	echo "W: consider restoring /etc/initramfs-tools/modules to its original state by running:" >&2
+	echo "sed '/^###/d' /usr/share/initramfs-tools/modules | sudo tee /etc/initramfs-tools/modules" >&2
 fi
 
 if [ ! -e /etc/motd ]; then

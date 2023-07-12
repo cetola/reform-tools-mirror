@@ -1,3 +1,10 @@
+reform-tools (1.25) reform; urgency=medium
+
+  * install /usr/share/initramfs-tools/modules.d/reform.conf replacing
+    /etc/initramfs-tools/modules
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Wed, 12 Jul 2023 14:17:51 +0200
+
 reform-tools (1.24) reform; urgency=medium
 
   * sbin/reform-flash-uboot: adjust checksum for u-boot 2023-07-04
