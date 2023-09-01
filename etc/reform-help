@@ -3,10 +3,8 @@ Some useful commands to explore the system:
 Learn more about a command:        [1mman[0m [1;4mname-of-command[0m
 Move around:                       [1mls[0m, [1mcd[0m, [1mcd ..[0m
 
-Start a graphical environment:     [1msway[0m
-                                   [1mgnome[0m
-                                   [1mreform-windowmaker[0m
-                                   [1mkde[0m
+Start a graphical environment:     [1msway[0m (tiling)
+                                   [1mwayfire[0m (traditional)
 
 See all running processes:         [1mhtop[0m
 See system services:               [1msystemctl[0m
@@ -21,6 +19,7 @@ Set keyboard layout and timezone:  [1mreform-config[0m
 Chat in Reform community:          [1mreform-chat[0m
 Select boot device:                [1mreform-boot-config[0m
 Select display configuration:      [1mreform-display-config[0m
+Set up encrypted NVMe:             [1mreform-setup-encrypted-nvme[0m
 Update / install software:         [1msudo apt update[0m
                                    [1mapt search [1;4mkeyword[0m
                                    [1msudo apt install [1;4mpackage[0m
@@ -30,4 +29,3 @@ Log out:                           [1mexit[0m
 
 Most programs can be quit with Ctrl+C, Q, or Ctrl+Q.
 Exit the chat with /quit.
-
