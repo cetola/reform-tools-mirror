@@ -18,7 +18,7 @@ set $term foot
 # Your preferred application launcher
 # Note: it's recommended that you pass the final command to sway
 #set $menu dmenu_path | dmenu | xargs swaymsg exec --
-set $menu rofi -show drun -font "Inter Bold 24" -display-drun "" -theme mnt-reform | xargs swaymsg exec --
+set $menu wofi --show drun -p Search -n -i -I -W 66% -s $HOME/.config/wofi.css
 
 #xwayland disable
 
@@ -64,7 +64,7 @@ exec swaybg -c "#000000"
 # Read `man 5 sway-input` for more information about this section.
 #
 
-default_border pixel 10
+#default_border pixel 10
 hide_edge_borders both
 
 ### Key bindings
@@ -75,11 +75,12 @@ hide_edge_borders both
     bindsym $mod+Return exec $term
     bindsym $mod+Shift+s exec grim ~/Pictures/$(date +'screenshot-%Y-%m-%d-%H-%M-%S').png
     bindsym $mod+Shift+x exec grim -g "$(slurp)" ~/Pictures/$(date +'screenshot-%Y-%m-%d-%H-%M-%S').png
-    bindsym $mod+Shift+v exec reform-pavucontrol
+    bindsym $mod+Shift+v exec pavucontrol
     bindsym $mod+Shift+l exec swaylock
 
     # Kill focused window
     bindsym $mod+Escape kill
+    bindsym --border button3 kill
 
     # Start your launcher
     bindsym $mod+d exec $menu
@@ -226,7 +227,7 @@ client.placeholder      #000000 #0c0c0c #ffffff #000000   #0c0c0c
 
 client.background       #ffffff
 
-font pango: Inter, Icons Bold 14
+font pango: Inter, Icons Medium 11
 
 #
 # Status Bar:
@@ -263,7 +264,7 @@ seat seat0 xcursor_theme Adwaita 24
 exec waybar
 
 # start a terminal
-exec xfce4-terminal -e 'bash -c "reform-desktop-help; bash"'
+exec foot bash -c "reform-desktop-help; bash"
 
 # start gnome xsettings daemon
 exec /usr/libexec/gsd-xsettings
@@ -271,10 +272,17 @@ exec /usr/libexec/gsd-xsettings
 # start a policykit agent
 exec lxpolkit
 
-# default GTK theme settings
-exec gsettings set org.gnome.desktop.interface font-name 'Inter 14'
-exec gsettings set org.gnome.desktop.interface monospace-font-name 'Iosevka Term Light 14'
-exec gsettings set org.gnome.desktop.interface gtk-theme 'Arc-Dark'
+# start network manager applet
+exec nm-applet --indicator
+
+# start bluetooth applet
+exec blueman-applet
+
+# default theme settings
+exec gsettings set org.gnome.desktop.interface icon-theme 'Papirus'
+exec gsettings set org.gnome.desktop.interface font-name 'Inter Medium 11'
+exec gsettings set org.gnome.desktop.interface monospace-font-name 'Iosevka Term 11'
+exec gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'
 exec gsettings set org.gnome.gedit.preferences.editor scheme 'cobalt'
 
 include config.d/*
