@@ -8,8 +8,6 @@ if [ "MNT Reform 2" != "$MACHINE" ] && [ "MNT Reform 2 HDMI" != "$MACHINE" ]
   exit
 fi
 
-TARGET="$1"
-
 echo ""
 echo "This script can copy your current OS and files to a different disk, such as an SSD installed in MNT Reform."
 echo ""
