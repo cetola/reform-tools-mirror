@@ -3,8 +3,8 @@ Some useful commands to explore the system:
 Learn more about a command:        [1mman[0m [1;4mname-of-command[0m
 Move around:                       [1mls[0m, [1mcd[0m, [1mcd ..[0m
 
-Start a graphical environment:     [1msway[0m (tiling)
-                                   [1mwayfire[0m (traditional)
+Start a graphical environment:     [1mwayfire[0m (overlapping windows, traditional)
+                                   [1msway[0m (tiling windows, advanced)
 
 See all running processes:         [1mhtop[0m
 See system services:               [1msystemctl[0m
