@@ -7,6 +7,12 @@ if [ "$(id -u)" -ne 0 ]; then
 	exit 1
 fi
 
+MACHINE=$(tr -d '\0' < /proc/device-tree/model)
+if [ "MNT Reform 2" != "$MACHINE" ] && [ "MNT Reform 2 HDMI" != "$MACHINE" ]
+  then echo "Sorry, reform-flash-rescue is only supported on MNT Reform 2 with i.MX8MQ processor module."
+  exit
+fi
+
 usage() {
 	echo "Usage: " >&2
 	echo "  reform-flash-uboot [--offline] [device...]" >&2

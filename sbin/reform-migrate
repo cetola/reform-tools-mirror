@@ -3,8 +3,8 @@
 set -e
 
 MACHINE=$(tr -d '\0' < /proc/device-tree/model)
-if [ "xMNT Reform 2" != "x$MACHINE" ] && [ "xMNT Reform 2 HDMI" != "x$MACHINE" ]
-  then echo "Sorry, reform-migrate is only supported on MNT Reform 2 with i.MX8MQ processor module."
+if [ "MNT Reform 2" != "$MACHINE" ] && [ "MNT Reform 2 HDMI" != "$MACHINE" ]
+  then echo "Sorry, reform-flash-rescue is only supported on MNT Reform 2 with i.MX8MQ processor module."
   exit
 fi
 
@@ -122,4 +122,3 @@ echo "$TARGET unmounted."
 echo "Running reform-boot-config..."
 
 reform-boot-config $EMMC "$TARGET"
-

@@ -13,8 +13,8 @@ if [ "$EUID" -ne 0 ]
 fi
 
 MACHINE=$(tr -d '\0' < /proc/device-tree/model)
-if [ "xMNT Reform 2" != "x$MACHINE" ] && [ "xMNT Reform 2 HDMI" != "x$MACHINE" ]
-  then echo "reform-standby is only supported on MNT Reform 2 with i.MX8MQ processor module."
+if [ "MNT Reform 2" != "$MACHINE" ] && [ "MNT Reform 2 HDMI" != "$MACHINE" ]
+  then echo "Sorry, reform-flash-rescue is only supported on MNT Reform 2 with i.MX8MQ processor module."
   exit
 fi
 
