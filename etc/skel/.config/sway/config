@@ -26,7 +26,8 @@ set $menu wofi --show drun -p Search -n -i -I -W 66% -s $HOME/.config/wofi.css
 #
 # Default wallpaper (more resolutions are available in @datadir@/backgrounds/sway/)
 #output * bg "#000000" fill
-exec swaybg -c "#000000"
+#exec swaybg -c "#000000"
+exec swaybg -i /usr/share/backgrounds/reform-mountains.jpg
 
 #
 # Example configuration:
@@ -219,9 +220,9 @@ mode "resize" {
 bindsym $mod+r mode "resize"
 
 # class                 border  backgr. text    indicator child_border
-client.focused          #000000 #ffffff #000000 #000000   #000000
-client.focused_inactive #000000 #eeeeee #000000 #000000   #000000
-client.unfocused        #000000 #222222 #888888 #000000   #000000
+client.focused          #000000 #080808 #ffffff #000000   #000000
+client.focused_inactive #000000 #000000 #eeeeee #000000   #000000
+client.unfocused        #000000 #000000 #888888 #000000   #000000
 client.urgent           #2f343a #900000 #ffffff #900000   #900000
 client.placeholder      #000000 #0c0c0c #ffffff #000000   #0c0c0c
 
