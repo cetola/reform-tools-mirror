@@ -7,6 +7,12 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
+MACHINE=$(tr -d '\0' < /proc/device-tree/model)
+if [ "xMNT Reform 2" != "x$MACHINE" ] && [ "xMNT Reform 2 HDMI" != "x$MACHINE" ]
+  then echo "Sorry, reform-display-config is only supported on MNT Reform 2 with i.MX8MQ processor module."
+  exit
+fi
+
 CHOICE="$1"
 BOOTPART="mmcblk1p1"
 BOOTDISK="SD card"

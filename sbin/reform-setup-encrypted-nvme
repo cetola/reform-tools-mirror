@@ -2,6 +2,12 @@
 
 set -e
 
+MACHINE=$(tr -d '\0' < /proc/device-tree/model)
+if [ "xMNT Reform 2" != "x$MACHINE" ] && [ "xMNT Reform 2 HDMI" != "x$MACHINE" ]
+  then echo "Sorry, reform-setup-encrypted-nvme is only supported on MNT Reform 2 with i.MX8MQ processor module."
+  exit
+fi
+
 if [ "$EUID" -ne 0 ]
   then echo "reform-setup-encrypted-nvme has to be run as root / using sudo."
   exit
