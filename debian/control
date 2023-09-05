@@ -5,7 +5,7 @@ Maintainer: Lukas F. Hartmann <lukas@mntre.com>
 Uploaders: Johannes Schauer Marin Rodrigues <josch@debian.org>
 Homepage: https://source.mnt.re/reform/reform-tools/
 Standards-Version: 4.6.0.1
-Build-Depends: debhelper-compat (= 13)
+Build-Depends: debhelper-compat (= 13), dh-sequence-dkms
 Rules-Requires-Root: no
 
 Package: reform-tools
@@ -19,6 +19,7 @@ Depends: alsa-utils,
          pavucontrol,
          procps,
          python3,
+         reform2-lpc-dkms,
          rsync,
          systemd,
          tzdata,
@@ -29,3 +30,10 @@ Description: MNT Reform System Tools
  /sbin/reform-init, a boot manager script that gets loaded by u-boot and which
  in turn launches the real /sbin/init after mounting an (encrypted) boot
  medium.
+
+Package: reform2-lpc-dkms
+Architecture: all
+Depends: ${misc:Depends}
+Description: dkms driver sources for reform2 lpc
+ This package provides sources for the reform2_lpc kernel module for use with
+ the Dynamic Kernel Module Support (dkms) framework.

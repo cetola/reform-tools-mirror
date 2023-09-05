@@ -1,0 +1,106 @@
+#!/bin/sh
+
+set -eu
+
+if [ "$(id -u)" -ne 0 ]; then
+	echo "reform-flash-uboot has to be run as root / using sudo."
+	exit 1
+fi
+
+usage() {
+	echo "Usage: " >&2
+	echo "  reform-flash-uboot [--offline] [device...]" >&2
+	echo "" >&2
+	echo "Download and write recent uboot to eMMC or SD-Card." >&2
+	echo "Without arguments only /boot/flash.bin wil be updated unless --offline is given." >&2
+	echo "Otherwise, the arguments are the devices onto which to install uboot." >&2
+	echo "Two device shortcuts are provided:" >&2
+	echo "" >&2
+	echo "   emmc -> /dev/mmcblk0boot0" >&2
+	echo "   sd -> /dev/mmcblk1" >&2
+	echo "" >&2
+}
+
+if [ "$#" -eq 0 ] || [ "$1" != "--offline" ]; then
+	echo "Downloading uboot to /boot/flash.bin and comparing checksum" >&2
+
+	ubooturl="https://source.mnt.re/reform/reform-boundary-uboot/-/jobs/artifacts/2023-07-04/raw/flash.bin?job=build"
+	ubootsha1="41d2ba5fcc65f26224f7d1afed650e86662cea27"
+	/usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file "$ubooturl" "/boot/flash.bin" "SHA1:$ubootsha1"
+elif [ "$#" -gt 0 ] && [ "$1" = "--offline" ]; then
+	echo "Not downloading uboot but using /boot/flash.bin without updating it." >&2
+	shift
+fi
+
+if [ "$#" -eq 0 ]; then
+	echo "No device to flash uboot to provided. Exiting." >&2
+	exit 0
+fi
+
+version=
+for h in 9d1eacedd8ea32284395bdfed05d112a1c445815 ${version#2023-01-25} \
+	41d2ba5fcc65f26224f7d1afed650e86662cea27 ${version#2023-07-04}; do
+	if echo "$h  /boot/flash.bin" | sha1sum --strict --check >/dev/null 2>&1; then
+		version=1
+		break
+	fi
+done
+
+if [ -z "$version" ]; then
+	echo "Incorrect checksum for /boot/flash.bin" >&2
+	echo "Either flash manually, or run without --offline to download the latest uboot version" >&2
+	exit 1
+fi
+
+ubootoffset=$((1024*33))
+ubootsize=$(stat --format=%s "/boot/flash.bin")
+
+# check if there is enough free space at the beginning of the disk
+for dev in "$@"; do
+	case $dev in
+		emmc) dev=/dev/mmcblk0boot0;;
+		sd)   dev=/dev/mmcblk1;;
+	esac
+
+	if [ "$dev" = "/dev/mmcblk0boot0" ]; then
+		continue
+	fi
+
+	freeuntil=$(parted --machine "$dev" unit B print free | grep --max-count=1 '^1:1024B:.*:free;')
+	freeuntil=${freeuntil##1:1024B:}
+	freeuntil=${freeuntil%B:*:free;}
+	# The following checks whether the parsed output is a valid integer.
+	# We cannot use [0-9] because that matches on any character (or
+	# possibly multi-character collation element) that sorts in between 0
+	# and 9.
+	# https://lists.gnu.org/archive/html/bug-bash/2021-02/msg00054.html
+	case "$freeuntil" in *[!0123456789]*|0?*|"")
+		echo "Unexpected parted output";
+		exit 1
+	esac
+
+	if [ "$((ubootoffset+ubootsize))" -ge "$freeuntil" ]; then
+		echo "the first partition on $dev starts at $freeuntil and would be overwritten by uboot" >&2
+		echo "make sure that the first $((ubootoffset+ubootsize)) bytes are free on $dev" >&2
+		exit 1
+	fi
+done
+
+# do the flashing
+for dev in "$@"; do
+	case $dev in
+		emmc) dev=/dev/mmcblk0boot0;;
+		sd)   dev=/dev/mmcblk1;;
+	esac
+
+	echo "Writing /boot/flash.bin to $dev" >&2
+
+	if [ "$dev" = "/dev/mmcblk0boot0" ]; then
+		echo 0 > /sys/class/block/mmcblk0boot0/force_ro
+		dd if=/boot/flash.bin of=/dev/mmcblk0boot0 bs=1024 seek=33
+		echo 1 > /sys/class/block/mmcblk0boot0/force_ro
+		continue
+	fi
+
+	dd if=/boot/flash.bin of="$dev" bs=1024 seek=33
+done

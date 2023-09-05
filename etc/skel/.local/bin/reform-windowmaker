@@ -15,7 +15,7 @@ cage -s -- Xwayland $DNUM -retro -noreset &
 export DISPLAY=$DNUM
 
 # idea lifted from https://gist.github.com/tullmann/476cc71169295d5c3fe6
-MAX=10
+MAX=15
 CT=0
 while ! xdpyinfo >/dev/null 2>&1; do
     sleep 0.50s

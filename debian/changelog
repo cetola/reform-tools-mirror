@@ -1,3 +1,152 @@
+reform-tools (1.24) reform; urgency=medium
+
+  * sbin/reform-flash-uboot: adjust checksum for u-boot 2023-07-04
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 11 Jul 2023 01:49:55 +0200
+
+reform-tools (1.23) reform; urgency=medium
+
+  * reform2-lpc-dkms: add missing header for linux 6.4
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 13 Jun 2023 10:38:15 +0200
+
+reform-tools (1.22) reform; urgency=medium
+
+  * bump uboot version to 2023-07-04
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 04 Jul 2023 19:19:43 +0200
+
+reform-tools (1.21) reform; urgency=medium
+
+  * reform-check: check for old /etc/flash-kernel/preboot.d/00reform2_preboot
+    overwriting /usr/share/flash-kernel/preboot.d/00reform2_preboot
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 30 May 2023 07:53:00 +0200
+
+reform-tools (1.20) reform; urgency=medium
+
+  * add reform-flash-uboot
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sat, 08 Apr 2023 08:31:58 +0200
+
+reform-tools (1.19) reform; urgency=medium
+
+  * reform2-lpc-dkms.dkms: AUTOINSTALL="yes"
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sat, 18 Feb 2023 09:51:10 +0100
+
+reform-tools (1.18) reform; urgency=medium
+
+  * install /usr/share/u-boot-menu/conf.d/reform.conf
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Fri, 27 Jan 2023 13:50:15 +0100
+
+reform-tools (1.17) reform; urgency=medium
+
+  * bump uboot version to 2023-01-25
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Fri, 27 Jan 2023 12:08:57 +0100
+
+reform-tools (1.16) reform; urgency=medium
+
+  * add reform-check utility
+  * etc/profile.d/reform.sh: remove call to unicode_start as its functionality
+    is provided automatically by console-setup
+  * etc/motd-rescue: adjust message to not specifically talk about eMMC, SDcard
+    or NVMe anymore
+  * etc/motd: use reform-tools date in message
+  * etc/profile.d/reform.sh: export MOZ_ENABLE_WAYLAND and
+    _JAVA_AWT_WM_NONREPARENTING
+  * sbin/reform-flash-rescue: check all mmcblk0 partitions in a loop before
+    proceeding
+  * sbin/reform-migrate: expand usage message
+  * sbin/reform-setup-encrypted-nvme: mount to tmpdir instead of /mnt
+  * sbin/reform-migrate: mount to tmpdir instead of /mnt
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sun, 18 Dec 2022 14:36:56 +0100
+
+reform-tools (1.15) reform; urgency=medium
+
+  * rework reform-boot-config
+     - support all combinations of:
+        * new root partition is already monted as /
+        * new root partition lives elsewhere
+        * new /boot partition is the same as the already configured one
+        * new /boot is already mounted
+        * new /boot device doesn't exist
+     - error out if anything is still mounted that shouldn't be mounted
+     - only mount when necessary
+     - only use chroot if new root device is not /
+     - use traps to always unmount everything and clean tmpfiles upon
+       failure
+     - consult /etc/fstab of new root for location of old /boot
+     - copy over contents of old /boot to new one if necessary
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sat, 03 Dec 2022 07:23:28 +0100
+
+reform-tools (1.14) reform; urgency=medium
+
+  * Disable the raid456 kernel module to prevent losing wm8960audio
+
+ -- Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>  Sun, 06 Nov 2022 17:14:03 +0100
+
+reform-tools (1.13) reform; urgency=medium
+
+  * install flash-kernel boot scripts to /usr/share instead of /etc
+  * flash-kernel/preboot.d/00reform2_preboot: even if ${fdtfile} is set, use
+    dtb-${fk_kvers} if it exists
+
+ -- Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>  Sun, 06 Nov 2022 17:13:32 +0100
+
+reform-tools (1.12) reform; urgency=medium
+
+  * install /usr/share/initramfs-tools/scripts/init-top/reform as a temporary
+    workaround to mxsfb producing a blank screen on roughly 50% of boots
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Wed, 12 Oct 2022 05:38:40 +0200
+
+reform-tools (1.11) reform; urgency=medium
+
+  * reform-{boot-config,setup-encrypted-nvme}: add more cleanup code to exit
+    traps and be verbose about script failure
+  * reform-boot-config: allow messing up the currently running system by using
+    an interactive prompt
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 13 Sep 2022 04:01:00 +0200
+
+reform-tools (1.10) reform; urgency=medium
+
+  * add reform2-lpc-dkms package with the reform2_lpc module
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Mon, 12 Sep 2022 16:06:20 +0200
+
+reform-tools (1.9) reform; urgency=medium
+
+  * install /usr/share/X11/xorg.conf.d/10-reform-etnaviv.conf
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Wed, 07 Sep 2022 17:02:24 +0200
+
+reform-tools (1.8) reform; urgency=medium
+
+  * etc/skel/.config/mpv/mpv.conf: set maximum resolution of ytdl to 1080p
+  * sway: fix KDE cursor appearing in sway
+  * sbin/reform-{flash-rescue,boot-config,migrate,display-config,
+    setup-encrypted-nvme}: check if devices are in use before proceeding
+  * sbin/reform-boot-config: allow passing the device name explicitly
+  * sbin/reform-migrate: add --emmc option
+  * sbin/reform-{boot-config,display-config,migrate}: inform about the DIP
+    switch if --emmc option is used
+  * sbin/reform-setup-encrypted-nvme: replicate what reform-migrate does to
+    avoid modifying the currently running system and ask whether /boot should
+    be on emmc or sd-card
+  * sbin/reform-{boot,display}-config: output meaningful error if
+    /dev/mmcblk0p1 is missing
+  * sbin/reform-{boot,display}-config: inform about the DIP switch always
+  * sbin/reform-{display-config,migrate,setup-encrypted-nvme}: umount in a
+    shell trap
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sat, 09 Jul 2022 15:29:59 +0200
+
 reform-tools (1.7) reform; urgency=medium
 
   * sbin/reform-flash-rescue: download from main branch instead of old sysimage-v3

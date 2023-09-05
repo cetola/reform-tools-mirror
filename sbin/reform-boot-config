@@ -1,4 +1,20 @@
 #!/bin/sh
+#
+# uboot on either emmc or the sd-card (as decided by the position of the DIP
+# switch) will load the kernel and initramfs from the first /boot partiton
+# where it finds a valid boot.scr (or extlinux.conf). It will attempt to find
+# a boot.scr on the first partition of the sd-card first and then will try
+# the first partition on emmc.
+#
+# This script sets up the first partition on the sd-card or emmc (as decided
+# by whether the --emmc option was passed or not) such that the initramfs on
+# that partition will load the correct rootfs. The rootfs can either reside on
+# the sd-card, emmc, nvme or a usb mass storage device.
+#
+# The initramfs is tightly tied to the rootfs and the kernel version because it
+# is generated from the contents of the rootfs and contains the kernel modules
+# that must fit the correct kernel version. The choice of rootfs stored inside
+# the initramfs is derived from the settings of /etc/fstab in the rootfs.
 
 set -eu
 
@@ -18,21 +34,21 @@ echo
 
 usage() {
 	echo "Usage: " >&2
-	echo "  reform-boot-config [--emmc] sd   Boot from SD card (default)." >&2
-	echo "  reform-boot-config [--emmc] nvme Boot from NVMe SSD." >&2
-	echo "  reform-boot-config [--emmc] usb  Boot from USB storage device." >&2
-	echo "  reform-boot-config [--emmc] emmc Boot from eMMC." >&2
+	echo "  reform-boot-config [--emmc] sd    # rootfs on SD card (/dev/mmcblk1p2, default)." >&2
+	echo "  reform-boot-config [--emmc] nvme  # rootfs on NVMe SSD (/dev/nvme0n1p1)." >&2
+	echo "  reform-boot-config [--emmc] usb   # rootfs on USB storage device (/dev/sda1)." >&2
+	echo "  reform-boot-config [--emmc] emmc  # rootfs on eMMC (/dev/mmcblk0p2)." >&2
 	echo "" >&2
 	echo "      --emmc Record boot preference on eMMC instead of SD card." >&2
 	echo "             This is only useful with SoM dip switch turned off." >&2
 	echo "" >&2
 	echo "Choosing sd, nvme, usb or emmc will set the root partition to" >&2
 	echo "/dev/mmcblk1p2, /dev/nvme0n1p1, /dev/sda1 or /dev/mmcblk0p2," >&2
-	echo "respectively. You can choose another root partition by running" >&2
-	echo "$0 with the ROOTPART environment variable set to" >&2
-	echo "the device path. For example, to boot from an LVM volume, run:" >&2
+	echo "respectively.i You can choose another root partition by passing" >&2
+	echo "the absolute device path starting with /dev/ explicitly." >&2
+	echo "For example, to boot a rootfs on an LVM volume, run:" >&2
 	echo "" >&2
-	echo "    ROOTPART="/dev/reformvg/root" reform-boot-config sd" >&2
+	echo "    reform-boot-config /dev/reformvg/root" >&2
 }
 
 if [ $# -ne 1 ] && [ $# -ne 2 ]; then
@@ -43,15 +59,14 @@ fi
 BOOTPREF="$1"
 BOOTPART="mmcblk1p1"
 
-if [ "--emmc" = "$1" ]
-then
-    BOOTPREF="$2"
-    BOOTPART="mmcblk0p1"
-fi
+if [ "--emmc" = "$1" ]; then
+	BOOTPREF="$2"
+	BOOTPART="mmcblk0p1"
 
-if mountpoint --quiet /mnt; then
-	echo "/mnt already has something mounted on it" >&2
-	exit 1
+	if [ ! -b "/dev/mmcblk0p1" ]; then
+		echo "/dev/mmcblk0p1 doesn't exist -- run reform-flash-rescue" >&2
+		exit 1
+	fi
 fi
 
 case $BOOTPREF in
@@ -59,49 +74,189 @@ case $BOOTPREF in
 	nvme) : "${ROOTPART:=nvme0n1p1}";;
 	usb)  : "${ROOTPART:=sda1}";;
 	emmc) : "${ROOTPART:=mmcblk0p2}";;
+	/dev/*)
+		if [ ! -b "$BOOTPREF" ]; then
+			echo "there is no block device called $BOOTPREF" >&2
+			exit 1
+		fi
+		: "${ROOTPART:=$BOOTPREF}"
+		;;
 	*) usage; exit 1;;
 esac
 
 ROOTPART="${ROOTPART#/dev/}"
 
+# POSIX shell only has a single array: $@
+# Instead of storing the list of directories that need to be unmounted or
+# removed in a string separated by whitespaces (and thus not supporting
+# whitespace characters in path names) we use $@ to store that list.
+# We push each new entry to the beginning of the list so that we can use
+# shift to pop the first entry.
 cleanup() {
-	umount /mnt/boot || :
-	umount /mnt/dev || :
-	umount /mnt/sys || :
-	umount /mnt/proc || :
-	umount /mnt || :
+	: "${TMPDIR:=/tmp}"
+	for dir; do
+		# $dir is either a device that has to be unmounted or an empty
+		# temporary directory that used to be a mountpoint
+		echo "cleaning up $dir" >&2
+		ret=0
+		if [ -d "$dir" ]; then
+			# special handling for /dev, /sys and /proc
+			case "$dir" in
+				*/dev|*/sys|*/proc) umount "$dir" || ret=$?;;
+				*) rmdir "$dir" || ret=$?;;
+			esac
+		else
+			umount "$dir" || ret=$?
+		fi
+		if [ "$ret" != 0 ]; then
+			echo "cleaning up $dir failed" >&2
+		fi
+		# remove this item from $@
+		shift
+	done
+	if [ "${MOUNTROOT:-}" = "/" ]; then
+		ret=0
+		mount /boot || ret=$?
+		if [ "$ret" != 0 ]; then
+			echo "mounting /boot failed" >&2
+		fi
+	fi
+	echo reform-boot-config FAILED to run >&2
 }
+set --
+trap 'cleanup "$@"' EXIT INT TERM
 
-trap cleanup EXIT INT TERM
+# check if rootfs is already mounted somewhere that is not /
+MOUNTROOT="$(lsblk --noheadings --output=MOUNTPOINT "/dev/$ROOTPART")"
+if [ "$MOUNTROOT" != "" ] && [ "$MOUNTROOT" != "/" ]; then
+	echo "/dev/$ROOTPART is still mounted on $MOUNTROOT." >&2
+	echo "Please unmount before running this script" >&2
+	exit 1
+fi
 
-mount /dev/$ROOTPART /mnt
-mount /dev/$BOOTPART /mnt/boot
-mount -o bind /dev /mnt/dev
-mount -t sysfs sys /mnt/sys
-mount -t proc proc /mnt/proc
+# mount the desired root partition somewhere if it isn't mounted yet
+if [ "$MOUNTROOT" = "" ]; then
+	MOUNTROOT="$(mktemp --tmpdir --directory reform-boot-config.XXXXXXXXXX)"
+	set -- "/dev/$ROOTPART" "$MOUNTROOT" "$@"
+	mount "/dev/$ROOTPART" "$MOUNTROOT"
+fi
 
+if [ ! -d "$MOUNTROOT/boot" ]; then
+	echo "the rootfs does not contain a /boot directory" >&2
+	exit 1
+fi
 
-if LIBMOUNT_FSTAB=/mnt/etc/fstab findmnt --fstab --noheadings --source "/dev/$ROOTPART" --mountpoint / >/dev/null && \
-	LIBMOUNT_FSTAB=/mnt/etc/fstab findmnt --fstab --noheadings --source "/dev/$BOOTPART" --mountpoint /boot >/dev/null; then
+# find the device that was mounted as /boot according to the /etc/fstab in the
+# given rootfs
+OLDBOOTPART="$(LIBMOUNT_FSTAB="$MOUNTROOT/etc/fstab" findmnt --fstab --noheadings --evaluate --mountpoint /boot --output SOURCE)"
+if [ -z "$OLDBOOTPART" ]; then
+	echo "cannot find /boot device referenced by /etc/fstab in rootfs at /dev/$ROOTPART" >&2
+	exit 1
+fi
+if [ ! -e "$OLDBOOTPART" ]; then
+	echo "/boot device $OLDBOOTPART from /etc/fstab in /dev/$ROOTPART doesn't exist" >&2
+	exit 1
+fi
+
+# check if the new boot is still mounted somewhere
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/$BOOTPART)" ]; then
+	echo "/dev/$BOOTPART is still mounted somewhere." >&2
+	echo "Please unmount before running this script" >&2
+	exit 1
+fi
+
+# check that the new mountpoint for /boot is empty
+if mountpoint --quiet "$MOUNTROOT/boot"; then
+	echo "Something is still mounted on $MOUNTROOT/boot." >&2
+	echo "Please unmount before running this script" >&2
+	exit 1
+fi
+
+# mount the new boot partition
+set -- "/dev/$BOOTPART" "$@"
+mount "/dev/$BOOTPART" "$MOUNTROOT/boot"
+
+if [ "$OLDBOOTPART" = "/dev/$BOOTPART" ]; then
+	echo "the /boot partition /dev/$BOOTPART referenced by the rootfs at /dev/$ROOTPART remains the same" >&2
+else
+	# copy the contents of the old /boot to the new /boot
+	OLDMOUNTBOOT="$(lsblk --noheadings --output=MOUNTPOINT "$OLDBOOTPART")"
+	needumount="no"
+	if [ "$OLDMOUNTBOOT" = "" ]; then
+		OLDMOUNTBOOT="$(mktemp --tmpdir --directory reform-boot-config.XXXXXXXXXX)"
+		set -- "$OLDBOOTPART" "$OLDMOUNTBOOT" "$@"
+		mount "$OLDBOOTPART" "$OLDMOUNTBOOT"
+		needumount="yes"
+	fi
+
+	rsync -axHAWXS --numeric-ids --quiet "$OLDMOUNTBOOT/" "$MOUNTROOT/boot"
+	if [ "$needumount" = "yes" ]; then
+		[ "$1" = "$OLDBOOTPART" ]  && shift && umount "$OLDBOOTPART"
+		[ "$1" = "$OLDMOUNTBOOT" ] && shift && rmdir "$OLDMOUNTBOOT"
+	fi
+fi
+
+if LIBMOUNT_FSTAB="$MOUNTROOT/etc/fstab" findmnt --fstab --noheadings --source "/dev/$ROOTPART" --mountpoint "/" >/dev/null && \
+	LIBMOUNT_FSTAB="$MOUNTROOT/etc/fstab" findmnt --fstab --noheadings --source "/dev/$BOOTPART" --mountpoint "/boot" >/dev/null; then
 	echo "/etc/fstab already contains the correct entries" >&2
 else
 	echo "commenting original /etc/fstab contents" >&2
 
 	SWAP=
-	if LIBMOUNT_FSTAB=/mnt/etc/fstab findmnt --fstab --types swap >/dev/null; then
-		SWAP="$(LIBMOUNT_FSTAB=/mnt/etc/fstab findmnt --noheadings --fstab --types swap --output SOURCE,TARGET,FSTYPE,OPTIONS,FREQ,PASSNO)"
+	if LIBMOUNT_FSTAB="$MOUNTROOT/etc/fstab" findmnt --fstab --types swap >/dev/null; then
+		SWAP="$(LIBMOUNT_FSTAB="$MOUNTROOT/etc/fstab" findmnt --noheadings --fstab --types swap --output SOURCE,TARGET,FSTYPE,OPTIONS,FREQ,PASSNO)"
 	fi
 
-	sed -i -e 's/^/#/' /mnt/etc/fstab
-	cat << END >> /mnt/etc/fstab
+	sed -i -e 's/^/#/' "$MOUNTROOT/etc/fstab"
+	cat << END >> "$MOUNTROOT/etc/fstab"
 /dev/$ROOTPART / auto errors=remount-ro 0 1
 /dev/$BOOTPART /boot auto errors=remount-ro 0 1
 END
 
 	if [ -n "$SWAP" ]; then
-		echo "$SWAP" >> /mnt/etc/fstab
+		echo "$SWAP" >> "$MOUNTROOT/etc/fstab"
 	fi
 fi
 
-chroot /mnt update-initramfs -u
+if [ "$MOUNTROOT" = "/" ]; then
+	update-initramfs -u
+else
+	set -- "$MOUNTROOT/proc" "$MOUNTROOT/sys" "$MOUNTROOT/dev" "$@"
+	mount -o bind /dev "$MOUNTROOT/dev"
+	mount -t sysfs sys "$MOUNTROOT/sys"
+	mount -t proc proc "$MOUNTROOT/proc"
+	chroot "$MOUNTROOT" update-initramfs -u
+	[ "$1" = "$MOUNTROOT/proc" ] && shift && umount "$MOUNTROOT/proc"
+	[ "$1" = "$MOUNTROOT/sys" ]  && shift && umount "$MOUNTROOT/sys"
+	[ "$1" = "$MOUNTROOT/dev" ]  && shift && umount "$MOUNTROOT/dev"
+fi
+
+# unmount /boot partition
+[ "$1" = "/dev/$BOOTPART" ] && shift && umount "/dev/$BOOTPART"
+
+# unmount the root partition if necessary
+if [ "$MOUNTROOT" != "/" ]; then
+	[ "$1" = "/dev/$ROOTPART" ] && shift && umount "/dev/$ROOTPART"
+	[ "$1" = "$MOUNTROOT" ]     && shift && rmdir "$MOUNTROOT"
+fi
+
+# make sure that the cleanup array is empty now
+[ $# -eq 0 ]
+
+trap - EXIT INT TERM
+
+# since /boot had to be unmounted before running this script, make sure to
+# mount it again
+if [ "$MOUNTROOT" = "/" ]; then
+	mount /boot
+fi
+
+if [ "$BOOTPART" = "mmcblk0p1" ]; then
+	echo "Your /boot partition is on emmc (/dev/$BOOTPART)." >&2
+	echo "Make sure that your DIP switch has been set to OFF." >&2
+else
+	echo "Your /boot partition is on your SD-Card (/dev/$BOOTPART)." >&2
+	echo "Make sure that your DIP switch has been set to ON." >&2
+fi
+
 echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."

@@ -29,10 +29,23 @@ then
         exit
 fi
 
+cleanupvg() { vgchange -an reformvg; }
+cleanupluks() { cryptsetup luksClose reform_crypt; }
+error() { echo "$0 FAILED to run" >&2; }
+
+trap error EXIT INT TERM
+
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/nvme0n1)" ]; then
+	echo "/dev/nvme0n1 is still in use" >&2
+	exit 1
+fi
+
 cryptsetup luksFormat /dev/nvme0n1
+trap "cleanupluks; error" EXIT INT TERM
 cryptsetup luksOpen /dev/nvme0n1 reform_crypt
 pvcreate /dev/mapper/reform_crypt
 vgcreate reformvg /dev/mapper/reform_crypt
+trap "cleanupvg; cleanupluks; error" EXIT INT TERM
 lvcreate --name swap --size 8G reformvg
 mkswap /dev/reformvg/swap
 lvcreate --name root --extents 100%FREE reformvg
@@ -56,13 +69,33 @@ then
 	echo "vgchange -an reformvg"
 	echo "cryptsetup luksClose reform_crypt"
 else
-	echo RESUME=UUID=$SWAPUUID > /etc/initramfs-tools/conf.d/resume
-	echo reform_crypt UUID=$CRYPTUUID none luks,discard > /etc/crypttab
-	echo UUID=$SWAPUUID none swap sw 0 0 >> /etc/fstab
-	reform-migrate /dev/reformvg/root
+	# we are not really running reform-migrate but imitate what it does
+	# instead because we want to write out some files after the rsync but
+	# before running reform-boot-config
+	ROOTMNT="$(mktemp --tmpdir --directory reform-setup-encrypted-nvme.XXXXXXXXXX)"
+	trap 'umount $ROOTMNT; cleanupvg; cleanupluks; error' EXIT INT TERM
+	mount /dev/reformvg/root "$ROOTMNT"
+	rsync -axHAWXS --numeric-ids --info=progress2 / "$ROOTMNT"
+	echo "RESUME=UUID=$SWAPUUID" > "$ROOTMNT/etc/initramfs-tools/conf.d/resume"
+	echo "reform_crypt UUID=$CRYPTUUID none luks,discard" > "$ROOTMNT/etc/crypttab"
+	echo "UUID=$SWAPUUID none swap sw 0 0" >> "$ROOTMNT/etc/fstab"
+	trap "cleanupvg; cleanupluks; error" EXIT INT TERM
+	umount "$ROOTMNT"
+
+	read -r -p "Your /boot partition will be on the SD-Card by default. Do you want it on eMMC instead? [y/N]" response
+	if [[ "$response" != "y" ]]; then
+		reform-boot-config /dev/reformvg/root
+	else
+		reform-boot-config --emmc /dev/reformvg/root
+	fi
 fi
 
-vgchange -an reformvg
-cryptsetup luksClose reform_crypt
+trap "cleanupluks; error" EXIT INT TERM
+cleanupvg
 
-echo "You can now reboot into your encrypted System. The first partition on your SD-Card is the boot medium."
+trap "error" EXIT INT TERM
+cleanupluks
+
+trap - EXIT INT TERM
+
+echo "You can now reboot into your encrypted System."

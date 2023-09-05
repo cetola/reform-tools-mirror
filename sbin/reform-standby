@@ -34,15 +34,24 @@ wifi_on() {
   sleep 1
 }
 
+hantro_off() {
+  # with 5.18, hantro_vpu hangs on resume
+  rmmod hantro_vpu
+}
+
+hantro_on() {
+  modprobe hantro_vpu
+}
+
 kbd_backlight_off() {
   for d in /dev/hidraw*
-    do echo -en "xLITE0" > $d
+    do echo -en "xLITE0" > "$d"
   done
 }
 
 kbd_backlight_on() {
   for d in /dev/hidraw*
-    do echo -en "xLITE6" > $d
+    do echo -en "xLITE6" > "$d"
   done
 }
 
@@ -56,15 +65,28 @@ hid_unbind() {
   echo 0003:03EB:2042.0001 > /sys/bus/hid/drivers/hid-generic/unbind
 }
 
-if [[ $1 = "suspend" ]]; then
-  setup_wake
-  wifi_off
-  kbd_backlight_off
-  hid_unbind
-fi
-
-if [[ $1 = "resume" ]]; then
-  kbd_backlight_on
-  wifi_on
-  hid_bind
-fi
+case $1 in
+	suspend)
+		setup_wake
+		wifi_off
+		hantro_off
+		kbd_backlight_off
+		hid_unbind
+		;;
+	resume)
+		kbd_backlight_on
+		wifi_on
+		hantro_on
+		hid_bind
+		;;
+	*)
+		echo "i.MX8MQ specific setup before suspend and after wakeup" >&2
+		echo "" >&2
+		echo "usage:" >&2
+		echo "    $0 [suspend|resume]" >&2
+		echo "" >&2
+		echo "This script is called by the reform-sleep.service systemd service." >&2
+		echo "Do not call this script manually from the terminal but use" >&2
+		echo "systemctl suspend instead." >&2
+		exit 1
+esac
