@@ -1,0 +1,26 @@
+* {
+    /*background-color: #000000;
+    color: #ffffff;*/
+}
+
+#outer-box {
+    margin: 16px;
+}
+
+#inner-box {
+}
+
+#input {
+    border: none;
+    margin-bottom: 16px;
+}
+
+#text {
+    color: #ffffff;
+    margin-left: 16px;
+}
+
+#entry:selected {
+    /*background-color: #ffffff;
+    color: #000000 !important;*/
+}

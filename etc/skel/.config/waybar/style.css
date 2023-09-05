@@ -1,44 +1,60 @@
 * {
-	font-size: 18px;
-	font-family: Inter;
-	font-weight: bold;
-	border-radius: 0;
+    font-size: 14px;
+    font-family: Inter;
+    font-weight: 600;
+    border-radius: 0;
 }
 
 window#waybar {
-	background: #000000;
-	color: #ffffff;
+    background: #000000;
+    color: #ffffff;
 }
 
-#sway-mode {
-	background-color: #330000;
+widget label, .text-button {
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 0px;
+    padding-bottom: 2px;
 }
 
-widget label {
-	padding: 0px 20px;
+/* compat with other waybar versions that don't use buttons */
+.horizontal label {
+    margin-left: 8px;
+    margin-right: 8px;
 }
 
-#workspaces label {
-	padding: 0px 0px;
+#tray {
+    padding-right: 8px;
 }
 
-#workspaces button {
-	color: #ffffff;
-	font-size: 20px;
-	font-style: italic;
-}
-#workspaces button.focused {
-	background: #ffffff;
-	color: #000000;
-}
-#workspaces button:hover {
-	box-shadow: inherit;
-	text-shadow: inherit;
-}
-#workspaces button:hover {
-	background: #888888;
+button:hover {
+    box-shadow: inherit;
+    text-shadow: inherit;
+    background: #111111;
+    border: none;
 }
 
-#clock {
-	padding-right: 0px;
+button {
+    color: #ffffff;
+    font-size: 14px;
+    border: none;
+}
+
+button.focused {
+    background: #ffffff;
+    color: #000000;
+    border: none;
+}
+
+button.active {
+    background: #303030;
+    color: #000000;
+    border: none;
+}
+
+button.minimized {
+    background: #000000;
+    color: #ffffff;
+    opacity: 0.25;
+    border: none;
 }

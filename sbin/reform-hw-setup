@@ -1,15 +1,37 @@
 #!/bin/bash
 
-# Workaround for WM8960 sometimes not coming out of reset
-echo 2-001a > /sys/bus/i2c/drivers/wm8960/bind
+MACHINE=$(tr -d '\0' < /proc/device-tree/model)
+if [ "MNT Reform 2" = "$MACHINE" ] || [ "MNT Reform 2 HDMI" = "$MACHINE" ]
+then
+    # Workaround for WM8960 sometimes not coming out of reset
+    echo 2-001a > /sys/bus/i2c/drivers/wm8960/bind
 
-# This switch in WM8960 needs to be on for the headset mic input to work
-amixer -c 0 sset 'Left Input Mixer Boost' on
+    # This switch in WM8960 needs to be on for the headset mic input to work
+    amixer -c 0 sset 'Left Input Mixer Boost' on
 
-# Fix WM8960 being too quiet
-amixer -c 0 sset Playback 255
+    # Fix WM8960 being too quiet
+    amixer -c 0 sset Playback 255
 
-# Enable wakeup from suspend on all UARTs
-echo enabled > /sys/devices/platform/soc@0/30800000.bus/30860000.serial/tty/ttymxc0/power/wakeup
-echo enabled > /sys/devices/platform/soc@0/30800000.bus/30890000.serial/tty/ttymxc1/power/wakeup
-echo enabled > /sys/devices/platform/soc@0/30800000.bus/30880000.serial/tty/ttymxc2/power/wakeup
+    # Enable wakeup from suspend on all UARTs (i.MX8MQ)
+    echo enabled > /sys/devices/platform/soc@0/30800000.bus/30860000.serial/tty/ttymxc0/power/wakeup
+    echo enabled > /sys/devices/platform/soc@0/30800000.bus/30890000.serial/tty/ttymxc1/power/wakeup
+    echo enabled > /sys/devices/platform/soc@0/30800000.bus/30880000.serial/tty/ttymxc2/power/wakeup
+fi
+
+if [ "MNT Reform 2 with BPI-CM4 Module" = "$MACHINE" ]
+then
+    # Workaround for WM8960 sometimes not coming out of reset
+    echo 1-001a > /sys/bus/i2c/drivers/wm8960/bind
+
+    # Fix WM8960 being too quiet
+    amixer -c 0 sset Playback 255
+    amixer -c 0 sset 'Left Output Mixer PCM' on
+    amixer -c 0 sset 'Right Output Mixer PCM' on
+
+    # A311D sound controls
+    amixer -c 0 sset 'FRDDR_A SINK 1 SEL' 'OUT 1'
+    amixer -c 0 sset 'FRDDR_A SRC 1 EN' 'on'
+    amixer -c 0 sset 'TDMOUT_B SRC SEL' 'IN 0'
+    amixer -c 0 sset 'TDMIN_B SRC SEL' 'IN 1'
+    amixer -c 0 sset 'TODDR_A SRC SEL' 'IN 1'
+fi

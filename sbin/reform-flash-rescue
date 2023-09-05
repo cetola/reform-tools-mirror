@@ -2,6 +2,12 @@
 
 set -e
 
+MACHINE=$(tr -d '\0' < /proc/device-tree/model)
+if [ "MNT Reform 2" != "$MACHINE" ] && [ "MNT Reform 2 HDMI" != "$MACHINE" ]
+  then echo "Sorry, reform-flash-rescue is only supported on MNT Reform 2 with i.MX8MQ processor module."
+  exit
+fi
+
 if [ ! -e /sys/class/block/mmcblk0boot0/force_ro ]; then
 	echo "/sys/class/block/mmcblk0boot0/force_ro doesn't exist" >&2
 	exit 1

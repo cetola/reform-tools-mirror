@@ -12,6 +12,12 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
+MACHINE=$(tr -d '\0' < /proc/device-tree/model)
+if [ "MNT Reform 2" != "$MACHINE" ] && [ "MNT Reform 2 HDMI" != "$MACHINE" ]
+  then echo "Sorry, reform-flash-rescue is only supported on MNT Reform 2 with i.MX8MQ processor module."
+  exit
+fi
+
 setup_wake() {
   # configure UARTs as wakeup sources
   echo enabled > /sys/devices/platform/soc@0/30800000.bus/30860000.serial/tty/ttymxc0/power/wakeup
