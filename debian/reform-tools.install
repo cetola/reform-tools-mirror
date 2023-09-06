@@ -6,6 +6,7 @@ audio/reform.conf               /usr/share/pulseaudio/alsa-mixer/profile-sets
 bin/*                           /usr/bin
 etc/*                           /etc
 sbin/*                          /usr/sbin
+share/*                         /usr/share
 systemd/reform-poweroff         /lib/systemd/system-shutdown
 systemd/reform-sleep.conf       /usr/lib/systemd/sleep.conf.d
 xorg/10-reform-etnaviv.conf     /usr/share/X11/xorg.conf.d
