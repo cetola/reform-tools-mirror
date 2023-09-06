@@ -58,7 +58,7 @@ then
         exit
 fi
 
-URL="https://source.mnt.re/reform/reform-system-image/-/jobs/artifacts/main/raw/reform2-imx8mq/reform-rescue-system.img.gz?job=build"
+URL="https://source.mnt.re/reform/reform-system-image/-/jobs/artifacts/main/raw/reform2-imx8mq/reform-system.img.gz?job=build"
 
 {
 if curl --version >/dev/null; then
