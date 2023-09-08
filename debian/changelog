@@ -1,7 +1,24 @@
 reform-tools (1.25) reform; urgency=medium
 
+  * updates for sysimage-v4
+     - switch default sway terminal to foot and include a nice foot config
+     - sway: modernize config, switch to wofi
+     - update reform-help
+     - update waybar config
+     - add wallpaper
+     - add default wayfire.ini
+     - update reform-flash-rescue's image download URL
+     - update reform-desktop-help content
+     - skel: add configs for gtk3, qt5ct, dunst
+  * let imx8mq specific tools exit early on the wrong platform
+  * add a311d support to reform-hw-setup
   * install /usr/share/initramfs-tools/modules.d/reform.conf replacing
     /etc/initramfs-tools/modules
+  * new script: reform-synaptic
+  * add dependency on parted needed by reform-flash-uboot
+  * add Protected: yes to make it really hard to remove
+  * add rudimentary debian/copyright
+  * add --help option to reform-flash-uboot
 
  -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Wed, 12 Jul 2023 14:17:51 +0200
 
