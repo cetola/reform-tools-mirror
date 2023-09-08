@@ -2,12 +2,14 @@ Welcome to the MNT Reform desktop.
 
 Useful keyboard shortcuts ([1mSUPER[0m is the MNT logo key):
 
-  [1mSUPER ENTER[0m  Open a terminal
-  [1mSUPER ESC[0m    Close active window
-  [1mSUPER D[0m      Find and launch programs
-  [1mSUPER F1[0m     Decrease backlight brightness
-  [1mSUPER F2[0m     Decrease backlight brightness
-  [1mSUPER 1[0m …    Go to workspace 1 - 9
+  [1mSUPER ENTER[0m    Open a terminal
+  [1mSUPER ESC[0m      Close active window
+  [1mSUPER D[0m        Find and launch programs
+  [1mSUPER F1[0m       Decrease backlight brightness
+  [1mSUPER F2[0m       Decrease backlight brightness
+  [1mSUPER SHIFT S[0m  Take screenshot (in ~/Pictures)
+  [1mSUPER SHIFT X[0m  Take screenshot of an area
+  [1mSUPER 1[0m …      Go to workspace 1 - 9
   [1mSUPER 9[0m
 
   To move the active window to a workspace, press the same
@@ -15,10 +17,10 @@ Useful keyboard shortcuts ([1mSUPER[0m is the MNT logo key):
 
 Only on wayfire:
 
-  [1mSUPER ←/→[0m    Resize window to left or right screen half
-  [1mSUPER ↑/↓[0m    (Un)maximize window
-  [1mSUPER TAB[0m    Window overview
-  [1mALT TAB[0m      Cycle through windows
+  [1mSUPER ←/→[0m      Tile window to left or right
+  [1mSUPER ↑/↓[0m      (Un)maximize window
+  [1mSUPER TAB[0m      Overview of all windows
+  [1mALT TAB[0m        Cycle through windows
 
 Customize the sway or wayfire configuration:
 
