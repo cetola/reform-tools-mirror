@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# temporarily allow the local root user to talk to the current user's Xwayland
+xhost si:localuser:root
+pkexec env DISPLAY="$DISPLAY" synaptic
+# revoke access
+xhost -si:localuser:root
