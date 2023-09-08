@@ -279,7 +279,7 @@ exec nm-applet --indicator
 exec blueman-applet
 
 # start MNT Reform tray menu
-exec reform-tray.py
+exec /usr/libexec/reform-tools/reform-tray.py
 
 # default theme settings
 exec gsettings set org.gnome.desktop.interface icon-theme 'Papirus-Dark'

@@ -5,6 +5,7 @@ audio/asound.state              /var/lib/alsa
 audio/reform.conf               /usr/share/pulseaudio/alsa-mixer/profile-sets
 bin/*                           /usr/bin
 etc/*                           /etc
+libexec/*                       /usr/libexec/reform-tools
 sbin/*                          /usr/sbin
 share/*                         /usr/share
 systemd/reform-poweroff         /lib/systemd/system-shutdown
