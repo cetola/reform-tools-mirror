@@ -1,7 +1,14 @@
 #!/bin/bash
 
+function finish {
+    # revoke Xwayland access
+    xhost -si:localuser:root
+}
+
+trap finish EXIT
+
 # temporarily allow the local root user to talk to the current user's Xwayland
 xhost si:localuser:root
+
+# start synaptic as superuser through polkit (asks for authentication)
 pkexec env DISPLAY="$DISPLAY" synaptic
-# revoke access
-xhost -si:localuser:root
