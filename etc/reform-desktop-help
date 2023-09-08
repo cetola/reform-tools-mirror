@@ -1,21 +1,29 @@
-This is [1msway[0m, a tiled windowing system and compositor.
-Windows don't normally float around. Instead, a new window occupies
-the full screen or a division of the screen. For example, if you
-open another window now, both windows will take half of the screen.
+Welcome to the MNT Reform desktop.
 
-To open another terminal, press [1mSUPER+ENTER[0m.
+Useful keyboard shortcuts ([1mSUPER[0m is the MNT logo key):
 
-To go to a workspace, press [1mSUPER+1[0m to [1mSUPER+9[0m.
-To move the focused window to another workspace, press the same
-combination, but together with [1mSHIFT[0m.
+  [1mSUPER ENTER[0m  Open a terminal
+  [1mSUPER ESC[0m    Close active window
+  [1mSUPER D[0m      Find and launch programs
+  [1mSUPER F1[0m     Decrease backlight brightness
+  [1mSUPER F2[0m     Decrease backlight brightness
+  [1mSUPER 1[0m …    Go to workspace 1 - 9
+  [1mSUPER 9[0m
 
-To close a window, press [1mSUPER+ESC[0m.
+  To move the active window to a workspace, press the same
+  combination, but together with [1mSHIFT[0m.
 
-To find a program by typing its name, press [1mSUPER+D[0m.
+Only on wayfire:
 
-Check out the sway configuration file:
-[1mmicro ~/.config/sway/config[0m.
+  [1mSUPER ←/→[0m    Resize window to left or right screen half
+  [1mSUPER ↑/↓[0m    (Un)maximize window
+  [1mSUPER TAB[0m    Window overview
+  [1mALT TAB[0m      Cycle through windows
 
-To learn more about the command line, enter: [1mreform-help[0m.
-This help can be reached by entering: [1mreform-desktop-help[0m.
-Read the MNT Reform handbook in a browser: [1mreform-handbook[0m.
+Customize the sway or wayfire configuration:
+
+  [1mmicro ~/.config/sway/config[0m
+  [1mmicro ~/.config/wayfire/config[0m
+
+To learn more about the command line, enter: [1mreform-help[0m
+Read the MNT Reform handbook in a browser: [1mreform-handbook[0m
