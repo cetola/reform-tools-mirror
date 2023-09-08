@@ -5,7 +5,7 @@ function finish {
     xhost -si:localuser:root
 }
 
-trap finish EXIT
+trap finish EXIT INT TERM
 
 # temporarily allow the local root user to talk to the current user's Xwayland
 xhost si:localuser:root
