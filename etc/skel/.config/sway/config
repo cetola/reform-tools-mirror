@@ -253,7 +253,6 @@ font pango: Inter, Icons Medium 11
 #}
 
 for_window [app_id="pavucontrol"] floating enable
-for_window [app_id="gnome-control-center"] floating enable
 
 exec systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK
 exec dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK XDG_CURRENT_DESKTOP=sway
@@ -279,8 +278,11 @@ exec nm-applet --indicator
 # start bluetooth applet
 exec blueman-applet
 
+# start MNT Reform tray menu
+exec /usr/libexec/reform-tools/reform-tray.py
+
 # default theme settings
-exec gsettings set org.gnome.desktop.interface icon-theme 'Papirus'
+exec gsettings set org.gnome.desktop.interface icon-theme 'Papirus-Dark'
 exec gsettings set org.gnome.desktop.interface font-name 'Inter Medium 11'
 exec gsettings set org.gnome.desktop.interface monospace-font-name 'Iosevka Term 11'
 exec gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'

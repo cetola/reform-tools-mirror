@@ -5,7 +5,11 @@
 export ETNA_MESA_DEBUG=nir
 
 # set GTK2 theme
-export GTK2_RC_FILES=/usr/share/themes/Arc-Dark/gtk-2.0/gtkrc
+export GTK2_RC_FILES=/usr/share/themes/Adwaita-Dark/gtk-2.0/gtkrc
+
+# set QT Platform and Theme
+export QT_QPA_PLATFORM=wayland
+export QT_QPA_PLATFORMTHEME=qt5ct
 
 # enable harware acceleration in clapper
 # https://github.com/Rafostar/clapper/wiki/Hardware-acceleration#mobile-devices-v4l2-codecs
