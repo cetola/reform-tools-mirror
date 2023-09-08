@@ -25,6 +25,7 @@ Depends: alsa-utils,
          systemd,
          tzdata,
          ${misc:Depends}
+Protected: yes
 Description: MNT Reform System Tools
  A number of scripts for managing boot media, displays, standby, plus a few
  help texts and gadgets for the customized sway desktop. Also contains
