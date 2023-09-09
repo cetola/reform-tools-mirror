@@ -278,6 +278,9 @@ exec nm-applet --indicator
 # start bluetooth applet
 exec blueman-applet
 
+# start volume applet
+exec pasystray
+
 # start MNT Reform tray menu
 exec /usr/libexec/reform-tools/reform-tray.py
 
