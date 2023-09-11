@@ -1,3 +1,9 @@
+reform-tools (1.26) reform; urgency=medium
+
+  * sbin/reform-flash-rescue: change disk labels after dd
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Mon, 11 Sep 2023 17:54:27 +0200
+
 reform-tools (1.25) reform; urgency=medium
 
   * updates for sysimage-v4
