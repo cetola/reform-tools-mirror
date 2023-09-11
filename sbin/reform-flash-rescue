@@ -71,6 +71,10 @@ else
 fi; } | gzip --decompress --to-stdout | dd of=/dev/mmcblk0 status=progress
 partprobe /dev/mmcblk0
 
+# overwrite the partition label
+e2label /dev/mmcblk0p1 reformemmcboot
+e2label /dev/mmcblk0p2 reformemmcroot
+
 # The rescue system image that we downloaded and wrote to the eMMC above is
 # configured to use the rootfs on the SD-Card but we want the initramfs on eMMC
 # to boot the rootfs on eMMC and not the rootfs from SD-Card.  Use
