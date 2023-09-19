@@ -3,3 +3,8 @@
 # setenv kernel_addr_r "0x40480000"
 # setenv fdt_addr_r "0x50000000"
 # setenv ramdisk_addr_r "0x51000000"
+
+# workaround for failing cryptomgr_test during boot
+if test "${fk_kvers}" = "6.5.0-1-reform2-arm64"; then
+  setenv bootargs "${bootargs} cryptomgr.notests"
+fi
