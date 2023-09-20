@@ -1,0 +1,33 @@
+#!/bin/sh
+
+set -e
+
+PREREQ=""
+prereqs() { echo "$PREREQ"; }
+case $1 in prereqs) prereqs; exit 0 ;; esac
+
+. /usr/share/initramfs-tools/hook-functions
+
+MACHINE=
+if [ -e /etc/flash-kernel/machine ]; then
+	MACHINE=$(cat /etc/flash-kernel/machine)
+elif [ -e /proc/device-tree/model ]; then
+	MACHINE=$(cat /proc/device-tree/model)
+fi
+
+case $MACHINE in
+	"MNT Reform 2") : ;;
+	"MNT Reform 2 with BPI-CM4 Module") : ;;
+	"MNT Reform 2 with LS1028A Module")
+		[ "${verbose}" = "y" ] && echo "Adding firmware ls1028a-mhdpfw.bin"
+		copy_file firmware /boot/ls1028a-mhdpfw.bin /lib/firmware
+		;;
+	"")
+		echo "unable to deduce target machine"
+		exit 1
+		;;
+	*)
+		echo "unsupported machine: $MACHINE"
+		exit 1;
+		;;
+esac
