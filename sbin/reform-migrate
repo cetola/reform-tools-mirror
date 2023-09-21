@@ -56,10 +56,12 @@ fi
 
 EMMC=""
 TARGET="$1"
+BOOTPART="mmcblk1p1"
 
 if [ "--emmc" = "$1" ]; then
 	EMMC="--emmc"
 	TARGET="$2"
+	BOOTPART="mmcblk0p1"
 fi
 
 if [ -z "$TARGET" ]; then
@@ -75,6 +77,13 @@ fi
 
 if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "$TARGET")" ]; then
 	echo "$TARGET is still in use" >&2
+	exit 1
+fi
+
+# check if the new boot is still mounted somewhere
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/$BOOTPART)" ]; then
+	echo "/dev/$BOOTPART is still mounted somewhere." >&2
+	echo "Please unmount before running this script" >&2
 	exit 1
 fi
 
