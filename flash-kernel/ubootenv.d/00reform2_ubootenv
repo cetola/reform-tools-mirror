@@ -1,5 +1,5 @@
-# setenv bootpart "1"
-# setenv prefix "/"
-# setenv kernel_addr_r "0x40480000"
-# setenv fdt_addr_r "0x50000000"
-# setenv ramdisk_addr_r "0x51000000"
+setenv bootargs "console=ttymxc0,115200 console=ttyAML0,115200 console=ttyS0,115200 console=tty1 ro no_console_suspend cma=512M@3G pci=nomsi,pcie_bus_perf libata.force=noncq nvme_core.default_ps_max_latency_us=0 cryptomgr.notests iommu.passthrough=1 arm-smmu.disable_bypass=0"
+
+if test "${board}" = "ls1028a"; then
+  setenv bootargs "console=ttyS0,115200 console=tty1 ro no_console_suspend cma=512M@3G libata.force=noncq nvme_core.default_ps_max_latency_us=0 cryptomgr.notests iommu.passthrough=1 arm-smmu.disable_bypass=0"
+fi
