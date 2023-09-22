@@ -1,5 +1,12 @@
-setenv bootargs "console=ttymxc0,115200 console=ttyAML0,115200 console=ttyS0,115200 console=tty1 ro no_console_suspend cma=512M@3G pci=nomsi,pcie_bus_perf libata.force=noncq nvme_core.default_ps_max_latency_us=0 cryptomgr.notests iommu.passthrough=1 arm-smmu.disable_bypass=0"
 
-if test "${board}" = "ls1028a"; then
-  setenv bootargs "console=ttyS0,115200 console=tty1 ro no_console_suspend cma=512M@3G libata.force=noncq nvme_core.default_ps_max_latency_us=0 cryptomgr.notests iommu.passthrough=1 arm-smmu.disable_bypass=0"
+#setenv bootargs "console=ttymxc0,115200 console=ttyAML0,115200 console=ttyS0,115200 console=tty1 ro no_console_suspend cma=512M@3G pci=nomsi,pcie_bus_perf libata.force=noncq nvme_core.default_ps_max_latency_us=0 cryptomgr.notests iommu.passthrough=1 arm-smmu.disable_bypass=0"
+
+setenv bootargs "console=tty1 ro no_console_suspend cma=512M@3G cryptomgr.notests"
+
+if test "${board}" = "nitrogen8m_som"; then
+  setenv bootargs "${bootargs} console=ttymxc0,115200 pci=nomsi"
+elif test "${board}" = "a311dFIXME"; then
+  setenv bootargs "${bootargs} console=ttyAML0,115200 pci=pcie_bus_perf libata.force=noncq nvme_core.default_ps_max_latency_us=0"
+elif test "${board}" = "ls1028a"; then
+  setenv bootargs "${bootargs} console=ttyS0,115200"
 fi
