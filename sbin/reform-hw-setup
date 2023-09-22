@@ -35,3 +35,19 @@ then
     amixer -c 0 sset 'TDMIN_B SRC SEL' 'IN 1'
     amixer -c 0 sset 'TODDR_A SRC SEL' 'IN 1'
 fi
+
+if [ "MNT Reform 2 with LS1028A Module" = "$MACHINE" ]
+then
+    # Workaround for a DWC3 USB Controller regression
+
+    # Assert USB hub reset
+    gpioset 2 13=0
+    # Reload DWC3 module
+    rmmod dwc3
+    modprobe dwc3
+    # Deassert USB hub reset
+    gpioset 2 13=1
+
+    # Select "ondemand" CPU frequency scaling governor
+    echo ondemand > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
+fi
