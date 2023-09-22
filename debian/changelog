@@ -1,3 +1,9 @@
+reform-tools (1.29) reform; urgency=medium
+
+  * flash-kernel/ubootenv.d/00reform2_ubootenv: set bootargs for each platform
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sun, 24 Sep 2023 07:41:13 +0200
+
 reform-tools (1.28) reform; urgency=medium
 
   * initramfs-tools/hooks/reform: also support 'MNT Reform 2 HDMI'
