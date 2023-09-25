@@ -34,6 +34,13 @@ then
     amixer -c 0 sset 'TDMOUT_B SRC SEL' 'IN 0'
     amixer -c 0 sset 'TDMIN_B SRC SEL' 'IN 1'
     amixer -c 0 sset 'TODDR_A SRC SEL' 'IN 1'
+
+    # Workaround for ethernet PHY reset problem
+
+    rmmod dwmac_meson8b dwmac_generic stmmac_platform stmmac mdio_mux_meson_g12a mdio_mux of_mdio
+    sleep 0.5
+    modprobe mdio_mux_meson_g12a
+    modprobe dwmac_meson8b
 fi
 
 if [ "MNT Reform 2 with LS1028A Module" = "$MACHINE" ]
