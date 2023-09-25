@@ -1,3 +1,13 @@
+reform-tools (1.28) reform; urgency=medium
+
+  * initramfs-tools/hooks/reform: also support 'MNT Reform 2 HDMI'
+  * flash-kernel: first stab at setting cpu specific kernel command lines in
+    ubootenv
+  * initramfs-tools: add missing modules for ls1028a display
+  * reform-hw-setup: add LS1028A usb workaround and default scaling_governor
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sat, 23 Sep 2023 20:46:33 +0200
+
 reform-tools (1.27) reform; urgency=medium
 
   * copy /boot/ls1028a-mhdpfw.bin into initramfs

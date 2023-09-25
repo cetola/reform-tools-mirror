@@ -17,6 +17,7 @@ fi
 
 case $MACHINE in
 	"MNT Reform 2") : ;;
+	"MNT Reform 2 HDMI") : ;;
 	"MNT Reform 2 with BPI-CM4 Module") : ;;
 	"MNT Reform 2 with LS1028A Module")
 		[ "${verbose}" = "y" ] && echo "Adding firmware ls1028a-mhdpfw.bin"
