@@ -24,6 +24,16 @@ Depends: alsa-utils,
          rsync,
          systemd,
          tzdata,
+         python3-gi,
+         gir1.2-ayatanaappindicator3-0.1,
+         gir1.2-notify-0.7,
+         pkexec,
+         synaptic,
+         pulseaudio-utils,
+         brightnessctl,
+         gnome-system-monitor,
+         foot,
+         thunar,
          ${misc:Depends}
 Protected: yes
 Description: MNT Reform System Tools

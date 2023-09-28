@@ -63,10 +63,10 @@ def handle_logout_item(self):
     handle_exit_item("Are you sure you want to exit the desktop session?", ["pkill", "(wayfire|sway)"])
 
 def handle_reboot_item(self):
-    handle_exit_item("Are you sure you want to reboot the computer?", ["pkexec", "/sbin/reboot", "now"])
+    handle_exit_item("Are you sure you want to reboot the computer?", ["systemctl", "reboot"])
 
 def handle_shutdown_item(self):
-    handle_exit_item("Are you sure you want to shut down the computer?", ["pkexec", "/sbin/shutdown", "now"])
+    handle_exit_item("Are you sure you want to shut down the computer?", ["systemctl", "poweroff"])
 
 menu = Gtk.Menu()
 
