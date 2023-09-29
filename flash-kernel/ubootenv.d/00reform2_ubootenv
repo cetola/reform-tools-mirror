@@ -2,6 +2,9 @@ setenv bootargs "console=tty1 ro no_console_suspend cma=512M@3G cryptomgr.notest
 
 if test "${board}" = "nitrogen8m_som"; then
   setenv bootargs "${bootargs} console=ttymxc0,115200 pci=nomsi"
+elif test "${board}" = "MNT Reform 2.0"; then
+  # some imx8mq Reforms have this board value
+  setenv bootargs "${bootargs} console=ttymxc0,115200 pci=nomsi"
 elif test "${board}" = "u200"; then
   # amlogic internal name for a311d dev board
   setenv bootargs "${bootargs} console=ttyAML0,115200 pci=pcie_bus_perf libata.force=noncq nvme_core.default_ps_max_latency_us=0"
