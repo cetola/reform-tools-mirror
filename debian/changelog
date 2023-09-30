@@ -1,3 +1,12 @@
+reform-tools (1.30) reform; urgency=medium
+
+  * reform-hw-setup: a311d: reload ethernet modules to complete phy reset
+  * Update 00reform2_ubootenv
+  * reform-tray: add missing dependencies, change reboot/poweroff to systemctl
+  * flash-kernel/uboot: add missing reform board variant
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Thu, 28 Sep 2023 16:16:39 +0200
+
 reform-tools (1.29) reform; urgency=medium
 
   * flash-kernel/ubootenv.d/00reform2_ubootenv: set bootargs for each platform
