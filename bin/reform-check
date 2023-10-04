@@ -33,7 +33,11 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 if [ ! -e "/etc/flash-kernel/machine" ]; then
-	echo "E: /etc/flash-kernel/machine does not exist" >&2
+	# /etc/flash-kernel/machine not existing is only a potential problem
+	# on imx8mq
+	case "$(cat /proc/device-tree/model)" in
+		"MNT Reform 2"|"MNT Reform 2 HDMI") echo "W: /etc/flash-kernel/machine does not exist" >&2 ;;
+	esac
 fi
 
 if [ ! -e "/proc/device-tree/model" ]; then
@@ -135,13 +139,21 @@ if [ ! -e /dev/mmcblk0p2 ]; then
 fi
 
 if [ ! -e /etc/flash-kernel/machine ]; then
-	echo "E: /etc/flash-kernel/machine doesn't exist" >&2
-	echo "E: It should contain either 'MNT Reform 2' (for single display) or 'MNT Reform 2 HDMI' (for dual display)." >&2
-	echo "E: You can run reform-display-config as root to create a working version." >&2
+	# /etc/flash-kernel/machine not existing is only a potential problem
+	# on imx8mq
+	case "$(cat /proc/device-tree/model)" in
+		"MNT Reform 2"|"MNT Reform 2 HDMI")
+			echo "E: /etc/flash-kernel/machine doesn't exist" >&2
+			echo "E: It should contain either 'MNT Reform 2' (for single display) or 'MNT Reform 2 HDMI' (for dual display)." >&2
+			echo "E: You can run reform-display-config as root to create a working version." >&2
+			;;
+	esac
 else
 	case "$(cat /etc/flash-kernel/machine)" in
 		"MNT Reform 2") : ;;
 		"MNT Reform 2 HDMI") : ;;
+		"MNT Reform 2 with BPI-CM4 Module") echo "W: /etc/flash-kernel/machine is not needed on A311D. Consider removing it." >&2 ;;
+		"MNT Reform 2 with LS1028A Module") echo "W: /etc/flash-kernel/machine is not needed on LS1028A. Consider removing it." >&2 ;;
 		*) echo "E: unexpected content in /etc/flash-kernel/machine" >&2 ;;
 	esac
 fi
