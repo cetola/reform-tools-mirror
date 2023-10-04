@@ -44,6 +44,7 @@ if [ -e "/etc/flash-kernel/machine" ] && [ -e "/proc/device-tree/model" ] && [ "
 	echo "E: your currently loaded dtb is not the one referenced by flash-kernel" >&2
 fi
 
+# FIXME: update the list of packages from systimage-v4
 PKGSGUI="xwayland xterm xfce4-terminal sway waybar swayidle swaylock mesa-utils lxpolkit wayland-protocols rofi"
 PKGSNET="iproute2 iptables iputils-ping ircii elinks isc-dhcp-client netcat-traditional net-tools network-manager nfacct ntp ntpdate rsync telnet traceroute wpasupplicant curl wget w3m rfkill ifupdown netbase openssh-client"
 PKGSADMIN="apt apt-utils apt-listbugs apt-file cron cryptsetup lvm2 dbus-bin e2fsprogs fbset init-system-helpers ncdu parted pciutils policykit-1 procps sudo systemd systemd-sysv tmux u-boot-tools screen"
@@ -157,9 +158,22 @@ else
 	fi
 fi
 
-if [ -e /etc/flash-kernel/preboot.d/00reform2_preboot ] && printf "# place here any u-boot commands to be executed before boot\n" | cmp --quiet - /etc/flash-kernel/preboot.d/00reform2_preboot; then
-	echo "E: /etc/flash-kernel/preboot.d/00reform2_preboot contains default content overriding /usr/share/flash-kernel/preboot.d/00reform2_preboot" >&2
-	echo "E: consider deleting /etc/flash-kernel/preboot.d/00reform2_preboot in favour of /usr/share/flash-kernel/preboot.d/00reform2_preboot" >&2
+if [ -e /etc/flash-kernel/preboot.d/00reform2_preboot ]; then
+	if printf "# place here any u-boot commands to be executed before boot\n" | cmp --quiet - /etc/flash-kernel/preboot.d/00reform2_preboot; then
+		echo "E: /etc/flash-kernel/preboot.d/00reform2_preboot contains default content overriding /usr/share/flash-kernel/preboot.d/00reform2_preboot" >&2
+		echo "E: consider deleting /etc/flash-kernel/preboot.d/00reform2_preboot in favour of /usr/share/flash-kernel/preboot.d/00reform2_preboot" >&2
+	else
+		echo "W: your custom /etc/flash-kernel/preboot.d/00reform2_preboot is overriding /usr/share/flash-kernel/preboot.d/00reform2_preboot" >&2
+	fi
+fi
+
+if [ -e /etc/flash-kernel/ubootenv.d/00reform2_ubootenv ]; then
+	if printf '# setenv bootpart "1"\n# setenv prefix "/"\n# setenv kernel_addr_r "0x40480000"\n# setenv fdt_addr_r "0x50000000"\n# setenv ramdisk_addr_r "0x51000000"\n' | cmp --quiet - /etc/flash-kernel/ubootenv.d/00reform2_ubootenv; then
+		echo "E: /etc/flash-kernel/ubootenv.d/00reform2_ubootenv contains default content overriding /usr/share/flash-kernel/ubootenv.d/00reform2_ubootenv" >&2
+		echo "E: consider deleting /etc/flash-kernel/ubootenv.d/00reform2_ubootenv in favour of /usr/share/flash-kernel/ubootenv.d/00reform2_ubootenv" >&2
+	else
+		echo "W: your custom /etc/flash-kernel/ubootenv.d/00reform2_ubootenv is overriding /usr/share/flash-kernel/ubootenv.d/00reform2_ubootenv"
+	fi
 fi
 
 initramfstoolsmodulescontent="pwm_imx27\nnwl-dsi\nti-sn65dsi86\nimx-dcss\npanel-edp\nmux-mmio\nmxsfb\nusbhid\nimx8mq-interconnect\n"
