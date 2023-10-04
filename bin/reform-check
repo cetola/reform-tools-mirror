@@ -248,6 +248,16 @@ if [ "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://mntre.com
 	echo "deb [arch=arm64 trusted=yes] https://mntre.com/reform-debian-repo reform main" >&2
 fi
 
+# on a311d we need non-free-firmware
+# shellcheck disable=SC2016
+if [ "$(tr -d '\0' < /proc/device-tree/model)" = "MNT Reform 2 with BPI-CM4 Module" ] \
+	&& ! apt-get indextargets 'Created-By: Packages' 'Origin: Debian' 'Repo-URI: http://deb.debian.org/debian/' --format '$(COMPONENT)' | sort -u | grep --silent non-free-firmware; then
+	echo "W: you do not have non-free-firmware enabled" >&2
+	echo "W: this is required to install non-free firmware blobs that are required for platforms like Banana Pi A311D" >&2
+	echo "W: you can add a line like this to your /etc/apt/sources.list:" >&2
+	echo "deb http://deb.debian.org/debian unstable non-free-firmware" >&2
+fi
+
 if ! apt-cache policy linux-image-arm64 | grep --quiet mntre.com; then
 	echo "E: the linux-image-arm64 package cannot come from the MNT repos" >&2
 fi
