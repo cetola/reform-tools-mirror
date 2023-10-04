@@ -1,5 +1,12 @@
-setenv bootargs "console=tty1 ro no_console_suspend cma=512M@3G cryptomgr.notests"
+# Default bootargs for Linux are set here and can be overwritten using
+# LINUX_KERNEL_CMDLINE in /etc/default/flash-kernel or by setting them in
+# u-boot itself via the setenv command.
+setenv bootargs "ro no_console_suspend cma=512M@3G cryptomgr.notests ${bootargs}"
 
+# Board-specific bootargs cannot be overwritten by above methods. If you
+# really need to overwrite below lines, create
+# /etc/flash-kernel/ubootenv.d/00reform2_ubootenv and fill it with what you
+# would like to replace the contents of this file with.
 if test "${board}" = "nitrogen8m_som"; then
   setenv bootargs "${bootargs} console=ttymxc0,115200 pci=nomsi"
 elif test "${board}" = "MNT Reform 2.0"; then
@@ -11,3 +18,8 @@ elif test "${board}" = "u200"; then
 elif test "${board}" = "ls1028a"; then
   setenv bootargs "${bootargs} console=ttyS0,115200 iommu.passthrough=1 arm-smmu.disable_bypass=0"
 fi
+
+# console=tty1 needs to go at the end of the kernel cmdline because the luks
+# passphrase prompt will show up on the last console which must not be the
+# serial terminal but the tty displayed to the screen
+setenv bootargs "${bootargs} console=tty1"

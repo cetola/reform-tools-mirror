@@ -1,3 +1,23 @@
+reform-tools (1.31) reform; urgency=medium
+
+  * bin/reform-check:
+     - warn about /etc/flash-kernel/preboot.d/00reform2_preboot and
+       /etc/flash-kernel/ubootenv.d/00reform2_ubootenv
+     - allow /etc/flash-kernel/machine to not exist on platforms other than
+       imx8mq
+     - update default content of /etc/default/flash-kernel
+     - update list of packages from sysimage-v4
+     - make checking for latest u-boot platform dependant
+     - warn about missing non-free-firmware on a311d
+  * flash-kernel/ubootenv.d/00reform2_ubootenv:
+     - respect ${bootargs} again
+     - put console=tty1 at the end of the cmdline to make sure that luks
+       passphrase prompt shows up there and not on the serial line
+  * stop installing /usr/share/u-boot-menu/conf.d/reform.conf as it does not
+    allow for platform specific settings -- use /etc/default/u-boot instead
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Wed, 04 Oct 2023 17:12:39 +0200
+
 reform-tools (1.30) reform; urgency=medium
 
   * reform-hw-setup: a311d: reload ethernet modules to complete phy reset

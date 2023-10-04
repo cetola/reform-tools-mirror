@@ -33,7 +33,11 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 if [ ! -e "/etc/flash-kernel/machine" ]; then
-	echo "E: /etc/flash-kernel/machine does not exist" >&2
+	# /etc/flash-kernel/machine not existing is only a potential problem
+	# on imx8mq
+	case "$(cat /proc/device-tree/model)" in
+		"MNT Reform 2"|"MNT Reform 2 HDMI") echo "W: /etc/flash-kernel/machine does not exist" >&2 ;;
+	esac
 fi
 
 if [ ! -e "/proc/device-tree/model" ]; then
@@ -44,17 +48,11 @@ if [ -e "/etc/flash-kernel/machine" ] && [ -e "/proc/device-tree/model" ] && [ "
 	echo "E: your currently loaded dtb is not the one referenced by flash-kernel" >&2
 fi
 
-PKGSGUI="xwayland xterm xfce4-terminal sway waybar swayidle swaylock mesa-utils lxpolkit wayland-protocols rofi"
-PKGSNET="iproute2 iptables iputils-ping ircii elinks isc-dhcp-client netcat-traditional net-tools network-manager nfacct ntp ntpdate rsync telnet traceroute wpasupplicant curl wget w3m rfkill ifupdown netbase openssh-client"
+PKGSGUI="xwayland xterm foot sway fonts-inter fonts-noto-color-emoji waybar swayidle swaylock mesa-utils lxpolkit wayland-protocols wofi wireplumber papirus-icon-theme wayfire firedecor libglib2.0-bin gsettings-desktop-schemas gnome-disk-utility gnome-themes-extra-data gnome-icon-theme gnome-settings-daemon gnome-system-monitor firefox grim slurp gedit evince mpv sxiv thunar pavucontrol unicode-data engrampa neverball minetest qt5ct kde-style-breeze python3-gi gir1.2-ayatanaappindicator3-0.1 gir1.2-notify-0.7 x11-xserver-utils dunst pkexec synaptic pasystray"
+PKGSNET="iproute2 iptables inetutils-ping ircii elinks isc-dhcp-client netcat-traditional net-tools network-manager network-manager-gnome nfacct ntp ntpdate rsync telnet traceroute wpasupplicant curl wget w3m rfkill ifupdown netbase openssh-client blueman firmware-realtek"
 PKGSADMIN="apt apt-utils apt-listbugs apt-file cron cryptsetup lvm2 dbus-bin e2fsprogs fbset init-system-helpers ncdu parted pciutils policykit-1 procps sudo systemd systemd-sysv tmux u-boot-tools screen"
-PKGSUTILS="busybox console-data console-setup cpio file flash-kernel gnupg gpgv htop kbd lm-sensors readline-common usbutils xdg-utils bsdmainutils less nano micro vim alsa-utils dosfstools python3-psutil"
-PKGSMISC="brightnessctl brightness-udev ca-certificates debian-archive-keyring dialog gpm ncurses-term locales bash-completion man-db cryptsetup-initramfs linux-image-arm64 linux-headers-arm64 reform-tools reform-handbook"
-PKGDESKTOP1="git libreoffice libreoffice-gtk3 firefox-esr chromium emacs gimp wmaker x11-utils imagemagick-6.q16"
-PKGDESKTOP2="evolution freecad ardour sxiv minetest neverball scummvm dosbox wf-recorder wev linphone-desktop kicad"
-PKGPATCHED="cage wayvnc ffmpeg"
-PKGGNOME="gnome-control-center gnome-session openjdk-11-jre-headless gnome-disk-utility gnome-icon-theme breeze-icon-theme gnome-system-monitor gnome-settings-daemon mpv eog evince gedit thunar pavucontrol grim fonts-inter fonts-noto-color-emoji pulseaudio unicode-data engrampa slurp arc-theme"
-PKGKDE1="plasma-workspace-wayland kde-plasma-desktop plasma-nm systemsettings powerdevil qtwayland5"
-PKGKDE2="plasma-discover apt-config-icons-large"
+PKGSUTILS="busybox console-data console-setup cpio file flash-kernel gnupg gpgv htop kbd lm-sensors readline-common usbutils xdg-utils bsdmainutils less nano micro vim alsa-utils dosfstools python3-psutil reform-handbook"
+PKGSMISC="brightnessctl brightness-udev ca-certificates debian-archive-keyring dialog gpm ncurses-term locales bash-completion man-db cryptsetup-initramfs linux-image-arm64 linux-headers-arm64 reform-tools gpiod"
 
 aptprefcontent="Package: *\nPin: release n=reform, l=reform\nPin-Priority: 990\n"
 if [ ! -e /etc/apt/preferences.d/reform.pref ]; then
@@ -71,7 +69,7 @@ else
 fi
 
 notinstalled=
-for package in $PKGSGUI $PKGSNET $PKGSADMIN $PKGSUTILS $PKGSMISC $PKGDESKTOP1 $PKGDESKTOP2 $PKGPATCHED $PKGGNOME $PKGKDE1 $PKGKDE2; do
+for package in $PKGSGUI $PKGSNET $PKGSADMIN $PKGSUTILS $PKGSMISC; do
 	if ! dpkg-query --showformat '${db:Status-Status}\n' --show "$package" 2>/dev/null | grep -q '^installed$'; then
 		notinstalled="$notinstalled $package"
 	fi
@@ -99,8 +97,28 @@ if ! mountpoint --quiet /boot; then
 	echo "E: your /boot has nothing mounted on it -- fix your /etc/fstab" >&2
 fi
 
-ubooturl="https://source.mnt.re/reform/reform-boundary-uboot/-/jobs/artifacts/2023-07-04/raw/flash.bin?job=build"
-ubootsha1="41d2ba5fcc65f26224f7d1afed650e86662cea27"
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI")
+		ubootsha1="41d2ba5fcc65f26224f7d1afed650e86662cea27"
+		ubootproject="reform-boundary-uboot"
+		uboottag="2023-07-04"
+		;;
+	"MNT Reform 2 with BPI-CM4 Module")
+		ubootsha1="8f2c588b727b251bdcfb4e846891b6d020485ce2"
+		ubootproject="reform-a311d-uboot"
+		uboottag="2023-10-02"
+		;;
+	"MNT Reform 2 with LS1028A Module")
+		ubootsha1="085847e4bbc5016fed3f179fa4082f14d0d39c00"
+		ubootproject="reform-ls1028a-uboot"
+		uboottag="2023-09-19"
+		;;
+	*) echo "E: unexpected content in /proc/device-tree/model" >&2 ;;
+esac
+
+# FIXME: on ls1028a, also check for /boot/ls1028a-mhdpfw.bin
+
+ubooturl="https://source.mnt.re/reform/${ubootproject}/-/jobs/artifacts/${uboottag}/raw/flash.bin?job=build"
 ubootbin=$(mktemp)
 /usr/lib/apt/apt-helper download-file "$ubooturl" "$ubootbin" "SHA1:$ubootsha1" >/dev/null
 if [ ! -e /boot/flash.bin ]; then
@@ -112,9 +130,13 @@ elif ! cmp --quiet /boot/flash.bin "$ubootbin"; then
 	echo "W: You can update it to the latest version by running as root:" >&2
 	echo "reform-flash-uboot" >&2
 fi
-ubootoffset=$((1024*33))
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI") ubootoffset=$((1024*33));;
+	"MNT Reform 2 with BPI-CM4 Module") ubootoffset=$((512));;
+	"MNT Reform 2 with LS1028A Module") ubootoffset=$((512*8));;
+esac
 ubootsize=$(stat --format=%s "$ubootbin")
-if ! cmp --quiet --bytes="$ubootsize" --ignore-initial=0:$ubootoffset "$ubootbin" /dev/mmcblk0boot0 2>/dev/null; then
+if ! cmp --quiet --bytes="$ubootsize" "--ignore-initial=0:$ubootoffset" "$ubootbin" /dev/mmcblk0boot0 2>/dev/null; then
 	echo "W: eMMC does not contain latest uboot" >&2
 	echo "W: You can update it to the latest version by running as root:" >&2
 	echo "reform-flash-uboot emmc" >&2
@@ -134,18 +156,26 @@ if [ ! -e /dev/mmcblk0p2 ]; then
 fi
 
 if [ ! -e /etc/flash-kernel/machine ]; then
-	echo "E: /etc/flash-kernel/machine doesn't exist" >&2
-	echo "E: It should contain either 'MNT Reform 2' (for single display) or 'MNT Reform 2 HDMI' (for dual display)." >&2
-	echo "E: You can run reform-display-config as root to create a working version." >&2
+	# /etc/flash-kernel/machine not existing is only a potential problem
+	# on imx8mq
+	case "$(cat /proc/device-tree/model)" in
+		"MNT Reform 2"|"MNT Reform 2 HDMI")
+			echo "E: /etc/flash-kernel/machine doesn't exist" >&2
+			echo "E: It should contain either 'MNT Reform 2' (for single display) or 'MNT Reform 2 HDMI' (for dual display)." >&2
+			echo "E: You can run reform-display-config as root to create a working version." >&2
+			;;
+	esac
 else
 	case "$(cat /etc/flash-kernel/machine)" in
 		"MNT Reform 2") : ;;
 		"MNT Reform 2 HDMI") : ;;
+		"MNT Reform 2 with BPI-CM4 Module") echo "W: /etc/flash-kernel/machine is not needed on A311D. Consider removing it." >&2 ;;
+		"MNT Reform 2 with LS1028A Module") echo "W: /etc/flash-kernel/machine is not needed on LS1028A. Consider removing it." >&2 ;;
 		*) echo "E: unexpected content in /etc/flash-kernel/machine" >&2 ;;
 	esac
 fi
 
-flashkerneldefaultcontent="LINUX_KERNEL_CMDLINE=\"console=ttymxc0,115200 console=tty1\"\nLINUX_KERNEL_CMDLINE_DEFAULTS=\"ro no_console_suspend cma=512M pci=nomsi\"\n"
+flashkerneldefaultcontent="LINUX_KERNEL_CMDLINE=\"\"\nLINUX_KERNEL_CMDLINE_DEFAULTS=\"\"\n"
 if [ ! -e /etc/default/flash-kernel ]; then
 	echo "E: /etc/default/flash-kernel doesn't exist" >&2
 	echo "E: /etc/default/flash-kernel should contain the following lines:" >&2
@@ -157,9 +187,22 @@ else
 	fi
 fi
 
-if [ -e /etc/flash-kernel/preboot.d/00reform2_preboot ] && printf "# place here any u-boot commands to be executed before boot\n" | cmp --quiet - /etc/flash-kernel/preboot.d/00reform2_preboot; then
-	echo "E: /etc/flash-kernel/preboot.d/00reform2_preboot contains default content overriding /usr/share/flash-kernel/preboot.d/00reform2_preboot" >&2
-	echo "E: consider deleting /etc/flash-kernel/preboot.d/00reform2_preboot in favour of /usr/share/flash-kernel/preboot.d/00reform2_preboot" >&2
+if [ -e /etc/flash-kernel/preboot.d/00reform2_preboot ]; then
+	if printf "# place here any u-boot commands to be executed before boot\n" | cmp --quiet - /etc/flash-kernel/preboot.d/00reform2_preboot; then
+		echo "E: /etc/flash-kernel/preboot.d/00reform2_preboot contains default content overriding /usr/share/flash-kernel/preboot.d/00reform2_preboot" >&2
+		echo "E: consider deleting /etc/flash-kernel/preboot.d/00reform2_preboot in favour of /usr/share/flash-kernel/preboot.d/00reform2_preboot" >&2
+	else
+		echo "W: your custom /etc/flash-kernel/preboot.d/00reform2_preboot is overriding /usr/share/flash-kernel/preboot.d/00reform2_preboot" >&2
+	fi
+fi
+
+if [ -e /etc/flash-kernel/ubootenv.d/00reform2_ubootenv ]; then
+	if printf '# setenv bootpart "1"\n# setenv prefix "/"\n# setenv kernel_addr_r "0x40480000"\n# setenv fdt_addr_r "0x50000000"\n# setenv ramdisk_addr_r "0x51000000"\n' | cmp --quiet - /etc/flash-kernel/ubootenv.d/00reform2_ubootenv; then
+		echo "E: /etc/flash-kernel/ubootenv.d/00reform2_ubootenv contains default content overriding /usr/share/flash-kernel/ubootenv.d/00reform2_ubootenv" >&2
+		echo "E: consider deleting /etc/flash-kernel/ubootenv.d/00reform2_ubootenv in favour of /usr/share/flash-kernel/ubootenv.d/00reform2_ubootenv" >&2
+	else
+		echo "W: your custom /etc/flash-kernel/ubootenv.d/00reform2_ubootenv is overriding /usr/share/flash-kernel/ubootenv.d/00reform2_ubootenv"
+	fi
 fi
 
 initramfstoolsmodulescontent="pwm_imx27\nnwl-dsi\nti-sn65dsi86\nimx-dcss\npanel-edp\nmux-mmio\nmxsfb\nusbhid\nimx8mq-interconnect\n"
@@ -203,6 +246,16 @@ if [ "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://mntre.com
 	echo "E: the reform repository is not known to apt" >&2
 	echo "E: add the following line to your /etc/apt/sources.list to fix this" >&2
 	echo "deb [arch=arm64 trusted=yes] https://mntre.com/reform-debian-repo reform main" >&2
+fi
+
+# on a311d we need non-free-firmware
+# shellcheck disable=SC2016
+if [ "$(tr -d '\0' < /proc/device-tree/model)" = "MNT Reform 2 with BPI-CM4 Module" ] \
+	&& ! apt-get indextargets 'Created-By: Packages' 'Origin: Debian' 'Repo-URI: http://deb.debian.org/debian/' --format '$(COMPONENT)' | sort -u | grep --silent non-free-firmware; then
+	echo "W: you do not have non-free-firmware enabled" >&2
+	echo "W: this is required to install non-free firmware blobs that are required for platforms like Banana Pi A311D" >&2
+	echo "W: you can add a line like this to your /etc/apt/sources.list:" >&2
+	echo "deb http://deb.debian.org/debian unstable non-free-firmware" >&2
 fi
 
 if ! apt-cache policy linux-image-arm64 | grep --quiet mntre.com; then
