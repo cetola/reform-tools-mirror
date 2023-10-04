@@ -97,8 +97,28 @@ if ! mountpoint --quiet /boot; then
 	echo "E: your /boot has nothing mounted on it -- fix your /etc/fstab" >&2
 fi
 
-ubooturl="https://source.mnt.re/reform/reform-boundary-uboot/-/jobs/artifacts/2023-07-04/raw/flash.bin?job=build"
-ubootsha1="41d2ba5fcc65f26224f7d1afed650e86662cea27"
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI")
+		ubootsha1="41d2ba5fcc65f26224f7d1afed650e86662cea27"
+		ubootproject="reform-boundary-uboot"
+		uboottag="2023-07-04"
+		;;
+	"MNT Reform 2 with BPI-CM4 Module")
+		ubootsha1="8f2c588b727b251bdcfb4e846891b6d020485ce2"
+		ubootproject="reform-a311d-uboot"
+		uboottag="2023-10-02"
+		;;
+	"MNT Reform 2 with LS1028A Module")
+		ubootsha1="085847e4bbc5016fed3f179fa4082f14d0d39c00"
+		ubootproject="reform-ls1028a-uboot"
+		uboottag="2023-09-19"
+		;;
+	*) echo "E: unexpected content in /proc/device-tree/model" >&2 ;;
+esac
+
+# FIXME: on ls1028a, also check for /boot/ls1028a-mhdpfw.bin
+
+ubooturl="https://source.mnt.re/reform/${ubootproject}/-/jobs/artifacts/${uboottag}/raw/flash.bin?job=build"
 ubootbin=$(mktemp)
 /usr/lib/apt/apt-helper download-file "$ubooturl" "$ubootbin" "SHA1:$ubootsha1" >/dev/null
 if [ ! -e /boot/flash.bin ]; then
@@ -110,9 +130,13 @@ elif ! cmp --quiet /boot/flash.bin "$ubootbin"; then
 	echo "W: You can update it to the latest version by running as root:" >&2
 	echo "reform-flash-uboot" >&2
 fi
-ubootoffset=$((1024*33))
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI") ubootoffset=$((1024*33));;
+	"MNT Reform 2 with BPI-CM4 Module") ubootoffset=$((512));;
+	"MNT Reform 2 with LS1028A Module") ubootoffset=$((512*8));;
+esac
 ubootsize=$(stat --format=%s "$ubootbin")
-if ! cmp --quiet --bytes="$ubootsize" --ignore-initial=0:$ubootoffset "$ubootbin" /dev/mmcblk0boot0 2>/dev/null; then
+if ! cmp --quiet --bytes="$ubootsize" "--ignore-initial=0:$ubootoffset" "$ubootbin" /dev/mmcblk0boot0 2>/dev/null; then
 	echo "W: eMMC does not contain latest uboot" >&2
 	echo "W: You can update it to the latest version by running as root:" >&2
 	echo "reform-flash-uboot emmc" >&2
