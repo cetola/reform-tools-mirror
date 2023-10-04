@@ -131,12 +131,12 @@ elif ! cmp --quiet /boot/flash.bin "$ubootbin"; then
 	echo "reform-flash-uboot" >&2
 fi
 case "$(cat /proc/device-tree/model)" in
-	"MNT Reform 2"|"MNT Reform 2 HDMI") ubootoffset=$((1024*33));;
-	"MNT Reform 2 with BPI-CM4 Module") ubootoffset=$((512));;
-	"MNT Reform 2 with LS1028A Module") ubootoffset=$((512*8));;
+	"MNT Reform 2"|"MNT Reform 2 HDMI") ubootoffset=$((1024*33)); flashbinoffset=0;;
+	"MNT Reform 2 with BPI-CM4 Module") ubootoffset=512;          flashbinoffset=512;;
+	"MNT Reform 2 with LS1028A Module") ubootoffset=$((512*8));   flashbinoffset=0;;
 esac
 ubootsize=$(stat --format=%s "$ubootbin")
-if ! cmp --quiet --bytes="$ubootsize" "--ignore-initial=0:$ubootoffset" "$ubootbin" /dev/mmcblk0boot0 2>/dev/null; then
+if ! cmp --quiet --bytes="$ubootsize" "--ignore-initial=$flashbinoffset:$ubootoffset" "$ubootbin" /dev/mmcblk0boot0 2>/dev/null; then
 	echo "W: eMMC does not contain latest uboot" >&2
 	echo "W: You can update it to the latest version by running as root:" >&2
 	echo "reform-flash-uboot emmc" >&2
