@@ -15,4 +15,3 @@ initramfs-tools/hooks/reform    /usr/share/initramfs-tools/hooks
 initramfs-tools/scripts/reform  /usr/share/initramfs-tools/scripts/init-top
 initramfs-tools/reform.conf     /usr/share/initramfs-tools/modules.d/
 flash-kernel/*                  /usr/share/flash-kernel
-u-boot-menu/reform.conf         /usr/share/u-boot-menu/conf.d
