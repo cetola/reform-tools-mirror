@@ -48,18 +48,11 @@ if [ -e "/etc/flash-kernel/machine" ] && [ -e "/proc/device-tree/model" ] && [ "
 	echo "E: your currently loaded dtb is not the one referenced by flash-kernel" >&2
 fi
 
-# FIXME: update the list of packages from systimage-v4
-PKGSGUI="xwayland xterm xfce4-terminal sway waybar swayidle swaylock mesa-utils lxpolkit wayland-protocols rofi"
-PKGSNET="iproute2 iptables iputils-ping ircii elinks isc-dhcp-client netcat-traditional net-tools network-manager nfacct ntp ntpdate rsync telnet traceroute wpasupplicant curl wget w3m rfkill ifupdown netbase openssh-client"
+PKGSGUI="xwayland xterm foot sway fonts-inter fonts-noto-color-emoji waybar swayidle swaylock mesa-utils lxpolkit wayland-protocols wofi wireplumber papirus-icon-theme wayfire firedecor libglib2.0-bin gsettings-desktop-schemas gnome-disk-utility gnome-themes-extra-data gnome-icon-theme gnome-settings-daemon gnome-system-monitor firefox grim slurp gedit evince mpv sxiv thunar pavucontrol unicode-data engrampa neverball minetest qt5ct kde-style-breeze python3-gi gir1.2-ayatanaappindicator3-0.1 gir1.2-notify-0.7 x11-xserver-utils dunst pkexec synaptic pasystray"
+PKGSNET="iproute2 iptables inetutils-ping ircii elinks isc-dhcp-client netcat-traditional net-tools network-manager network-manager-gnome nfacct ntp ntpdate rsync telnet traceroute wpasupplicant curl wget w3m rfkill ifupdown netbase openssh-client blueman firmware-realtek"
 PKGSADMIN="apt apt-utils apt-listbugs apt-file cron cryptsetup lvm2 dbus-bin e2fsprogs fbset init-system-helpers ncdu parted pciutils policykit-1 procps sudo systemd systemd-sysv tmux u-boot-tools screen"
-PKGSUTILS="busybox console-data console-setup cpio file flash-kernel gnupg gpgv htop kbd lm-sensors readline-common usbutils xdg-utils bsdmainutils less nano micro vim alsa-utils dosfstools python3-psutil"
-PKGSMISC="brightnessctl brightness-udev ca-certificates debian-archive-keyring dialog gpm ncurses-term locales bash-completion man-db cryptsetup-initramfs linux-image-arm64 linux-headers-arm64 reform-tools reform-handbook"
-PKGDESKTOP1="git libreoffice libreoffice-gtk3 firefox-esr chromium emacs gimp wmaker x11-utils imagemagick-6.q16"
-PKGDESKTOP2="evolution freecad ardour sxiv minetest neverball scummvm dosbox wf-recorder wev linphone-desktop kicad"
-PKGPATCHED="cage wayvnc ffmpeg"
-PKGGNOME="gnome-control-center gnome-session openjdk-11-jre-headless gnome-disk-utility gnome-icon-theme breeze-icon-theme gnome-system-monitor gnome-settings-daemon mpv eog evince gedit thunar pavucontrol grim fonts-inter fonts-noto-color-emoji pulseaudio unicode-data engrampa slurp arc-theme"
-PKGKDE1="plasma-workspace-wayland kde-plasma-desktop plasma-nm systemsettings powerdevil qtwayland5"
-PKGKDE2="plasma-discover apt-config-icons-large"
+PKGSUTILS="busybox console-data console-setup cpio file flash-kernel gnupg gpgv htop kbd lm-sensors readline-common usbutils xdg-utils bsdmainutils less nano micro vim alsa-utils dosfstools python3-psutil reform-handbook"
+PKGSMISC="brightnessctl brightness-udev ca-certificates debian-archive-keyring dialog gpm ncurses-term locales bash-completion man-db cryptsetup-initramfs linux-image-arm64 linux-headers-arm64 reform-tools gpiod"
 
 aptprefcontent="Package: *\nPin: release n=reform, l=reform\nPin-Priority: 990\n"
 if [ ! -e /etc/apt/preferences.d/reform.pref ]; then
@@ -76,7 +69,7 @@ else
 fi
 
 notinstalled=
-for package in $PKGSGUI $PKGSNET $PKGSADMIN $PKGSUTILS $PKGSMISC $PKGDESKTOP1 $PKGDESKTOP2 $PKGPATCHED $PKGGNOME $PKGKDE1 $PKGKDE2; do
+for package in $PKGSGUI $PKGSNET $PKGSADMIN $PKGSUTILS $PKGSMISC; do
 	if ! dpkg-query --showformat '${db:Status-Status}\n' --show "$package" 2>/dev/null | grep -q '^installed$'; then
 		notinstalled="$notinstalled $package"
 	fi
