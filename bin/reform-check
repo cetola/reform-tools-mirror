@@ -184,7 +184,7 @@ esac
 case "$(cat /proc/device-tree/model)" in
 	"MNT Reform 2"|"MNT Reform 2 HDMI"|"MNT Reform 2 with LS1028A Module")
 		if [ ! -e "/dev/${MMCDEV}p2" ]; then
-			echo "W: /dev/${MMCDEV}p2 doesn't exist. Your eMMC still contains a sysimage before v3" >&2
+			echo "W: /dev/${MMCDEV}p2 doesn't exist." >&2
 			echo "W: To update your eMMC to sysimage-v4 you can run reform-flash-rescue" >&2
 			echo "W: Only run reform-flash-rescue if you intend a factory-reset of your eMMC" >&2
 			echo "W: Do not use reform-flash-rescue if you boot from eMMC because this will overwrite your /boot partition" >&2

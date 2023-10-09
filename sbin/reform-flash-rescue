@@ -90,6 +90,11 @@ fi
 
 echo "Downloading $URL..."
 
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI") MMCDEV="mmcblk0";;
+	"MNT Reform 2 with LS1028A Module") MMCDEV="mmcblk1";;
+esac
+
 {
 if curl --version >/dev/null; then
 	curl --silent --location "$URL"
@@ -98,12 +103,12 @@ elif wget --version >/dev/null; then
 else
 	echo "need curl or wget" >&2
 	exit 1
-fi; } | gzip --decompress --to-stdout | dd of=/dev/mmcblk0 status=progress
-partprobe /dev/mmcblk0
+fi; } | gzip --decompress --to-stdout | dd of="/dev/$MMCDEV" status=progress
+partprobe "/dev/$MMCDEV"
 
 # overwrite the partition label
-e2label /dev/mmcblk0p1 reformemmcboot
-e2label /dev/mmcblk0p2 reformemmcroot
+e2label "/dev/${MMCDEV}p1" reformemmcboot
+e2label "/dev/${MMCDEV}p2" reformemmcroot
 
 # The rescue system image that we downloaded and wrote to the eMMC above is
 # configured to use the rootfs on the SD-Card but we want the initramfs on eMMC

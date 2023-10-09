@@ -14,7 +14,7 @@ usage() {
 	echo "  reform-flash-uboot [--offline] [device...]" >&2
 	echo "" >&2
 	echo "Download and write recent uboot to eMMC or SD-Card." >&2
-	echo "Without arguments only /boot/flash.bin wil be updated unless --offline is given." >&2
+	echo "Without arguments only /boot/flash.bin will be updated unless --offline is given." >&2
 	echo "Otherwise, the arguments are the devices onto which to install uboot." >&2
 	case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with BPI-CM4 Module")
 		echo "A device shortcut is provided:" >&2
@@ -32,7 +32,7 @@ usage() {
 	esac
 }
 
-if [ "$#" -gt 0 ] && [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+if [ "$#" -gt 0 ] && [ "$1" = "--help" ] || [ "$#" -eq 0 ] || [ "$1" = "-h" ]; then
 	usage
 	exit 0
 fi

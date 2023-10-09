@@ -78,6 +78,7 @@ if [ "--emmc" = "$1" ]; then
 	case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with BPI-CM4 Module")
 		echo "E: writing to eMMC not supported on A311D" >&2
 		exit 1
+		;;
 	esac
 	EMMC="--emmc"
 	TARGET="$2"

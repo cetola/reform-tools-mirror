@@ -11,7 +11,13 @@ command -v "cryptsetup" >/dev/null 2>&1 || { echo >&2 "Please install \"cryptset
 command -v "lvchange" >/dev/null 2>&1 || { echo >&2 "Please install \"lvm2\" using: apt install lvm2"; exit 1; }
 command -v "mkfs.ext4" >/dev/null 2>&1 || { echo >&2 "Please install \"e2fsprogs\" using: apt install e2fsprogs"; exit 1; }
 
-echo "This will ERASE ALL DATA from your NVMe SSD."
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI"|"MNT Reform 2 with BPI-CM4 Module") HUMAN="NVMe";;
+	"MNT Reform 2 with LS1028A Module")                                    HUMAN="SATA";;
+	*) echo "E: unknown platform: $(cat /proc/device-tree/model)" >&2; exit 1;;
+esac
+
+echo "This will ERASE ALL DATA from your $HUMAN SSD."
 
 echo ""
 
@@ -29,14 +35,20 @@ error() { echo "$0 FAILED to run" >&2; }
 
 trap error EXIT INT TERM
 
-if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/nvme0n1)" ]; then
-	echo "/dev/nvme0n1 is still in use" >&2
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI"|"MNT Reform 2 with BPI-CM4 Module") NVMEDEV=nvme0n1;;
+	"MNT Reform 2 with LS1028A Module")                                    NVMEDEV=sda;;
+	*) echo "E: unknown platform: $(cat /proc/device-tree/model)" >&2; exit 1;;
+esac
+
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$NVMEDEV")" ]; then
+	echo "/dev/$NVMEDEV is still in use" >&2
 	exit 1
 fi
 
-cryptsetup luksFormat /dev/nvme0n1
+cryptsetup luksFormat "/dev/$NVMEDEV"
 trap "cleanupluks; error" EXIT INT TERM
-cryptsetup luksOpen /dev/nvme0n1 reform_crypt
+cryptsetup luksOpen "/dev/$NVMEDEV" reform_crypt
 pvcreate /dev/mapper/reform_crypt
 vgcreate reformvg /dev/mapper/reform_crypt
 trap "cleanupvg; cleanupluks; error" EXIT INT TERM
@@ -45,19 +57,19 @@ mkswap /dev/reformvg/swap
 lvcreate --name root --extents 100%FREE reformvg
 mkfs.ext4 /dev/reformvg/root
 SWAPUUID=$(blkid -s UUID -o value /dev/reformvg/swap)
-CRYPTUUID=$(blkid -s UUID -o value /dev/nvme0n1)
+CRYPTUUID=$(blkid -s UUID -o value "/dev/$NVMEDEV")
 
 echo ""
-printf "The encrypted NVMe is now set up. Do you want me to run reform-migrate now as well? [y/N] "
+printf "The encrypted %s is now set up. Do you want me to run reform-migrate now as well? [y/N] " "$HUMAN"
 read -r response
 
 if [ "$response" != "y" ]; then
-	echo "If you want to migrate this system to NVMe SSD you can now run:"
+	echo "If you want to migrate this system to $HUMAN SSD you can now run:"
 	echo ""
 	echo "echo RESUME=UUID=$SWAPUUID > /etc/initramfs-tools/conf.d/resume"
 	echo "echo reform_crypt UUID=$CRYPTUUID none luks,discard > /etc/crypttab"
 	echo "echo UUID=$SWAPUUID none swap sw 0 0 >> /etc/fstab"
-	echo "cryptsetup luksOpen /dev/nvme0n1 reform_crypt"
+	echo "cryptsetup luksOpen /dev/$NVMEDEV reform_crypt"
 	echo "vgchange -ay reformvg"
 	echo "reform-migrate /dev/reformvg/root"
 	echo "vgchange -an reformvg"
