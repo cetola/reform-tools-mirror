@@ -23,28 +23,35 @@ if [ "$(id -u)" -ne 0 ]
   exit
 fi
 
-MACHINE=$(tr -d '\0' < /proc/device-tree/model)
-if [ "MNT Reform 2" != "$MACHINE" ] && [ "MNT Reform 2 HDMI" != "$MACHINE" ]
-  then echo "Sorry, reform-boot-config is only supported on MNT Reform 2 with i.MX8MQ processor module."
-  exit
-fi
+case $(cat /proc/device-tree/model) in
+	"MNT Reform 2") : ;;
+	"MNT Reform 2 HDMI") : ;;
+	"MNT Reform 2 with BPI-CM4 Module") echo "Sorry, reform-boot-config is not supported on MNT Reform 2 with BPI-CM4 processor module.";;
+	"MNT Reform 2 with LS1028A Module") : ;;
+esac
 
 echo "This script selects your preferred boot medium. It writes your choice to the file /etc/fstab"
 echo
 
+case $(cat /proc/device-tree/model) in
+	"MNT Reform 2"|"MNT Reform 2 HDMI") MMCDEV="mmcblk0"; SDDEV="mmcblk1" ;;
+	"MNT Reform 2 with BPI-CM4 Module") echo "E: not supported" >&2; exit 1 ;;
+	"MNT Reform 2 with LS1028A Module") MMCDEV="mmcblk1"; SDDEV="mmcblk0" ;;
+esac
+
 usage() {
 	echo "Usage: " >&2
-	echo "  reform-boot-config [--emmc] sd    # rootfs on SD card (/dev/mmcblk1p2, default)." >&2
+	echo "  reform-boot-config [--emmc] sd    # rootfs on SD card (/dev/${SDDEV}p2, default)." >&2
 	echo "  reform-boot-config [--emmc] nvme  # rootfs on NVMe SSD (/dev/nvme0n1p1)." >&2
 	echo "  reform-boot-config [--emmc] usb   # rootfs on USB storage device (/dev/sda1)." >&2
-	echo "  reform-boot-config [--emmc] emmc  # rootfs on eMMC (/dev/mmcblk0p2)." >&2
+	echo "  reform-boot-config [--emmc] emmc  # rootfs on eMMC (/dev/${MMCDEV}p2)." >&2
 	echo "" >&2
 	echo "      --emmc Record boot preference on eMMC instead of SD card." >&2
 	echo "             This is only useful with SoM dip switch turned off." >&2
 	echo "" >&2
 	echo "Choosing sd, nvme, usb or emmc will set the root partition to" >&2
-	echo "/dev/mmcblk1p2, /dev/nvme0n1p1, /dev/sda1 or /dev/mmcblk0p2," >&2
-	echo "respectively.i You can choose another root partition by passing" >&2
+	echo "/dev/${SDDEV}p2, /dev/nvme0n1p1, /dev/sda1 or /dev/${MMCDEV}p2," >&2
+	echo "respectively. You can choose another root partition by passing" >&2
 	echo "the absolute device path starting with /dev/ explicitly." >&2
 	echo "For example, to boot a rootfs on an LVM volume, run:" >&2
 	echo "" >&2
@@ -57,23 +64,23 @@ if [ $# -ne 1 ] && [ $# -ne 2 ]; then
 fi
 
 BOOTPREF="$1"
-BOOTPART="mmcblk1p1"
+BOOTPART="${SDDEV}p1"
 
 if [ "--emmc" = "$1" ]; then
 	BOOTPREF="$2"
-	BOOTPART="mmcblk0p1"
+	BOOTPART="${MMCDEV}p1"
 
-	if [ ! -b "/dev/mmcblk0p1" ]; then
-		echo "/dev/mmcblk0p1 doesn't exist -- run reform-flash-rescue" >&2
+	if [ ! -b "/dev/$BOOTPART" ]; then
+		echo "/dev/$BOOTPART doesn't exist -- run reform-flash-rescue" >&2
 		exit 1
 	fi
 fi
 
 case $BOOTPREF in
-	sd)   : "${ROOTPART:=mmcblk1p2}";;
+	sd)   : "${ROOTPART:=${SDDEV}p2}";;
 	nvme) : "${ROOTPART:=nvme0n1p1}";;
 	usb)  : "${ROOTPART:=sda1}";;
-	emmc) : "${ROOTPART:=mmcblk0p2}";;
+	emmc) : "${ROOTPART:=${MMCDEV}p2}";;
 	/dev/*)
 		if [ ! -b "$BOOTPREF" ]; then
 			echo "there is no block device called $BOOTPREF" >&2
@@ -251,7 +258,7 @@ if [ "$MOUNTROOT" = "/" ]; then
 	mount /boot
 fi
 
-if [ "$BOOTPART" = "mmcblk0p1" ]; then
+if [ "$BOOTPART" = "${MMCDEV}p1" ]; then
 	echo "Your /boot partition is on emmc (/dev/$BOOTPART)." >&2
 	echo "Make sure that your DIP switch has been set to OFF." >&2
 else

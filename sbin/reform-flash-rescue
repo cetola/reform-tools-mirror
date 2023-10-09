@@ -1,65 +1,94 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 
-MACHINE=$(tr -d '\0' < /proc/device-tree/model)
-if [ "MNT Reform 2" != "$MACHINE" ] && [ "MNT Reform 2 HDMI" != "$MACHINE" ]
-  then echo "Sorry, reform-flash-rescue is only supported on MNT Reform 2 with i.MX8MQ processor module."
-  exit
-fi
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI") : ;;
+	"MNT Reform 2 with BPI-CM4 Module") echo "E: refusing to modify eMMC on A311D" >&2; exit 1;;
+	"MNT Reform 2 with LS1028A Module") : ;;
+	*) echo "E: unknown platform: $(cat /proc/device-tree/model)" >&2; exit 1;;
+esac
 
-if [ ! -e /sys/class/block/mmcblk0boot0/force_ro ]; then
-	echo "/sys/class/block/mmcblk0boot0/force_ro doesn't exist" >&2
-	exit 1
-fi
-
-if [ ! -w /sys/class/block/mmcblk0boot0/force_ro ]; then
-	echo "/sys/class/block/mmcblk0boot0/force_ro is not writable" >&2
-	exit 1
-fi
-
-if [ ! -e /boot/flash.bin ]; then
-	echo "/boot/flash.bin doesn't exist" >&2
-	exit 1
-fi
-
-for p in $(lsblk --list --noheadings --output=NAME /dev/mmcblk0) mmcblk0boot0 mmcblk0boot1; do
-	[ -b "/dev/$p" ] || continue
-	if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$p")" ]; then
-		echo "/dev/$p is still in use" >&2
+# only run "reform-flash-uboot emmc" on imx8mq
+case "$(cat /proc/device-tree/model)" in "MNT Reform 2"|"MNT Reform 2 HDMI")
+	if [ ! -e /sys/class/block/mmcblk0boot0/force_ro ]; then
+		echo "/sys/class/block/mmcblk0boot0/force_ro doesn't exist" >&2
 		exit 1
 	fi
-done
 
-echo "WARNING: This overwrites the bootloader on the eMMC rescue disk with the" >&2
-echo "backup stored as /boot/flash.bin!" >&2
+	if [ ! -w /sys/class/block/mmcblk0boot0/force_ro ]; then
+		echo "/sys/class/block/mmcblk0boot0/force_ro is not writable" >&2
+		exit 1
+	fi
 
-read -r -p "Are you sure you want to proceed? [y/N] " response
+	if [ ! -e /boot/flash.bin ]; then
+		echo "/boot/flash.bin doesn't exist" >&2
+		exit 1
+	fi
 
-if [[ "$response" != "y" ]]
-then
-        echo "Exiting."
-        exit
-fi
+	for p in $(lsblk --list --noheadings --output=NAME /dev/mmcblk0) mmcblk0boot0 mmcblk0boot1; do
+		[ -b "/dev/$p" ] || continue
+		if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$p")" ]; then
+			echo "/dev/$p is still in use" >&2
+			exit 1
+		fi
+	done
 
-reform-flash-uboot --offline emmc
+	echo "WARNING: This overwrites the bootloader on the eMMC rescue disk with the" >&2
+	echo "backup stored as /boot/flash.bin!" >&2
 
-echo "Bootloader was successfully written to /dev/mmcblk0boot0." >&2
-echo "" >&2
+	printf "Are you sure you want to proceed? [y/N] "
+	read -r response
 
-echo "Do you want to download and install the latest sysimage-v3 to eMMC as well?" >&2
+	if [ "$response" != "y" ]; then
+		echo "Exiting."
+		exit
+	fi
+
+	reform-flash-uboot --offline emmc
+
+	echo "Bootloader was successfully written to /dev/mmcblk0boot0." >&2
+	echo "" >&2
+	;;
+esac
+
+echo "Do you want to download and install the latest sysimage-v4 to eMMC as well?" >&2
 echo "This step needs a working internet connection and either wget or curl installed." >&2
 echo "" >&2
 echo "WARNING: This overwrites partitions on eMMC, deleting all data." >&2
-read -r -p "Are you sure you want to proceed? [y/N] " response
+printf "Are you sure you want to proceed? [y/N] "
 
-if [[ "$response" != "y" ]]
-then
-        echo "Exiting."
-        exit
+read -r response
+
+if [ "$response" != "y" ]; then
+	echo "Exiting."
+	exit
 fi
 
-URL="https://source.mnt.re/reform/reform-system-image/-/jobs/artifacts/main/raw/reform2-imx8mq/reform-system.img.gz?job=build"
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI") PLATFORM=imx8mq ;;
+	"MNT Reform 2 with BPI-CM4 Module") echo "E: refusing to modify eMMC on A311D" >&2; exit 1;;
+	"MNT Reform 2 with LS1028A Module") PLATFORM=ls1028a ;;
+	*) echo "E: unknown platform: $(cat /proc/device-tree/model)" >&2; exit 1;;
+esac
+
+URL="https://source.mnt.re/reform/reform-system-image/-/jobs/artifacts/main/raw/reform-system-${PLATFORM}.img.gz?job=build"
+
+if grep --silent '^URIs: https://reform.debian.net/debian/$' /etc/apt/sources.list.d/reform*.sources 2>/dev/null; then
+	echo "The current system image is configured to use the Debian stable mirror from" >&2
+	echo "reform.debian.net. Do you want to flash the system image from reform.debian.net" >&2
+	echo "to your eMMC? If you answer anything but \"y\", the official MNT system image will" >&2
+	echo "be downloaded and written to eMMC instead." >&2
+	printf "Do you want to download and use the rescue system image from reform.debian.net? [y/N] "
+
+	read -r response
+	if [ "$response" = "y" ]; then
+		echo "not implemented yet" >&2
+		exit 1
+	fi
+fi
+
+echo "Downloading $URL..."
 
 {
 if curl --version >/dev/null; then

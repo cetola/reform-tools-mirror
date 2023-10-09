@@ -1,16 +1,10 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 
-MACHINE=$(tr -d '\0' < /proc/device-tree/model)
-if [ "MNT Reform 2" != "$MACHINE" ] && [ "MNT Reform 2 HDMI" != "$MACHINE" ]
-  then echo "Sorry, reform-flash-rescue is only supported on MNT Reform 2 with i.MX8MQ processor module."
-  exit
-fi
-
-if [ "$EUID" -ne 0 ]
-  then echo "reform-setup-encrypted-nvme has to be run as root / using sudo."
-  exit
+if [ "$(id -u)" -ne 0 ]; then
+	echo "reform-setup-encrypted-nvme has to be run as root / using sudo."
+	exit
 fi
 
 command -v "cryptsetup" >/dev/null 2>&1 || { echo >&2 "Please install \"cryptsetup\" using: apt install cryptsetup"; exit 1; }
@@ -21,12 +15,12 @@ echo "This will ERASE ALL DATA from your NVMe SSD."
 
 echo ""
 
-read -r -p "Are you sure you want to proceed? [y/N] " response
+printf "Are you sure you want to proceed? [y/N] "
+read -r response
 
-if [[ "$response" != "y" ]]
-then
-        echo "Exiting."
-        exit
+if [ "$response" != "y" ]; then
+	echo "Exiting."
+	exit
 fi
 
 cleanupvg() { vgchange -an reformvg; }
@@ -54,10 +48,10 @@ SWAPUUID=$(blkid -s UUID -o value /dev/reformvg/swap)
 CRYPTUUID=$(blkid -s UUID -o value /dev/nvme0n1)
 
 echo ""
-read -r -p "The encrypted NVMe is now set up. Do you want me to run reform-migrate now as well? [y/N]" response
+printf "The encrypted NVMe is now set up. Do you want me to run reform-migrate now as well? [y/N] "
+read -r response
 
-if [[ "$response" != "y" ]]
-then
+if [ "$response" != "y" ]; then
 	echo "If you want to migrate this system to NVMe SSD you can now run:"
 	echo ""
 	echo "echo RESUME=UUID=$SWAPUUID > /etc/initramfs-tools/conf.d/resume"
@@ -82,12 +76,19 @@ else
 	trap "cleanupvg; cleanupluks; error" EXIT INT TERM
 	umount "$ROOTMNT"
 
-	read -r -p "Your /boot partition will be on the SD-Card by default. Do you want it on eMMC instead? [y/N]" response
-	if [[ "$response" != "y" ]]; then
-		reform-boot-config /dev/reformvg/root
-	else
-		reform-boot-config --emmc /dev/reformvg/root
-	fi
+	# on A311D, do not attempt writing on eMMC
+	case "$(cat /proc/device-tree/model)" in
+		"MNT Reform 2 with BPI-CM4 Module") reform-boot-config /dev/reformvg/root;;
+		*)
+			printf "Your /boot partition will be on the SD-Card by default. Do you want it on eMMC instead? [y/N] "
+			read -r response
+			if [ "$response" != "y" ]; then
+				reform-boot-config /dev/reformvg/root
+			else
+				reform-boot-config --emmc /dev/reformvg/root
+			fi
+			;;
+	esac
 fi
 
 trap "cleanupluks; error" EXIT INT TERM

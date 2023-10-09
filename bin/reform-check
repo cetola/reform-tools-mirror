@@ -85,12 +85,23 @@ if [ -z "$(findmnt --fstab --noheadings --evaluate --mountpoint / --output SOURC
 	echo "$(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) / auto errors=remount-ro 0 1" >&2
 fi
 
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI") MMCDEV="mmcblk0"; SDDEV="mmcblk1" ;;
+	"MNT Reform 2 with BPI-CM4 Module")                   SDDEV="mmcblk0" ;;
+	"MNT Reform 2 with LS1028A Module") MMCDEV="mmcblk1"; SDDEV="mmcblk0" ;;
+esac
+
+
 if [ -z "$(findmnt --fstab --noheadings --evaluate --mountpoint /boot --output SOURCE)" ]; then
 	echo "E: your /etc/fstab does not have an entry for /boot" >&2
-	echo "E: for eMMC booting, add:" >&2
-	echo "/dev/mmcblk0p1 /boot auto errors=remount-ro 0 1" >&2
+	case "$(cat /proc/device-tree/model)" in
+		"MNT Reform 2"|"MNT Reform 2 HDMI"|"MNT Reform 2 with LS1028A Module")
+			echo "E: for eMMC booting, add:" >&2
+			echo "/dev/${MMCDEV}p1 /boot auto errors=remount-ro 0 1" >&2
+			;;
+	esac
 	echo "E: for SD-Card booting, add:" >&2
-	echo "/dev/mmcblk1p1 /boot auto errors=remount-ro 0 1" >&2
+	echo "/dev/${SDDEV}p1 /boot auto errors=remount-ro 0 1" >&2
 fi
 
 if ! mountpoint --quiet /boot; then
@@ -136,24 +147,49 @@ case "$(cat /proc/device-tree/model)" in
 	"MNT Reform 2 with LS1028A Module") ubootoffset=$((512*8));   flashbinoffset=0;;
 esac
 ubootsize=$(stat --format=%s "$ubootbin")
-if ! cmp --quiet --bytes="$ubootsize" "--ignore-initial=$flashbinoffset:$ubootoffset" "$ubootbin" /dev/mmcblk0boot0 2>/dev/null; then
-	echo "W: eMMC does not contain latest uboot" >&2
-	echo "W: You can update it to the latest version by running as root:" >&2
-	echo "reform-flash-uboot emmc" >&2
-fi
-if [ -e /dev/mmcblk1 ] && ! cmp --quiet --bytes="$ubootsize" --ignore-initial="0:$ubootoffset" "$ubootbin" /dev/mmcblk1 2>/dev/null; then
+
+case "$(cat /proc/device-tree/model)" in "MNT Reform 2"|"MNT Reform 2 HDMI")
+	if ! cmp --quiet --bytes="$ubootsize" "--ignore-initial=$flashbinoffset:$ubootoffset" "$ubootbin" "/dev/${MMCDEV}boot0" 2>/dev/null; then
+		echo "W: eMMC does not contain latest uboot" >&2
+		echo "W: You can update it to the latest version by running as root:" >&2
+		echo "reform-flash-uboot emmc" >&2
+	fi
+	;;
+esac
+if [ -e "/dev/$SDDEV" ] && ! cmp --quiet --bytes="$ubootsize" --ignore-initial="0:$ubootoffset" "$ubootbin" "/dev/$SDDEV" 2>/dev/null; then
 	echo "W: SD-Card does not contain latest uboot" >&2
 	echo "W: You can update it to the latest version by running as root:" >&2
 	echo "reform-flash-uboot sd" >&2
 fi
 rm "$ubootbin"
 
-if [ ! -e /dev/mmcblk0p2 ]; then
-	echo "W: /dev/mmcblk0p2 doesn't exist. Your eMMC still contains a sysimage before v3" >&2
-	echo "W: To update your eMMC to sysimage-v3 you can run reform-flash-rescue" >&2
-	echo "W: Only run reform-flash-rescue if you intend a factory-reset of your eMMC" >&2
-	echo "W: Do not use reform-flash-rescue if you boot from eMMC because this will overwrite your /boot partition" >&2
-fi
+case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with LS1028A Module")
+	mhdpfwbin=$(mktemp)
+	/usr/lib/apt/apt-helper download-file \
+		"https://source.mnt.re/reform/reform-ls1028a-uboot/-/raw/main/ls1028a-mhdpfw.bin" \
+		"$mhdpfwbin" "SHA1:fa96b9aa59d7c1e9e6ee1c0375d0bcc8f8e5b78c" >/dev/null
+	if [ ! -e /boot/ls1028a-mhdpfw.bin ]; then
+		echo "W: /boot/ls1028a-mhdpfw.bin doesn't exist" >&2
+		echo "W: You can download the latest version by running as root:" >&2
+		echo "reform-flash-uboot" >&2
+	elif ! cmp --quiet /boot/ls1028a-mhdpfw.bin "$mhdpfwbin"; then
+		echo "W: /boot/ls1028a-mhdpfw.bin is not the latest uboot" >&2
+		echo "W: You can update it to the latest version by running as root:" >&2
+		echo "reform-flash-uboot" >&2
+	fi
+	rm "$mhdpfwbin"
+	;;
+esac
+
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI"|"MNT Reform 2 with LS1028A Module")
+		if [ ! -e "/dev/${MMCDEV}p2" ]; then
+			echo "W: /dev/${MMCDEV}p2 doesn't exist. Your eMMC still contains a sysimage before v3" >&2
+			echo "W: To update your eMMC to sysimage-v4 you can run reform-flash-rescue" >&2
+			echo "W: Only run reform-flash-rescue if you intend a factory-reset of your eMMC" >&2
+			echo "W: Do not use reform-flash-rescue if you boot from eMMC because this will overwrite your /boot partition" >&2
+		fi
+esac
 
 if [ ! -e /etc/flash-kernel/machine ]; then
 	# /etc/flash-kernel/machine not existing is only a potential problem
