@@ -7,7 +7,7 @@
 #
 # This preboot script overwrites ${fdtpath} such that even when ${fdtfile} is
 # set to a reasonable default, u-boot will still use dtb-${fk_kvers} if it
-# exists -- which it does with sysimage-v3 after running flash-kernel.
+# exists -- which it does after running flash-kernel.
 
 if test -e ${devtype} ${devnum}:${partition} ${prefix}dtb-${fk_kvers}; then
   setenv fdtpath dtb-${fk_kvers}

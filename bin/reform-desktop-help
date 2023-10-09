@@ -1,4 +1,3 @@
-#!/bin/bash
+#!/bin/sh
 
-cat /etc/motd
-cat /etc/reform-desktop-help
+exec cat /etc/motd /etc/reform-desktop-help

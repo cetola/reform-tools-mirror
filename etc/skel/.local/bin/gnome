@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # fix Xwayland (and anything using modifiers) graphics problems
 gsettings set org.gnome.mutter experimental-features "['kms-modifiers']"
@@ -7,4 +7,4 @@ gsettings set org.gnome.desktop.session idle-delay 0
 
 # launch a GNOME session using mutter's wayland compositor
 export XDG_SESSION_TYPE=wayland
-dbus-run-session gnome-session
+exec dbus-run-session gnome-session

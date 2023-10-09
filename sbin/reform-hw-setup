@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 MACHINE=$(tr -d '\0' < /proc/device-tree/model)
 if [ "MNT Reform 2" = "$MACHINE" ] || [ "MNT Reform 2 HDMI" = "$MACHINE" ]

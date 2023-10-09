@@ -1,23 +1,22 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 
-if [ "$EUID" -ne 0 ]
+if [ "$(id -u)" -ne 0 ]
   then echo "reform-display-config has to be run as root / using sudo."
   exit
 fi
 
-MACHINE=$(tr -d '\0' < /proc/device-tree/model)
-if [ "MNT Reform 2" != "$MACHINE" ] && [ "MNT Reform 2 HDMI" != "$MACHINE" ]
-  then echo "Sorry, reform-display-config is only supported on MNT Reform 2 with i.MX8MQ processor module."
-  exit
-fi
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI") : ;;
+	*) echo "Sorry, reform-display-config is only supported on MNT Reform 2 with i.MX8MQ processor module."; exit 1;;
+esac
 
 CHOICE="$1"
 BOOTPART="mmcblk1p1"
 BOOTDISK="SD card"
 
-if [[ "--emmc" == "$1" ]]; then
+if [ "--emmc" = "$1" ]; then
 	CHOICE="$2"
 	BOOTPART="mmcblk0p1"
 	BOOTDISK="eMMC"
