@@ -38,6 +38,7 @@ Depends:
  systemd,
  thunar,
  tzdata,
+ x11-xserver-utils,
  ${misc:Depends},
 Protected: yes
 Description: MNT Reform System Tools
