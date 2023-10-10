@@ -1,5 +1,5 @@
 Iosevka-Term                    /usr/share/fonts
-audio/99-reform.rules           /lib/udev/rules.d
+audio/99-reform.rules           /usr/lib/udev/rules.d
 audio/analog-input-reform.conf  /usr/share/pulseaudio/alsa-mixer/paths
 audio/asound.state              /var/lib/alsa
 audio/reform.conf               /usr/share/pulseaudio/alsa-mixer/profile-sets
@@ -13,6 +13,6 @@ libexec/*                       /usr/libexec
 sbin/*                          /usr/sbin
 share/*                         /usr/share
 systemd/*.service               /usr/lib/systemd/system/
-systemd/reform-poweroff         /lib/systemd/system-shutdown
+systemd/reform-poweroff         /usr/lib/systemd/system-shutdown
 systemd/reform-sleep.conf       /usr/lib/systemd/sleep.conf.d
 xorg/10-reform-etnaviv.conf     /usr/share/X11/xorg.conf.d
