@@ -99,9 +99,9 @@ fi
 
 case "$(cat /proc/device-tree/model)" in
 	"MNT Reform 2"|"MNT Reform 2 HDMI")
-		ubootsha1="41d2ba5fcc65f26224f7d1afed650e86662cea27"
+		ubootsha1="07b6e19854c37c5eebd0ad3255d952d093fe1f57"
 		ubootproject="reform-boundary-uboot"
-		uboottag="2023-07-04"
+		uboottag="2023-10-10"
 		;;
 	"MNT Reform 2 with BPI-CM4 Module")
 		ubootsha1="8f2c588b727b251bdcfb4e846891b6d020485ce2"

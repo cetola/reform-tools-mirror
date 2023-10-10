@@ -35,8 +35,8 @@ fi
 if [ "$#" -eq 0 ] || [ "$1" != "--offline" ]; then
 	echo "Downloading uboot to /boot/flash.bin and comparing checksum" >&2
 
-	ubooturl="https://source.mnt.re/reform/reform-boundary-uboot/-/jobs/artifacts/2023-07-04/raw/flash.bin?job=build"
-	ubootsha1="41d2ba5fcc65f26224f7d1afed650e86662cea27"
+	ubooturl="https://source.mnt.re/reform/reform-boundary-uboot/-/jobs/artifacts/2023-10-10/raw/flash.bin?job=build"
+	ubootsha1="07b6e19854c37c5eebd0ad3255d952d093fe1f57"
 	/usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file "$ubooturl" "/boot/flash.bin" "SHA1:$ubootsha1"
 elif [ "$#" -gt 0 ] && [ "$1" = "--offline" ]; then
 	echo "Not downloading uboot but using /boot/flash.bin without updating it." >&2
@@ -50,7 +50,8 @@ fi
 
 version=
 for h in 9d1eacedd8ea32284395bdfed05d112a1c445815 ${version#2023-01-25} \
-	41d2ba5fcc65f26224f7d1afed650e86662cea27 ${version#2023-07-04}; do
+	41d2ba5fcc65f26224f7d1afed650e86662cea27 ${version#2023-07-04} \
+	07b6e19854c37c5eebd0ad3255d952d093fe1f57 ${version#2023-10-10}; do
 	if echo "$h  /boot/flash.bin" | sha1sum --strict --check >/dev/null 2>&1; then
 		version=1
 		break
