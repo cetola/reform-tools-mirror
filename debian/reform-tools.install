@@ -5,6 +5,10 @@ audio/asound.state              /var/lib/alsa
 audio/reform.conf               /usr/share/pulseaudio/alsa-mixer/profile-sets
 bin/*                           /usr/bin
 etc/*                           /etc
+flash-kernel/*                  /usr/share/flash-kernel
+initramfs-tools/hooks/reform    /usr/share/initramfs-tools/hooks
+initramfs-tools/reform.conf     /usr/share/initramfs-tools/modules.d/
+initramfs-tools/scripts/reform  /usr/share/initramfs-tools/scripts/init-top
 libexec/*                       /usr/libexec
 sbin/*                          /usr/sbin
 share/*                         /usr/share
@@ -12,7 +16,3 @@ systemd/*.service               /usr/lib/systemd/system/
 systemd/reform-poweroff         /lib/systemd/system-shutdown
 systemd/reform-sleep.conf       /usr/lib/systemd/sleep.conf.d
 xorg/10-reform-etnaviv.conf     /usr/share/X11/xorg.conf.d
-initramfs-tools/hooks/reform    /usr/share/initramfs-tools/hooks
-initramfs-tools/scripts/reform  /usr/share/initramfs-tools/scripts/init-top
-initramfs-tools/reform.conf     /usr/share/initramfs-tools/modules.d/
-flash-kernel/*                  /usr/share/flash-kernel

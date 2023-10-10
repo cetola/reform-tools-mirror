@@ -2,39 +2,43 @@ Source: reform-tools
 Section: admin
 Priority: optional
 Maintainer: Lukas F. Hartmann <lukas@mntre.com>
-Uploaders: Johannes Schauer Marin Rodrigues <josch@debian.org>
+Uploaders:
+ Johannes Schauer Marin Rodrigues <josch@debian.org>,
 Homepage: https://source.mnt.re/reform/reform-tools/
 Standards-Version: 4.6.0.1
-Build-Depends: debhelper-compat (= 13), dh-sequence-dkms
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-sequence-dkms,
 Rules-Requires-Root: no
 
 Package: reform-tools
 Architecture: all
-Depends: alsa-utils,
-         console-setup,
-         debconf,
-         ircii,
-         keyboard-configuration,
-         mount,
-         parted,
-         pavucontrol,
-         procps,
-         python3,
-         reform2-lpc-dkms,
-         rsync,
-         systemd,
-         tzdata,
-         python3-gi,
-         gir1.2-ayatanaappindicator3-0.1,
-         gir1.2-notify-0.7,
-         pkexec,
-         synaptic,
-         pulseaudio-utils,
-         brightnessctl,
-         gnome-system-monitor,
-         foot,
-         thunar,
-         ${misc:Depends}
+Depends:
+ alsa-utils,
+ brightnessctl,
+ console-setup,
+ debconf,
+ foot,
+ gir1.2-ayatanaappindicator3-0.1,
+ gir1.2-notify-0.7,
+ gnome-system-monitor,
+ ircii,
+ keyboard-configuration,
+ mount,
+ parted,
+ pavucontrol,
+ pkexec,
+ procps,
+ pulseaudio-utils,
+ python3,
+ python3-gi,
+ reform2-lpc-dkms,
+ rsync,
+ synaptic,
+ systemd,
+ thunar,
+ tzdata,
+ ${misc:Depends},
 Protected: yes
 Description: MNT Reform System Tools
  A number of scripts for managing boot media, displays, standby, plus a few
@@ -45,7 +49,8 @@ Description: MNT Reform System Tools
 
 Package: reform2-lpc-dkms
 Architecture: all
-Depends: ${misc:Depends}
+Depends:
+ ${misc:Depends},
 Description: dkms driver sources for reform2 lpc
  This package provides sources for the reform2_lpc kernel module for use with
  the Dynamic Kernel Module Support (dkms) framework.
