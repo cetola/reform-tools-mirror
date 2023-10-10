@@ -78,6 +78,11 @@ for dev in "$@"; do
 		continue
 	fi
 
+	# no further tests for disks without a partition table
+	if [ "$(parted --machine "$dev" unit B print 2>/dev/null | grep "^$dev:" | cut -d: -f 6)" = unknown ]; then
+		continue
+	fi
+
 	freeuntil=$(parted --machine "$dev" unit B print free | grep --max-count=1 '^1:1024B:.*:free;')
 	freeuntil=${freeuntil##1:1024B:}
 	freeuntil=${freeuntil%B:*:free;}
