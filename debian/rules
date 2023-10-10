@@ -12,8 +12,8 @@ execute_after_dh_auto_build:
 	for m in full rescue; do sed "s/{DATE}/$(shell date --date=@$(SOURCE_DATE_EPOCH) --iso-8601=date)/" etc.in/motd-$$m > etc/motd-$$m; done
 
 override_dh_installsystemd:
-	dh_installsystemd --name=reform-hw-setup
-	dh_installsystemd --name=reform-sleep
+	dh_installsystemd --package=reform-tools reform-hw-setup.service
+	dh_installsystemd --package=reform-tools --no-stop-on-upgrade --no-start reform-sleep.service
 
 override_dh_dkms:
 	dh_dkms -V $(DEB_VERSION_UPSTREAM)

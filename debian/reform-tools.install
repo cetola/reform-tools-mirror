@@ -8,6 +8,7 @@ etc/*                           /etc
 libexec/*                       /usr/libexec
 sbin/*                          /usr/sbin
 share/*                         /usr/share
+systemd/*.service               /usr/lib/systemd/system/
 systemd/reform-poweroff         /lib/systemd/system-shutdown
 systemd/reform-sleep.conf       /usr/lib/systemd/sleep.conf.d
 xorg/10-reform-etnaviv.conf     /usr/share/X11/xorg.conf.d
