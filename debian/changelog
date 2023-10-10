@@ -1,3 +1,19 @@
+reform-tools (1.32) reform; urgency=medium
+
+  * debian/reform-tools.conffiles: remove-on-upgrade
+    /etc/flash-kernel/ubootenv.d/00reform2_ubootenv
+  * do not restart reform-sleep.service on upgrades
+  * sbin/reform-standby: make 'Device or resource busy' and 'No such device'
+    non-fatal
+  * debian/reform-tools.triggers: make triggers activate-noawait
+  * run wrap-and-sort -astb
+  * debian/reform-tools.install: install to /usr
+  * update to u-boot 2023-10-10
+  * sbin/reform-flash-uboot: skip checks on disks without a partition table
+  * install /usr/share/u-boot-menu/conf.d/reform.conf respecting ${bootargs}
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 10 Oct 2023 10:38:43 +0200
+
 reform-tools (1.31) reform; urgency=medium
 
   * bin/reform-check:
