@@ -56,13 +56,13 @@ kbd_backlight_on() {
 }
 
 hid_bind() {
-  echo 0003:03EB:2041.0002 > /sys/bus/hid/drivers/hid-generic/bind
-  echo 0003:03EB:2042.0001 > /sys/bus/hid/drivers/hid-generic/bind
+  echo 0003:03EB:2041.0002 > /sys/bus/hid/drivers/hid-generic/bind || :
+  echo 0003:03EB:2042.0001 > /sys/bus/hid/drivers/hid-generic/bind || :
 }
 
 hid_unbind() {
-  echo 0003:03EB:2041.0002 > /sys/bus/hid/drivers/hid-generic/unbind
-  echo 0003:03EB:2042.0001 > /sys/bus/hid/drivers/hid-generic/unbind
+  echo 0003:03EB:2041.0002 > /sys/bus/hid/drivers/hid-generic/unbind || :
+  echo 0003:03EB:2042.0001 > /sys/bus/hid/drivers/hid-generic/unbind || :
 }
 
 case $1 in
