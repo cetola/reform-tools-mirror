@@ -46,13 +46,44 @@ if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$NVMEDEV")" ]; then
 	exit 1
 fi
 
+# /proc/meminfo contains the sizes in kibibytes
+mem="$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)"
+case "$mem" in *[!0123456789]*|0?*|"")
+	echo "E: unable to acquire total memory from /proc/meminfo" >&2
+	exit 1
+esac
+# convert memory size to gigabytes, rounding up
+mem="$(awk 'BEGIN {printf("%.f",'"$mem"'/1024/1024+0.5)}')"
+# minimum swap size is 4G
+if [ "$mem" -lt 4 ]; then
+	mem=4
+fi
+
+disksize=$(lsblk -bno SIZE "/dev/$NVMEDEV" | head -1)
+case "$disksize" in *[!0123456789]*|0?*|"")
+	echo "E: unable to acquire disk size of /dev/$NVMEDEV" >&2
+	exit 1
+esac
+# convert disk size to gigabytes, rounding down
+disksize="$((disksize/1024/1024/1024))"
+
+# maximum swap size is 5% of disk size
+if [ "$mem" -gt "$((disksize*5/100))" ]; then
+	mem="$((disksize*5/100))"
+fi
+
+if [ "$mem" -le 1 ]; then
+	echo "E: your disk is too small for swap" >&2
+	exit 1
+fi
+
 cryptsetup luksFormat "/dev/$NVMEDEV"
 trap "cleanupluks; error" EXIT INT TERM
 cryptsetup luksOpen "/dev/$NVMEDEV" reform_crypt
 pvcreate /dev/mapper/reform_crypt
 vgcreate reformvg /dev/mapper/reform_crypt
 trap "cleanupvg; cleanupluks; error" EXIT INT TERM
-lvcreate --name swap --size 8G reformvg
+lvcreate --name swap --size "${mem}G" reformvg
 mkswap /dev/reformvg/swap
 lvcreate --name root --extents 100%FREE reformvg
 mkfs.ext4 /dev/reformvg/root
