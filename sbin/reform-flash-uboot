@@ -44,19 +44,19 @@ fi
 
 case "$(cat /proc/device-tree/model)" in
 	"MNT Reform 2"|"MNT Reform 2 HDMI")
-		ubootsha1="07b6e19854c37c5eebd0ad3255d952d093fe1f57"
+		ubootsha1="3de987054676b65b80ecb65455465326c9539928"
 		ubootproject="reform-boundary-uboot"
-		uboottag="2023-10-10"
+		uboottag="2023-10-18"
 		;;
 	"MNT Reform 2 with BPI-CM4 Module")
-		ubootsha1="8f2c588b727b251bdcfb4e846891b6d020485ce2"
+		ubootsha1="db5f2efb62da58dbf548e73a97764cc1380ed4ab"
 		ubootproject="reform-a311d-uboot"
-		uboottag="2023-10-02"
+		uboottag="2023-10-18"
 		;;
 	"MNT Reform 2 with LS1028A Module")
-		ubootsha1="085847e4bbc5016fed3f179fa4082f14d0d39c00"
+		ubootsha1="41570d83a25e8fb6ec84afa1e4cc9559c962d621"
 		ubootproject="reform-ls1028a-uboot"
-		uboottag="2023-09-19"
+		uboottag="2023-10-10"
 		;;
 	*) echo "E: unexpected content in /proc/device-tree/model" >&2; exit 1 ;;
 esac
