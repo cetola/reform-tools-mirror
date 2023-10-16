@@ -1,3 +1,17 @@
+reform-tools (1.33) reform; urgency=medium
+
+  * bin/reform-check: support skipping the first X bytes of flash.bin when
+    comparing
+  * debian/control: add dep on x11-xserver-utils for xhost
+  * add multiplatform support in sysimage-v4
+  * move remaining scripts from bash to posix shell
+  * sbin/reform-setup-encrypted-nvme: compute swap space depending on total
+    memory
+  * update to latest u-boot 2023-10-10 on all platforms
+  * set cma=512M on imx and cma=512M@3G on ls1028a
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Mon, 16 Oct 2023 08:22:18 +0200
+
 reform-tools (1.32) reform; urgency=medium
 
   * debian/reform-tools.conffiles: remove-on-upgrade
