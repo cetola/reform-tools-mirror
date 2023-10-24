@@ -42,8 +42,8 @@ exec swaybg -i /usr/share/backgrounds/reform-mountains.jpg
 #
 # exec swayidle -w \
 #          timeout 300 'swaylock -f -c 000000' \
-#          timeout 600 'swaymsg "output * dpms off"' \
-#               resume 'swaymsg "output * dpms on"' \
+#          timeout 600 'brightnessctl --save; brightnessctl set 0' \
+#               resume 'brightnessctl --restore' \
 #          before-sleep 'swaylock -f -c 000000'
 #
 # This will lock your screen after 300 seconds of inactivity, then turn off
