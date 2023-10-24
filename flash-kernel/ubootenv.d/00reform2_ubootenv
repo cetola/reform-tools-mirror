@@ -1,22 +1,22 @@
 # Default bootargs for Linux are set here and can be overwritten using
 # LINUX_KERNEL_CMDLINE in /etc/default/flash-kernel or by setting them in
 # u-boot itself via the setenv command.
-setenv bootargs "ro no_console_suspend cma=512M@3G cryptomgr.notests ${bootargs}"
+setenv bootargs "ro no_console_suspend cryptomgr.notests ${bootargs}"
 
 # Board-specific bootargs cannot be overwritten by above methods. If you
 # really need to overwrite below lines, create
 # /etc/flash-kernel/ubootenv.d/00reform2_ubootenv and fill it with what you
 # would like to replace the contents of this file with.
 if test "${board}" = "nitrogen8m_som"; then
-  setenv bootargs "${bootargs} console=ttymxc0,115200 pci=nomsi"
+  setenv bootargs "${bootargs} console=ttymxc0,115200 cma=512M pci=nomsi"
 elif test "${board}" = "MNT Reform 2.0"; then
   # some imx8mq Reforms have this board value
-  setenv bootargs "${bootargs} console=ttymxc0,115200 pci=nomsi"
+  setenv bootargs "${bootargs} console=ttymxc0,115200 cma=512M pci=nomsi"
 elif test "${board}" = "u200"; then
   # amlogic internal name for a311d dev board
   setenv bootargs "${bootargs} console=ttyAML0,115200 pci=pcie_bus_perf libata.force=noncq nvme_core.default_ps_max_latency_us=0"
 elif test "${board}" = "ls1028a"; then
-  setenv bootargs "${bootargs} console=ttyS0,115200 iommu.passthrough=1 arm-smmu.disable_bypass=0"
+  setenv bootargs "${bootargs} console=ttyS0,115200 cma=512M@3G iommu.passthrough=1 arm-smmu.disable_bypass=0"
 fi
 
 # console=tty1 needs to go at the end of the kernel cmdline because the luks

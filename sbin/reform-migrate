@@ -1,12 +1,6 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
-
-MACHINE=$(tr -d '\0' < /proc/device-tree/model)
-if [ "MNT Reform 2" != "$MACHINE" ] && [ "MNT Reform 2 HDMI" != "$MACHINE" ]
-  then echo "Sorry, reform-flash-rescue is only supported on MNT Reform 2 with i.MX8MQ processor module."
-  exit
-fi
 
 echo ""
 echo "This script can copy your current OS and files to a different disk, such as an SSD installed in MNT Reform."
@@ -24,25 +18,47 @@ echo ""
 echo "You can also setup an encrypted NVMe SSD by running reform-setup-encrypted-nvme"
 echo ""
 
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI") MMCDEV="mmcblk0"; SDDEV="mmcblk1" ;;
+	"MNT Reform 2 with BPI-CM4 Module")                   SDDEV="mmcblk0" ;;
+	"MNT Reform 2 with LS1028A Module") MMCDEV="mmcblk1"; SDDEV="mmcblk0" ;;
+	*) echo "E: unknown platform: $(cat /proc/device-tree/model)" >&2; exit 1;;
+esac
+
 usage() {
 	echo "Usage:"
-	echo "  reform-migrate [--emmc] TARGET"
+	case "$(cat /proc/device-tree/model)" in
+		"MNT Reform 2 with BPI-CM4 Module") echo "  reform-migrate TARGET" ;;
+		*) echo "  reform-migrate [--emmc] TARGET" ;;
+	esac
 	echo ""
 	echo "Mounts TARGET and copies the currently running system to it using rsync. This will"
 	echo "overwrite all existing files in TARGET. At the end, reform-boot-config is run and"
-	echo "will set up the first partition of the SD-card or eMMC (depending on the --emmc"
-	echo "option) to load your newly copied rootfs and adjust /etc/fstab of TARGET accordingly."
-	echo ""
-	echo "Options:"
-	echo ""
-	echo "      --emmc Record boot preference on eMMC instead of SD card."
-	echo "             This is only useful with SoM dip switch turned off."
+	case "$(cat /proc/device-tree/model)" in
+		"MNT Reform 2 with BPI-CM4 Module")
+			echo "will set up the first partition of the SD-card to load your newly copied rootfs"
+			echo "and adjust /etc/fstab of TARGET accordingly."
+			;;
+		*)
+			echo "will set up the first partition of the SD-card or eMMC (depending on the --emmc"
+			echo "option) to load your newly copied rootfs and adjust /etc/fstab of TARGET accordingly."
+			echo ""
+			echo "Options:"
+			echo ""
+			echo "      --emmc Record boot preference on eMMC instead of SD card."
+			echo "             This is only useful with SoM dip switch turned off."
+			;;
+	esac
 	echo ""
 	echo "Examples:"
 	echo ""
-	echo "  reform-migrate --emmc /dev/nvme0n1p1"
-	echo "          Mounts the first partition of an NVMe disk and mirrors your system to it."
-	echo "          Configures booting from the first partition on eMMC."
+	case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with BPI-CM4 Module") : ;;
+		*)
+			echo "  reform-migrate --emmc /dev/nvme0n1p1"
+			echo "          Mounts the first partition of an NVMe disk and mirrors your system to it."
+			echo "          Configures booting from the first partition on eMMC."
+			;;
+	esac
 	echo "  reform-migrate /dev/mapper/crypt"
 	echo "          Mounts encrypted disk 'crypt' and mirrors your system to it."
 	echo "          The disk has to be unlocked first with: cryptsetup luksOpen /dev/nvme0n1p1 crypt"
@@ -56,12 +72,17 @@ fi
 
 EMMC=""
 TARGET="$1"
-BOOTPART="mmcblk1p1"
+BOOTPART="${SDDEV}p1"
 
 if [ "--emmc" = "$1" ]; then
+	case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with BPI-CM4 Module")
+		echo "E: writing to eMMC not supported on A311D" >&2
+		exit 1
+		;;
+	esac
 	EMMC="--emmc"
 	TARGET="$2"
-	BOOTPART="mmcblk0p1"
+	BOOTPART="${MMCDEV}p1"
 fi
 
 if [ -z "$TARGET" ]; then
@@ -81,13 +102,13 @@ if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "$TARGET")" ]; then
 fi
 
 # check if the new boot is still mounted somewhere
-if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/$BOOTPART)" ]; then
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART")" ]; then
 	echo "/dev/$BOOTPART is still mounted somewhere." >&2
 	echo "Please unmount before running this script" >&2
 	exit 1
 fi
 
-if [ "$EUID" -ne 0 ]
+if [ "$(id -u)" -ne 0 ]
   then echo "reform-migrate has to be run as root / using sudo."
   exit
 fi
@@ -105,10 +126,10 @@ mount "$TARGET" "$MOUNTPOINT"
 echo "Target partition successfully mounted. The next step will copy all your files over to the target, overwriting existing files in the process."
 echo ""
 
-read -r -p "Are you sure you want to proceed? [y/N] " response
+printf "Are you sure you want to proceed? [y/N] "
+read -r response
 
-if [[ "$response" != "y" ]]
-then
+if [ "$response" != "y" ]; then
 	echo "Exiting."
 	umount "$MOUNTPOINT"
 	trap - EXIT INT TERM

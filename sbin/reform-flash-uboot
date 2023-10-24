@@ -2,27 +2,37 @@
 
 set -eu
 
-MACHINE=$(tr -d '\0' < /proc/device-tree/model)
-if [ "MNT Reform 2" != "$MACHINE" ] && [ "MNT Reform 2 HDMI" != "$MACHINE" ]
-  then echo "Sorry, reform-flash-rescue is only supported on MNT Reform 2 with i.MX8MQ processor module."
-  exit
-fi
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI") MMCDEV="mmcblk0"; SDDEV="mmcblk1" ;;
+	"MNT Reform 2 with BPI-CM4 Module")                   SDDEV="mmcblk0" ;;
+	"MNT Reform 2 with LS1028A Module") MMCDEV="mmcblk1"; SDDEV="mmcblk0" ;;
+	*) echo "Unknown device name: $(cat /proc/device-tree/model)" >&2; exit 1;;
+esac
 
 usage() {
 	echo "Usage: " >&2
 	echo "  reform-flash-uboot [--offline] [device...]" >&2
 	echo "" >&2
 	echo "Download and write recent uboot to eMMC or SD-Card." >&2
-	echo "Without arguments only /boot/flash.bin wil be updated unless --offline is given." >&2
+	echo "Without arguments only /boot/flash.bin will be updated unless --offline is given." >&2
 	echo "Otherwise, the arguments are the devices onto which to install uboot." >&2
-	echo "Two device shortcuts are provided:" >&2
-	echo "" >&2
-	echo "   emmc -> /dev/mmcblk0boot0" >&2
-	echo "   sd -> /dev/mmcblk1" >&2
-	echo "" >&2
+	case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with BPI-CM4 Module")
+		echo "A device shortcut is provided:" >&2
+		echo "" >&2
+		echo "   sd -> /dev/${SDDEV}" >&2
+		echo "" >&2
+		;;
+	*)
+		echo "Two device shortcuts are provided:" >&2
+		echo "" >&2
+		echo "   emmc -> /dev/${MMCDEV}boot0" >&2
+		echo "   sd -> /dev/${SDDEV}" >&2
+		echo "" >&2
+		;;
+	esac
 }
 
-if [ "$#" -gt 0 ] && [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+if [ "$#" -gt 0 ] && [ "$1" = "--help" ] || [ "$#" -eq 0 ] || [ "$1" = "-h" ]; then
 	usage
 	exit 0
 fi
@@ -32,49 +42,88 @@ if [ "$(id -u)" -ne 0 ]; then
 	exit 1
 fi
 
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI")
+		ubootsha1="3de987054676b65b80ecb65455465326c9539928"
+		ubootproject="reform-boundary-uboot"
+		uboottag="2023-10-18"
+		;;
+	"MNT Reform 2 with BPI-CM4 Module")
+		ubootsha1="db5f2efb62da58dbf548e73a97764cc1380ed4ab"
+		ubootproject="reform-a311d-uboot"
+		uboottag="2023-10-18"
+		;;
+	"MNT Reform 2 with LS1028A Module")
+		ubootsha1="41570d83a25e8fb6ec84afa1e4cc9559c962d621"
+		ubootproject="reform-ls1028a-uboot"
+		uboottag="2023-10-10"
+		;;
+	*) echo "E: unexpected content in /proc/device-tree/model" >&2; exit 1 ;;
+esac
+
 if [ "$#" -eq 0 ] || [ "$1" != "--offline" ]; then
 	echo "Downloading uboot to /boot/flash.bin and comparing checksum" >&2
 
-	ubooturl="https://source.mnt.re/reform/reform-boundary-uboot/-/jobs/artifacts/2023-10-10/raw/flash.bin?job=build"
-	ubootsha1="07b6e19854c37c5eebd0ad3255d952d093fe1f57"
+	ubooturl="https://source.mnt.re/reform/${ubootproject}/-/jobs/artifacts/${uboottag}/raw/flash.bin?job=build"
 	/usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file "$ubooturl" "/boot/flash.bin" "SHA1:$ubootsha1"
+	# download mhdpfw.bin on ls1028a
+	case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with LS1028A Module")
+		/usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file \
+			"https://source.mnt.re/reform/reform-ls1028a-uboot/-/raw/main/ls1028a-mhdpfw.bin" \
+			"/boot/ls1028a-mhdpfw.bin" \
+			"SHA1:fa96b9aa59d7c1e9e6ee1c0375d0bcc8f8e5b78c"
+		;;
+	esac
 elif [ "$#" -gt 0 ] && [ "$1" = "--offline" ]; then
 	echo "Not downloading uboot but using /boot/flash.bin without updating it." >&2
 	shift
+	if ! echo "$ubootsha1  /boot/flash.bin" | sha1sum --strict --check >/dev/null 2>&1; then
+		echo "Incorrect checksum for /boot/flash.bin" >&2
+		echo "Either flash manually, or run without --offline to download the latest uboot version" >&2
+		exit 1
+	fi
 fi
 
 if [ "$#" -eq 0 ]; then
-	echo "No device to flash uboot to provided. Exiting." >&2
+	echo "No device unto which to flash uboot provided. Exiting." >&2
 	exit 0
 fi
 
-version=
-for h in 9d1eacedd8ea32284395bdfed05d112a1c445815 ${version#2023-01-25} \
-	41d2ba5fcc65f26224f7d1afed650e86662cea27 ${version#2023-07-04} \
-	07b6e19854c37c5eebd0ad3255d952d093fe1f57 ${version#2023-10-10}; do
-	if echo "$h  /boot/flash.bin" | sha1sum --strict --check >/dev/null 2>&1; then
-		version=1
-		break
-	fi
+# disallow writing u-boot to eMMC on A311D and LS1028A
+for dev in "$@"; do
+	case $dev in emmc|"/dev/${MMCDEV}"*)
+		case "$(cat /proc/device-tree/model)" in
+			"MNT Reform 2 with BPI-CM4 Module")
+				echo "Unless you know what you are doing, you might want to refrain" >&2
+				echo "from utilizing the eMMC on A311D Banana Pi because if something" >&2
+				echo "goes wrong, it will be hard to un-brick your board." >&2
+				exit 1
+				;;
+			"MNT Reform 2 with LS1028A Module")
+				echo "The LS1028A currently is only able to load u-boot from SD-Card." >&2
+				exit 1
+				;;
+		esac
+		;;
+	esac
 done
 
-if [ -z "$version" ]; then
-	echo "Incorrect checksum for /boot/flash.bin" >&2
-	echo "Either flash manually, or run without --offline to download the latest uboot version" >&2
-	exit 1
-fi
-
-ubootoffset=$((1024*33))
+# offsets given in multiples of 512 bytes
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI") ubootoffset=66; flashbinoffset=0;;
+	"MNT Reform 2 with BPI-CM4 Module") ubootoffset=1;  flashbinoffset=1;;
+	"MNT Reform 2 with LS1028A Module") ubootoffset=8;  flashbinoffset=0;;
+esac
 ubootsize=$(stat --format=%s "/boot/flash.bin")
 
 # check if there is enough free space at the beginning of the disk
 for dev in "$@"; do
 	case $dev in
-		emmc) dev=/dev/mmcblk0boot0;;
-		sd)   dev=/dev/mmcblk1;;
+		emmc) dev=/dev/${MMCDEV}boot0;;
+		sd)   dev=/dev/${SDDEV};;
 	esac
 
-	if [ "$dev" = "/dev/mmcblk0boot0" ]; then
+	if [ "$dev" = "/dev/${MMCDEV}boot0" ]; then
 		continue
 	fi
 
@@ -96,9 +145,9 @@ for dev in "$@"; do
 		exit 1
 	esac
 
-	if [ "$((ubootoffset+ubootsize))" -ge "$freeuntil" ]; then
+	if [ "$((512*(ubootoffset-flashbinoffset)+ubootsize))" -ge "$freeuntil" ]; then
 		echo "the first partition on $dev starts at $freeuntil and would be overwritten by uboot" >&2
-		echo "make sure that the first $((ubootoffset+ubootsize)) bytes are free on $dev" >&2
+		echo "make sure that the first $((512*(ubootoffset-flashbinoffset)+ubootsize)) bytes are free on $dev" >&2
 		exit 1
 	fi
 done
@@ -106,18 +155,18 @@ done
 # do the flashing
 for dev in "$@"; do
 	case $dev in
-		emmc) dev=/dev/mmcblk0boot0;;
-		sd)   dev=/dev/mmcblk1;;
+		emmc) dev=/dev/${MMCDEV}boot0;;
+		sd)   dev=/dev/${SDDEV};;
 	esac
 
 	echo "Writing /boot/flash.bin to $dev" >&2
 
-	if [ "$dev" = "/dev/mmcblk0boot0" ]; then
-		echo 0 > /sys/class/block/mmcblk0boot0/force_ro
-		dd if=/boot/flash.bin of=/dev/mmcblk0boot0 bs=1024 seek=33
-		echo 1 > /sys/class/block/mmcblk0boot0/force_ro
+	if [ "$dev" = "/dev/${MMCDEV}boot0" ]; then
+		echo 0 > "/sys/class/block/${MMCDEV}boot0/force_ro"
+		dd if=/boot/flash.bin of="/dev/${MMCDEV}boot0" bs=512 seek="$ubootoffset" skip="$flashbinoffset"
+		echo 1 > "/sys/class/block/${MMCDEV}boot0/force_ro"
 		continue
 	fi
 
-	dd if=/boot/flash.bin of="$dev" bs=1024 seek=33
+	dd if=/boot/flash.bin of="$dev" bs=512 seek="$ubootoffset" skip="$flashbinoffset"
 done

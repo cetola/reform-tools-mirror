@@ -1,32 +1,32 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 
-MACHINE=$(tr -d '\0' < /proc/device-tree/model)
-if [ "MNT Reform 2" != "$MACHINE" ] && [ "MNT Reform 2 HDMI" != "$MACHINE" ]
-  then echo "Sorry, reform-flash-rescue is only supported on MNT Reform 2 with i.MX8MQ processor module."
-  exit
-fi
-
-if [ "$EUID" -ne 0 ]
-  then echo "reform-setup-encrypted-nvme has to be run as root / using sudo."
-  exit
+if [ "$(id -u)" -ne 0 ]; then
+	echo "reform-setup-encrypted-nvme has to be run as root / using sudo."
+	exit
 fi
 
 command -v "cryptsetup" >/dev/null 2>&1 || { echo >&2 "Please install \"cryptsetup\" using: apt install cryptsetup"; exit 1; }
 command -v "lvchange" >/dev/null 2>&1 || { echo >&2 "Please install \"lvm2\" using: apt install lvm2"; exit 1; }
 command -v "mkfs.ext4" >/dev/null 2>&1 || { echo >&2 "Please install \"e2fsprogs\" using: apt install e2fsprogs"; exit 1; }
 
-echo "This will ERASE ALL DATA from your NVMe SSD."
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI"|"MNT Reform 2 with BPI-CM4 Module") HUMAN="NVMe";;
+	"MNT Reform 2 with LS1028A Module")                                    HUMAN="SATA";;
+	*) echo "E: unknown platform: $(cat /proc/device-tree/model)" >&2; exit 1;;
+esac
+
+echo "This will ERASE ALL DATA from your $HUMAN SSD."
 
 echo ""
 
-read -r -p "Are you sure you want to proceed? [y/N] " response
+printf "Are you sure you want to proceed? [y/N] "
+read -r response
 
-if [[ "$response" != "y" ]]
-then
-        echo "Exiting."
-        exit
+if [ "$response" != "y" ]; then
+	echo "Exiting."
+	exit
 fi
 
 cleanupvg() { vgchange -an reformvg; }
@@ -35,35 +35,72 @@ error() { echo "$0 FAILED to run" >&2; }
 
 trap error EXIT INT TERM
 
-if [ -n "$(lsblk --noheadings --output=MOUNTPOINT /dev/nvme0n1)" ]; then
-	echo "/dev/nvme0n1 is still in use" >&2
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2"|"MNT Reform 2 HDMI"|"MNT Reform 2 with BPI-CM4 Module") NVMEDEV=nvme0n1;;
+	"MNT Reform 2 with LS1028A Module")                                    NVMEDEV=sda;;
+	*) echo "E: unknown platform: $(cat /proc/device-tree/model)" >&2; exit 1;;
+esac
+
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$NVMEDEV")" ]; then
+	echo "/dev/$NVMEDEV is still in use" >&2
 	exit 1
 fi
 
-cryptsetup luksFormat /dev/nvme0n1
+# /proc/meminfo contains the sizes in kibibytes
+mem="$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)"
+case "$mem" in *[!0123456789]*|0?*|"")
+	echo "E: unable to acquire total memory from /proc/meminfo" >&2
+	exit 1
+esac
+# convert memory size to gigabytes, rounding up
+mem="$(awk 'BEGIN {printf("%.f",'"$mem"'/1024/1024+0.5)}')"
+# minimum swap size is 4G
+if [ "$mem" -lt 4 ]; then
+	mem=4
+fi
+
+disksize=$(lsblk -bno SIZE "/dev/$NVMEDEV" | head -1)
+case "$disksize" in *[!0123456789]*|0?*|"")
+	echo "E: unable to acquire disk size of /dev/$NVMEDEV" >&2
+	exit 1
+esac
+# convert disk size to gigabytes, rounding down
+disksize="$((disksize/1024/1024/1024))"
+
+# maximum swap size is 5% of disk size
+if [ "$mem" -gt "$((disksize*5/100))" ]; then
+	mem="$((disksize*5/100))"
+fi
+
+if [ "$mem" -le 1 ]; then
+	echo "E: your disk is too small for swap" >&2
+	exit 1
+fi
+
+cryptsetup luksFormat "/dev/$NVMEDEV"
 trap "cleanupluks; error" EXIT INT TERM
-cryptsetup luksOpen /dev/nvme0n1 reform_crypt
+cryptsetup luksOpen "/dev/$NVMEDEV" reform_crypt
 pvcreate /dev/mapper/reform_crypt
 vgcreate reformvg /dev/mapper/reform_crypt
 trap "cleanupvg; cleanupluks; error" EXIT INT TERM
-lvcreate --name swap --size 8G reformvg
+lvcreate --name swap --size "${mem}G" reformvg
 mkswap /dev/reformvg/swap
 lvcreate --name root --extents 100%FREE reformvg
 mkfs.ext4 /dev/reformvg/root
 SWAPUUID=$(blkid -s UUID -o value /dev/reformvg/swap)
-CRYPTUUID=$(blkid -s UUID -o value /dev/nvme0n1)
+CRYPTUUID=$(blkid -s UUID -o value "/dev/$NVMEDEV")
 
 echo ""
-read -r -p "The encrypted NVMe is now set up. Do you want me to run reform-migrate now as well? [y/N]" response
+printf "The encrypted %s is now set up. Do you want me to run reform-migrate now as well? [y/N] " "$HUMAN"
+read -r response
 
-if [[ "$response" != "y" ]]
-then
-	echo "If you want to migrate this system to NVMe SSD you can now run:"
+if [ "$response" != "y" ]; then
+	echo "If you want to migrate this system to $HUMAN SSD you can now run:"
 	echo ""
 	echo "echo RESUME=UUID=$SWAPUUID > /etc/initramfs-tools/conf.d/resume"
 	echo "echo reform_crypt UUID=$CRYPTUUID none luks,discard > /etc/crypttab"
 	echo "echo UUID=$SWAPUUID none swap sw 0 0 >> /etc/fstab"
-	echo "cryptsetup luksOpen /dev/nvme0n1 reform_crypt"
+	echo "cryptsetup luksOpen /dev/$NVMEDEV reform_crypt"
 	echo "vgchange -ay reformvg"
 	echo "reform-migrate /dev/reformvg/root"
 	echo "vgchange -an reformvg"
@@ -82,12 +119,19 @@ else
 	trap "cleanupvg; cleanupluks; error" EXIT INT TERM
 	umount "$ROOTMNT"
 
-	read -r -p "Your /boot partition will be on the SD-Card by default. Do you want it on eMMC instead? [y/N]" response
-	if [[ "$response" != "y" ]]; then
-		reform-boot-config /dev/reformvg/root
-	else
-		reform-boot-config --emmc /dev/reformvg/root
-	fi
+	# on A311D, do not attempt writing on eMMC
+	case "$(cat /proc/device-tree/model)" in
+		"MNT Reform 2 with BPI-CM4 Module") reform-boot-config /dev/reformvg/root;;
+		*)
+			printf "Your /boot partition will be on the SD-Card by default. Do you want it on eMMC instead? [y/N] "
+			read -r response
+			if [ "$response" != "y" ]; then
+				reform-boot-config /dev/reformvg/root
+			else
+				reform-boot-config --emmc /dev/reformvg/root
+			fi
+			;;
+	esac
 fi
 
 trap "cleanupluks; error" EXIT INT TERM
