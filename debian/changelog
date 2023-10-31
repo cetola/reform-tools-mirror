@@ -1,3 +1,34 @@
+reform-tools (1.34) reform; urgency=medium
+
+  [ Johannes Schauer Marin Rodrigues ]
+  * etc/skel/.config/sway/config: replace dmps on/off with brightnessctl
+    --save and brightnessctl --restore
+  * reform-hw-setup: add comment explaining a311d amixer settings
+  * reform-boot-config: fix /boot message for a311d
+  * reform-boot-config: allow unmount /boot after prompt if current system is
+    rescue sd-card
+  * reform-boot-config: remove the rescue system disk label if necessary
+  * reform-flash-uboot: inform about the DIP switch on imx8mq
+  * reform-check: support for reform.debian.net
+  * reform-flash-rescue: support for flashing reform.d.n images to emmc
+  * stop installing /usr/lib/systemd/system-shutdown/reform-poweroff now that
+    the reform-lpc module does the right thing
+  * use symlinks to install systemd services to let dh_installsystemd choose
+    whether to install into /lib or into /usr/lib
+  * etc/reform-help: instruct to run reform-config with sudo
+
+  [ Michael Fincham ]
+  * lpc/reform2_lpc.c: send poweroff
+
+  [ Lukas F. Hartmann ]
+  * skel: fix qt5 icon theme and dialogs for KDE
+  * skel: prevent autostarting of waybar, blueman, pasystray, lxpolkit in
+    non-wlroots DEs
+  * skel: don't set QT_QPA_PLATFORMTHEME as it interferes with KDE
+  * skel: set adwaita cursor theme for gtk apps in sway and wayfire
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 02 Jan 2024 20:19:06 +0100
+
 reform-tools (1.33) reform; urgency=medium
 
   * bin/reform-check: support skipping the first X bytes of flash.bin when
