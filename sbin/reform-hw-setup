@@ -29,6 +29,8 @@ then
     amixer -c 0 sset 'Right Output Mixer PCM' on
 
     # A311D sound controls
+    # without setting these, there is no UCM profile and messages like this are produced:
+    # no backend DAIs enabled for fe.dai-link-0, possibly missing ALSA mixer-based routing or UCM profile
     amixer -c 0 sset 'FRDDR_A SINK 1 SEL' 'OUT 1'
     amixer -c 0 sset 'FRDDR_A SRC 1 EN' 'on'
     amixer -c 0 sset 'TDMOUT_B SRC SEL' 'IN 0'
