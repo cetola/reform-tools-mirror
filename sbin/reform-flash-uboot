@@ -170,3 +170,27 @@ for dev in "$@"; do
 
 	dd if=/boot/flash.bin of="$dev" bs=512 seek="$ubootoffset" skip="$flashbinoffset"
 done
+
+# inform about the DIP switch position only on imx8mq
+case "$(cat /proc/device-tree/model)" in "MNT Reform 2"|"MNT Reform 2 HDMI")
+	DOMMC=0
+	DOSD=0
+	for dev in "$@"; do
+		case $dev in
+			emmc) dev=/dev/${MMCDEV}boot0;;
+			sd)   dev=/dev/${SDDEV};;
+		esac
+		case $dev in
+			"/dev/${MMCDEV}"*) DOMMC=1;;
+			"/dev/${SDDEV}"*)  DOSD=1;;
+		esac
+	done
+	if [ "$DOMMC" != "0" ]; then
+		echo "For the i.MX8MQ to load u-boot from MMC, make sure" >&2
+		echo "that your DIP switch is set to OFF." >&2
+	fi
+	if [ "$DOSD" != "0" ]; then
+		echo "For the i.MX8MQ to load u-boot from SD-Card, make sure" >&2
+		echo "that your DIP switch is set to ON." >&2
+	fi
+esac

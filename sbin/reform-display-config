@@ -65,10 +65,8 @@ fi
 
 if [ "--emmc" = "$1" ]; then
 	echo "Your /boot partition is on emmc (/dev/$BOOTPART)." >&2
-	echo "Make sure that your DIP switch has been set to OFF." >&2
 else
 	echo "Your /boot partition is on your SD-Card (/dev/$BOOTPART)." >&2
-	echo "Make sure that your DIP switch has been set to ON." >&2
 fi
 
 echo "Restart MNT Reform (type: reboot) after saving your work to activate the changes."
