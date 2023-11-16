@@ -12,7 +12,6 @@ initramfs-tools/scripts/reform  /usr/share/initramfs-tools/scripts/init-top
 libexec/*                       /usr/libexec
 sbin/*                          /usr/sbin
 share/*                         /usr/share
-systemd/*.service               /lib/systemd/system/
 systemd/reform-sleep.conf       /usr/lib/systemd/sleep.conf.d
 u-boot-menu/reform.conf         /usr/share/u-boot-menu/conf.d
 xorg/10-reform-etnaviv.conf     /usr/share/X11/xorg.conf.d
