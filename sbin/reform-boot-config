@@ -167,9 +167,32 @@ fi
 
 # check if the new boot is still mounted somewhere
 if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART")" ]; then
-	echo "/dev/$BOOTPART is still mounted somewhere." >&2
-	echo "Please unmount before running this script" >&2
-	exit 1
+	echo "/dev/$BOOTPART is still mounted somewhere, which means that it is" >&2
+	echo "probably used by the currently running system and that replacing" >&2
+	echo "its contents might make the currently running system unbootable."
+	# if the new boot partition is found to be mounted but
+	# it's not currently mounted as /boot
+	# or it's not on the sd-card
+	# or it doesn't have the reformsdboot label
+	# then immediately exit
+	if [ "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART")" != "/boot" ] \
+		|| [ "$BOOTPART" != "${SDDEV}p1" ] \
+		|| [ "$(lsblk --noheadings --output=LABEL "/dev/$BOOTPART")" != "reformsdboot" ]; then
+		echo "Please unmount before running this script" >&2
+		exit 1
+	fi
+	# otherwise, this is very likely a rescue system sd-card so we suggest
+	# to automatically umount it and overwrite its contents
+	echo "It seems that the current /boot partition is only booting a rescue" >&2
+	echo "system on SD-Card.">&2
+	echo "" >&2
+	printf "Do you want to unmount it? [y/N]"
+	read -r response
+	if [ "$response" != "y" ]; then
+		echo "Exiting."
+		exit
+	fi
+	umount "/dev/$BOOTPART"
 fi
 
 # check that the new mountpoint for /boot is empty
