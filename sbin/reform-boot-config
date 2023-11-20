@@ -275,6 +275,22 @@ fi
 
 trap - EXIT INT TERM
 
+# make sure that the new boot partition does not still have the reformsdboot
+# or reformemmcboot labels in case it used to be the /boot partition from a
+# rescue system on sd-card or emmc, respectively
+case "$BOOTPART" in
+	"${SDDEV}p1")
+		if [ "$(lsblk --noheadings --output=LABEL "/dev/$BOOTPART")" = "reformsdboot" ]; then
+			e2label "/dev/$BOOTPART" ""
+		fi
+		;;
+	"${MMCDEV}p1")
+		if [ "$(lsblk --noheadings --output=LABEL "/dev/$BOOTPART")" = "reformemmcboot" ]; then
+			e2label "/dev/$BOOTPART" ""
+		fi
+		;;
+esac
+
 # since /boot had to be unmounted before running this script, make sure to
 # mount it again
 if [ "$MOUNTROOT" = "/" ]; then
