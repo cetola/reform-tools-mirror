@@ -8,6 +8,7 @@
 
 static int lpcProbe(struct spi_device *spi);
 static void lpcRemove(struct spi_device *spi);
+static void lpcPowerOff(void);
 static ssize_t showStatus(struct device *dev, struct device_attribute *attr, char *buf);
 static ssize_t showCells(struct device *dev, struct device_attribute *attr, char *buf);
 static ssize_t showFirmware(struct device *dev, struct device_attribute *attr, char *buf);
@@ -57,6 +58,8 @@ static struct power_supply_desc bat_desc = {
 };
 
 static struct power_supply_config psy_cfg = {};
+
+static struct device *poweroff_device;
 
 static int lpcProbe(struct spi_device *spi)
 {
@@ -121,6 +124,10 @@ static int lpcProbe(struct spi_device *spi)
         return PTR_ERR(data->bat);
     }
 
+    // this overwrites something else that has already claimed pm_power_off on reform2 but it'll do for now
+    poweroff_device = &spi->dev;
+    pm_power_off = lpcPowerOff;
+
     return ret;
 }
 
@@ -136,6 +143,11 @@ static void lpcRemove(struct spi_device *spi)
     device_remove_file(&spi->dev, &dev_attr_capacity);
 
     power_supply_unregister(data->bat);
+
+    if (pm_power_off == &lpcPowerOff)
+    {
+        pm_power_off = NULL;
+    }
 
     kfree(data);
 }
@@ -287,6 +299,14 @@ static ssize_t lpcCommand(struct device *dev, char command, uint8_t arg1, uint8_
     mutex_unlock(&data->lock);
 
     return ret;
+}
+
+static void lpcPowerOff(void)
+{
+    int ret = 0;
+    uint8_t buffer[8];
+
+    ret = lpcCommand(poweroff_device, 'p', 1, buffer);
 }
 
 static int getBatProperty(struct power_supply *psy,

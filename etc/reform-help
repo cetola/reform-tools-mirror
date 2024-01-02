@@ -15,7 +15,7 @@ List hardware/peripherals:         [1mlsblk[0m
                                    [1mip a[0m
 View this message again:           [1mreform-help[0m
 Read the Operator Handbook:        [1mreform-handbook[0m (press % to fix contrast, Q to quit)
-Set keyboard layout and timezone:  [1mreform-config[0m
+Set keyboard layout and timezone:  [1msudo reform-config[0m
 Chat in Reform community:          [1mreform-chat[0m
 Select boot device:                [1mreform-boot-config[0m
 Select display configuration:      [1mreform-display-config[0m

@@ -32,6 +32,30 @@ if [ "$(id -u)" -ne 0 ]; then
 	exit 0
 fi
 
+MIRROR=
+
+if [ "$#" -gt 0 ]; then case "$1" in
+	--mirror=mntre.com)
+		if [ "$#" -gt 1 ]; then echo "too many arguments" >&2; exit 1; fi
+		MIRROR="mntre.com";;
+	--mirror=*) echo "invalid argument for --mirror" >&2; exit 1;;
+	--mirror)
+		if [ "$#" -eq 1 ]; then            echo "missing argument" >&2; exit 1
+		elif [ "$2" != "mntre.com" ]; then echo "invalid argument for --mirror" >&2; exit 1
+		elif [ "$#" -gt 2 ]; then          echo "too many arguments" >&2; exit 1; fi
+		MIRROR="mntre.com";;
+esac; fi
+
+if [ -z "$MIRROR" ] && grep --silent '^URIs: https://reform.debian.net/debian/\?$' /etc/apt/sources.list.d/reform*.sources 2>/dev/null; then
+	echo "I: reform.debian.net is configured as a mirror in /etc/apt/sources.list.d" >&2
+	echo "I: Assuming reform.debian.net stable mirror for this script" >&2
+	echo "I: If this is incorrect, you can set the mirror to its default by" >&2
+	echo "I: re-running this script with --mirror=mntre.com"
+	MIRROR="reform.debian.net"
+else
+	MIRROR="mntre.com"
+fi
+
 if [ ! -e "/etc/flash-kernel/machine" ]; then
 	# /etc/flash-kernel/machine not existing is only a potential problem
 	# on imx8mq
@@ -48,13 +72,20 @@ if [ -e "/etc/flash-kernel/machine" ] && [ -e "/proc/device-tree/model" ] && [ "
 	echo "E: your currently loaded dtb is not the one referenced by flash-kernel" >&2
 fi
 
-PKGSGUI="xwayland xterm foot sway fonts-inter fonts-noto-color-emoji waybar swayidle swaylock mesa-utils lxpolkit wayland-protocols wofi wireplumber papirus-icon-theme wayfire firedecor libglib2.0-bin gsettings-desktop-schemas gnome-disk-utility gnome-themes-extra-data gnome-icon-theme gnome-settings-daemon gnome-system-monitor firefox grim slurp gedit evince mpv sxiv thunar pavucontrol unicode-data engrampa neverball minetest qt5ct kde-style-breeze python3-gi gir1.2-ayatanaappindicator3-0.1 gir1.2-notify-0.7 x11-xserver-utils dunst pkexec synaptic pasystray"
+PKGSGUI="xwayland xterm foot sway fonts-inter fonts-noto-color-emoji waybar swayidle swaylock mesa-utils lxpolkit wayland-protocols wofi wireplumber papirus-icon-theme libglib2.0-bin gsettings-desktop-schemas gnome-disk-utility gnome-themes-extra-data gnome-icon-theme gnome-settings-daemon gnome-system-monitor grim slurp gedit evince mpv sxiv thunar pavucontrol unicode-data engrampa neverball minetest qt5ct kde-style-breeze python3-gi gir1.2-ayatanaappindicator3-0.1 gir1.2-notify-0.7 x11-xserver-utils dunst pkexec synaptic pasystray"
+case "$MIRROR" in
+	mntre.com)         PKGSGUI="$PKGSGUI wayfire reform-firedecor firefox";;
+	reform.debian.net) PKGSGUI="$PKGSGUI firefox-esr";;
+esac
 PKGSNET="iproute2 iptables inetutils-ping ircii elinks isc-dhcp-client netcat-traditional net-tools network-manager network-manager-gnome nfacct ntp ntpdate rsync telnet traceroute wpasupplicant curl wget w3m rfkill ifupdown netbase openssh-client blueman firmware-realtek"
 PKGSADMIN="apt apt-utils apt-listbugs apt-file cron cryptsetup lvm2 dbus-bin e2fsprogs fbset init-system-helpers ncdu parted pciutils policykit-1 procps sudo systemd systemd-sysv tmux u-boot-tools screen"
 PKGSUTILS="busybox console-data console-setup cpio file flash-kernel gnupg gpgv htop kbd lm-sensors readline-common usbutils xdg-utils bsdmainutils less nano micro vim alsa-utils dosfstools python3-psutil reform-handbook"
 PKGSMISC="brightnessctl brightness-udev ca-certificates debian-archive-keyring dialog gpm ncurses-term locales bash-completion man-db cryptsetup-initramfs linux-image-arm64 linux-headers-arm64 reform-tools gpiod"
 
-aptprefcontent="Package: *\nPin: release n=reform, l=reform\nPin-Priority: 990\n"
+case "$MIRROR" in
+	mntre.com) aptprefcontent="Package: *\nPin: release n=reform, l=reform\nPin-Priority: 990\n";;
+	reform.debian.net) aptprefcontent="Package: *\nPin: origin \"reform.debian.net\"\nPin-Priority: 999\n";;
+esac
 if [ ! -e /etc/apt/preferences.d/reform.pref ]; then
 	echo "E: /etc/apt/preferences.d/reform.pref doesn't exist" >&2
 	echo "E: you should not install packages on this system unless you know what you are doing" >&2
@@ -278,11 +309,21 @@ if [ -n "$(dpkg --verify reform-tools)" ]; then
 fi
 
 # shellcheck disable=SC2016
-if [ "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://mntre.com/reform-debian-repo/' --format '$(RELEASE)')" != reform ]; then
-	echo "E: the reform repository is not known to apt" >&2
-	echo "E: add the following line to your /etc/apt/sources.list to fix this" >&2
-	echo "deb [arch=arm64 trusted=yes] https://mntre.com/reform-debian-repo reform main" >&2
-fi
+case "$MIRROR" in mntre.com)
+	if [ "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://mntre.com/reform-debian-repo/' --format '$(RELEASE)')" != reform ]; then
+		echo "E: the reform repository is not known to apt" >&2
+		echo "E: add the following line to your /etc/apt/sources.list to fix this" >&2
+		echo "deb [arch=arm64 trusted=yes] https://mntre.com/reform-debian-repo reform main" >&2
+	fi;;
+reform.debian.net)
+	case "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://reform.debian.net/debian/' --format '$(RELEASE)')" in
+		bookworm*) : ;;
+		*) echo "E: the reform.debian.net repository is not known to apt" >&2;;
+	esac;;
+*)
+	echo "invalid mirror: $MIRROR" >&2
+	exit 1
+esac
 
 # on a311d we need non-free-firmware
 # shellcheck disable=SC2016
@@ -294,12 +335,23 @@ if [ "$(tr -d '\0' < /proc/device-tree/model)" = "MNT Reform 2 with BPI-CM4 Modu
 	echo "deb http://deb.debian.org/debian unstable non-free-firmware" >&2
 fi
 
-if ! apt-cache policy linux-image-arm64 | grep --quiet mntre.com; then
-	echo "E: the linux-image-arm64 package cannot come from the MNT repos" >&2
-fi
+case "$MIRROR" in mntre.com)
+	if ! apt-cache policy linux-image-arm64 | grep --quiet mntre.com; then
+		echo "E: the linux-image-arm64 package cannot come from the MNT repos" >&2
+	fi
+	;;
+reform.debian.net)
+	if ! apt-cache policy linux-image-arm64 | grep --quiet /reform.debian.net/; then
+		echo "E: the linux-image-arm64 package cannot come from the reform.debian.net repos" >&2
+	fi
+	;;
+*)
+	echo "invalid mirror: $MIRROR" >&2
+	exit 1
+esac
 
 if ! dpkg-query --showformat '${Version}' --show linux-image-arm64 | grep --quiet reform; then
-	echo "E: the currently installed package linux-image-arm64 is not from the MNT repository" >&2
+	echo "E: the currently installed package linux-image-arm64 does not come with Reform patches" >&2
 fi
 
 for file in /boot/initrd.img-*-reform2-arm64 /boot/vmlinuz-*-reform2-arm64; do

@@ -73,8 +73,9 @@ case "$(cat /proc/device-tree/model)" in
 esac
 
 URL="https://source.mnt.re/reform/reform-system-image/-/jobs/artifacts/main/raw/reform-system-${PLATFORM}.img.gz?job=build"
+DECOMPRESSOR=gzip
 
-if grep --silent '^URIs: https://reform.debian.net/debian/$' /etc/apt/sources.list.d/reform*.sources 2>/dev/null; then
+if grep --silent '^URIs: https://reform.debian.net/debian/\?$' /etc/apt/sources.list.d/reform*.sources 2>/dev/null; then
 	echo "The current system image is configured to use the Debian stable mirror from" >&2
 	echo "reform.debian.net. Do you want to flash the system image from reform.debian.net" >&2
 	echo "to your eMMC? If you answer anything but \"y\", the official MNT system image will" >&2
@@ -83,8 +84,10 @@ if grep --silent '^URIs: https://reform.debian.net/debian/$' /etc/apt/sources.li
 
 	read -r response
 	if [ "$response" = "y" ]; then
-		echo "not implemented yet" >&2
-		exit 1
+		# no need to use the backports kernel because a311d is not
+		# allowed to write to emmc anyways
+		URL="https://reform.debian.net/images/reform2-system-${PLATFORM}.img.xz"
+		DECOMPRESSOR=xz
 	fi
 fi
 
@@ -103,7 +106,7 @@ elif wget --version >/dev/null; then
 else
 	echo "need curl or wget" >&2
 	exit 1
-fi; } | gzip --decompress --to-stdout | dd of="/dev/$MMCDEV" status=progress
+fi; } | "$DECOMPRESSOR" --decompress --to-stdout | dd of="/dev/$MMCDEV" status=progress
 partprobe "/dev/$MMCDEV"
 
 # overwrite the partition label
