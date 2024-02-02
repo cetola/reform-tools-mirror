@@ -155,7 +155,7 @@ fi
 
 # find the device that was mounted as /boot according to the /etc/fstab in the
 # given rootfs
-OLDBOOTPART="$(LIBMOUNT_FSTAB="$MOUNTROOT/etc/fstab" findmnt --fstab --noheadings --evaluate --mountpoint /boot --output SOURCE)"
+OLDBOOTPART="$(LIBMOUNT_FSTAB="$MOUNTROOT/etc/fstab" findmnt --fstab --noheadings --evaluate --mountpoint /boot --output SOURCE || :)"
 if [ -z "$OLDBOOTPART" ]; then
 	echo "cannot find /boot device referenced by /etc/fstab in rootfs at /dev/$ROOTPART" >&2
 	exit 1
