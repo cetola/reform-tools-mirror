@@ -396,3 +396,7 @@ else
 		echo "W: raid456 not blacklisted in /etc/modprobe.d/reform.conf" >&2
 	fi
 fi
+
+if [ -e /proc/modules ] && ! grep --quiet '^reform2_lpc ' /proc/modules; then
+	echo "E: reform2_lpc is not loaded" >&2
+fi
