@@ -38,13 +38,20 @@ usage() {
 	echo "  reform-boot-config [--emmc] sd    # rootfs on SD card (/dev/${SDDEV}p2, default)." >&2
 	echo "  reform-boot-config [--emmc] nvme  # rootfs on NVMe SSD (/dev/${NVMEDEV}p1)." >&2
 	echo "  reform-boot-config [--emmc] usb   # rootfs on USB storage device (/dev/${USBDEV}1)." >&2
-	echo "  reform-boot-config [--emmc] emmc  # rootfs on eMMC (/dev/${MMCDEV}p2)." >&2
-	echo "" >&2
-	echo "      --emmc Record boot preference on eMMC instead of SD card." >&2
-	echo "             This is only useful with SoM dip switch turned off." >&2
-	echo "" >&2
-	echo "Choosing sd, nvme, usb or emmc will set the root partition to" >&2
-	echo "/dev/${SDDEV}p2, /dev/${NVMEDEV}p1, /dev/${USBDEV}1 or /dev/${MMCDEV}p2," >&2
+	case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with BPI-CM4 Module")
+		echo "Choosing sd, nvme, or usb  will set the root partition to" >&2
+		echo "/dev/${SDDEV}p2, /dev/${NVMEDEV}p1 or /dev/${USBDEV}1," >&2
+		;;
+	*)
+		echo "  reform-boot-config [--emmc] emmc  # rootfs on eMMC (/dev/${MMCDEV}p2)." >&2
+		echo "" >&2
+		echo "      --emmc Record boot preference on eMMC instead of SD card." >&2
+		echo "             This is only useful with SoM dip switch turned off." >&2
+		echo "" >&2
+		echo "Choosing sd, nvme, usb or emmc will set the root partition to" >&2
+		echo "/dev/${SDDEV}p2, /dev/${NVMEDEV}p1, /dev/${USBDEV}1 or /dev/${MMCDEV}p2," >&2
+		;;
+	esac
 	echo "respectively. You can choose another root partition by passing" >&2
 	echo "the absolute device path starting with /dev/ explicitly." >&2
 	echo "For example, to boot a rootfs on an LVM volume, run:" >&2
