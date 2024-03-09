@@ -27,7 +27,6 @@ case $MACHINE in
 		echo "W: unable to deduce target machine for reform initramfs-hook" >&2
 		;;
 	*)
-		echo "E: unsupported machine: $MACHINE" >&2
-		exit 1;
+		echo "W: unsupported machine: $MACHINE" >&2
 		;;
 esac
