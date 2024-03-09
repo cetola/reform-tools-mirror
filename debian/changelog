@@ -1,3 +1,28 @@
+reform-tools (1.35) reform; urgency=medium
+
+  * Add support for four new setups:
+     - MNT Pocket Reform with i.MX8MP Module
+     - MNT Pocket Reform with BPI-CM4 Module
+     - MNT Reform 2 with i.MX8MP Module
+     - MNT Reform 2 with RCORE RK3588 Module
+  * bin/reform-check: check if reform2_lpc is loaded
+  * bin/reform-check: check whether dtb and symlinks to it are set up correctly
+  * bin/reform-check: instruct to run 'apt update' first
+  * sbin/reform-boot-config: do not fail if /boot is not mounted
+  * sbin/reform-boot-config: make --help output dependent on the platform
+  * sbin/reform-flash-uboot: forbid flashing u-boot to emmc on A311D and
+    LS1028A
+  * sbin/reform-migrate: give approximate numbers that have to be copied
+  * initramfs-tools/hooks/reform: warn instead of error if platform unknown
+  * initramfs-tools/scripts/reform: disable manual modprobing
+  * flash-kernel/ubootenv.d/00reform2_ubootenv, u-boot-menu/reform.conf: set
+    loglevel=3
+  * debian/control: add Testsuite: autopkgtest-pkg-dkms
+  * remove X11 settings for etnaviv -- this removes /etc/X11/xorg.conf as well
+    as /usr/share/X11/xorg.conf.d/10-reform-etnaviv.conf
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 19 Mar 2024 13:55:44 +0100
+
 reform-tools (1.34) reform; urgency=medium
 
   [ Johannes Schauer Marin Rodrigues ]
