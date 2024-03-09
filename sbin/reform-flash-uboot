@@ -2,10 +2,28 @@
 
 set -eu
 
+# disallow writing u-boot to eMMC on A311D and LS1028A
+case "$(cat /proc/device-tree/model)" in
+	"MNT Reform 2 with BPI-CM4 Module")
+		for dev in "$@"; do case $dev in emmc|"/dev/mmcblk1"*)
+			echo "Unless you know what you are doing, you might want to refrain" >&2
+			echo "from utilizing the eMMC on A311D Banana Pi because if something" >&2
+			echo "goes wrong, it will be hard to un-brick your board." >&2
+			exit 1
+			;;
+		esac; done ;;
+	"MNT Reform 2 with LS1028A Module")
+		for dev in "$@"; do case $dev in emmc|"/dev/mmcblk1"*)
+			echo "The LS1028A currently is only able to load u-boot from SD-Card." >&2
+			exit 1
+			;;
+		esac; done ;;
+esac
+
 case "$(cat /proc/device-tree/model)" in
 	"MNT Reform 2"|"MNT Reform 2 HDMI") MMCDEV="mmcblk0"; SDDEV="mmcblk1" ;;
 	"MNT Reform 2 with BPI-CM4 Module")                   SDDEV="mmcblk0" ;;
-	"MNT Reform 2 with LS1028A Module") MMCDEV="mmcblk1"; SDDEV="mmcblk0" ;;
+	"MNT Reform 2 with LS1028A Module")                   SDDEV="mmcblk0" ;;
 	*) echo "Unknown device name: $(cat /proc/device-tree/model)" >&2; exit 1;;
 esac
 
@@ -13,10 +31,14 @@ usage() {
 	echo "Usage: " >&2
 	echo "  reform-flash-uboot [--offline] [device...]" >&2
 	echo "" >&2
-	echo "Download and write recent uboot to eMMC or SD-Card." >&2
+	case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with BPI-CM4 Module"|"MNT Reform 2 with LS1028A Module")
+		echo "Download and write recent uboot to SD-Card." >&2 ;;
+	*)
+		echo "Download and write recent uboot to eMMC or SD-Card." >&2 ;;
+	esac
 	echo "Without arguments only /boot/flash.bin will be updated unless --offline is given." >&2
 	echo "Otherwise, the arguments are the devices onto which to install uboot." >&2
-	case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with BPI-CM4 Module")
+	case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with BPI-CM4 Module"|"MNT Reform 2 with LS1028A Module")
 		echo "A device shortcut is provided:" >&2
 		echo "" >&2
 		echo "   sd -> /dev/${SDDEV}" >&2
@@ -88,25 +110,6 @@ if [ "$#" -eq 0 ]; then
 	echo "No device unto which to flash uboot provided. Exiting." >&2
 	exit 0
 fi
-
-# disallow writing u-boot to eMMC on A311D and LS1028A
-for dev in "$@"; do
-	case $dev in emmc|"/dev/${MMCDEV}"*)
-		case "$(cat /proc/device-tree/model)" in
-			"MNT Reform 2 with BPI-CM4 Module")
-				echo "Unless you know what you are doing, you might want to refrain" >&2
-				echo "from utilizing the eMMC on A311D Banana Pi because if something" >&2
-				echo "goes wrong, it will be hard to un-brick your board." >&2
-				exit 1
-				;;
-			"MNT Reform 2 with LS1028A Module")
-				echo "The LS1028A currently is only able to load u-boot from SD-Card." >&2
-				exit 1
-				;;
-		esac
-		;;
-	esac
-done
 
 # offsets given in multiples of 512 bytes
 case "$(cat /proc/device-tree/model)" in
