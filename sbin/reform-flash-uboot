@@ -2,56 +2,49 @@
 
 set -eu
 
-# disallow writing u-boot to eMMC on A311D and LS1028A
-case "$(cat /proc/device-tree/model)" in
-	"MNT Reform 2 with BPI-CM4 Module")
-		for dev in "$@"; do case $dev in emmc|"/dev/mmcblk1"*)
-			echo "Unless you know what you are doing, you might want to refrain" >&2
-			echo "from utilizing the eMMC on A311D Banana Pi because if something" >&2
-			echo "goes wrong, it will be hard to un-brick your board." >&2
-			exit 1
-			;;
-		esac; done ;;
-	"MNT Reform 2 with LS1028A Module")
-		for dev in "$@"; do case $dev in emmc|"/dev/mmcblk1"*)
-			echo "The LS1028A currently is only able to load u-boot from SD-Card." >&2
-			exit 1
-			;;
-		esac; done ;;
-esac
+# shellcheck source=/dev/null
+if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
+	. "./machines/$(cat /proc/device-tree/model).conf"
+elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf" ]; then
+	. "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
+else
+	echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
+	exit 1
+fi
 
-case "$(cat /proc/device-tree/model)" in
-	"MNT Reform 2"|"MNT Reform 2 HDMI") MMCDEV="mmcblk0"; SDDEV="mmcblk1" ;;
-	"MNT Reform 2 with BPI-CM4 Module")                   SDDEV="mmcblk0" ;;
-	"MNT Reform 2 with LS1028A Module")                   SDDEV="mmcblk0" ;;
-	*) echo "Unknown device name: $(cat /proc/device-tree/model)" >&2; exit 1;;
-esac
+if [ "$EMMC_BOOT" = false ]; then
+	for dev in "$@"; do
+		case $dev in emmc|"/dev/${DEV_MMC}"*)
+			echo "E: writing uboot to eMMC not supported on $(cat /proc/device-tree/model)" >&2
+			exit 1
+			;;
+		esac
+	done
+fi
 
 usage() {
 	echo "Usage: " >&2
 	echo "  reform-flash-uboot [--offline] [device...]" >&2
 	echo "" >&2
-	case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with BPI-CM4 Module"|"MNT Reform 2 with LS1028A Module")
-		echo "Download and write recent uboot to SD-Card." >&2 ;;
-	*)
-		echo "Download and write recent uboot to eMMC or SD-Card." >&2 ;;
-	esac
+	if [ "$EMMC_BOOT" = true ]; then
+		echo "Download and write recent uboot to eMMC or SD-Card." >&2
+	else
+		echo "Download and write recent uboot to SD-Card." >&2
+	fi
 	echo "Without arguments only /boot/flash.bin will be updated unless --offline is given." >&2
 	echo "Otherwise, the arguments are the devices onto which to install uboot." >&2
-	case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with BPI-CM4 Module"|"MNT Reform 2 with LS1028A Module")
-		echo "A device shortcut is provided:" >&2
-		echo "" >&2
-		echo "   sd -> /dev/${SDDEV}" >&2
-		echo "" >&2
-		;;
-	*)
+	if [ "$EMMC_BOOT" = true ]; then
 		echo "Two device shortcuts are provided:" >&2
 		echo "" >&2
 		echo "   emmc -> /dev/${MMCDEV}boot0" >&2
 		echo "   sd -> /dev/${SDDEV}" >&2
 		echo "" >&2
-		;;
-	esac
+	else
+		echo "A device shortcut is provided:" >&2
+		echo "" >&2
+		echo "   sd -> /dev/${SDDEV}" >&2
+		echo "" >&2
+	fi
 }
 
 if [ "$#" -gt 0 ] && [ "$1" = "--help" ] || [ "$#" -eq 0 ] || [ "$1" = "-h" ]; then
@@ -64,30 +57,11 @@ if [ "$(id -u)" -ne 0 ]; then
 	exit 1
 fi
 
-case "$(cat /proc/device-tree/model)" in
-	"MNT Reform 2"|"MNT Reform 2 HDMI")
-		ubootsha1="3de987054676b65b80ecb65455465326c9539928"
-		ubootproject="reform-boundary-uboot"
-		uboottag="2023-10-18"
-		;;
-	"MNT Reform 2 with BPI-CM4 Module")
-		ubootsha1="db5f2efb62da58dbf548e73a97764cc1380ed4ab"
-		ubootproject="reform-a311d-uboot"
-		uboottag="2023-10-18"
-		;;
-	"MNT Reform 2 with LS1028A Module")
-		ubootsha1="41570d83a25e8fb6ec84afa1e4cc9559c962d621"
-		ubootproject="reform-ls1028a-uboot"
-		uboottag="2023-10-10"
-		;;
-	*) echo "E: unexpected content in /proc/device-tree/model" >&2; exit 1 ;;
-esac
-
 if [ "$#" -eq 0 ] || [ "$1" != "--offline" ]; then
 	echo "Downloading uboot to /boot/flash.bin and comparing checksum" >&2
 
-	ubooturl="https://source.mnt.re/reform/${ubootproject}/-/jobs/artifacts/${uboottag}/raw/flash.bin?job=build"
-	/usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file "$ubooturl" "/boot/flash.bin" "SHA1:$ubootsha1"
+	ubooturl="https://source.mnt.re/reform/${UBOOT_PROJECT}/-/jobs/artifacts/${UBOOT_TAG}/raw/flash.bin?job=build"
+	/usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file "$ubooturl" "/boot/flash.bin" "SHA1:$UBOOT_SHA1"
 	# download mhdpfw.bin on ls1028a
 	case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with LS1028A Module")
 		/usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file \
@@ -99,7 +73,7 @@ if [ "$#" -eq 0 ] || [ "$1" != "--offline" ]; then
 elif [ "$#" -gt 0 ] && [ "$1" = "--offline" ]; then
 	echo "Not downloading uboot but using /boot/flash.bin without updating it." >&2
 	shift
-	if ! echo "$ubootsha1  /boot/flash.bin" | sha1sum --strict --check >/dev/null 2>&1; then
+	if ! echo "$UBOOT_SHA1  /boot/flash.bin" | sha1sum --strict --check >/dev/null 2>&1; then
 		echo "Incorrect checksum for /boot/flash.bin" >&2
 		echo "Either flash manually, or run without --offline to download the latest uboot version" >&2
 		exit 1
@@ -111,12 +85,6 @@ if [ "$#" -eq 0 ]; then
 	exit 0
 fi
 
-# offsets given in multiples of 512 bytes
-case "$(cat /proc/device-tree/model)" in
-	"MNT Reform 2"|"MNT Reform 2 HDMI") ubootoffset=66; flashbinoffset=0;;
-	"MNT Reform 2 with BPI-CM4 Module") ubootoffset=1;  flashbinoffset=1;;
-	"MNT Reform 2 with LS1028A Module") ubootoffset=8;  flashbinoffset=0;;
-esac
 ubootsize=$(stat --format=%s "/boot/flash.bin")
 
 # check if there is enough free space at the beginning of the disk
@@ -148,9 +116,9 @@ for dev in "$@"; do
 		exit 1
 	esac
 
-	if [ "$((512*(ubootoffset-flashbinoffset)+ubootsize))" -ge "$freeuntil" ]; then
+	if [ "$((UBOOT_OFFSET-FLASHBIN_OFFSET+ubootsize))" -ge "$freeuntil" ]; then
 		echo "the first partition on $dev starts at $freeuntil and would be overwritten by uboot" >&2
-		echo "make sure that the first $((512*(ubootoffset-flashbinoffset)+ubootsize)) bytes are free on $dev" >&2
+		echo "make sure that the first $((UBOOT_OFFSET-FLASHBIN_OFFSET+ubootsize)) bytes are free on $dev" >&2
 		exit 1
 	fi
 done
@@ -166,12 +134,12 @@ for dev in "$@"; do
 
 	if [ "$dev" = "/dev/${MMCDEV}boot0" ]; then
 		echo 0 > "/sys/class/block/${MMCDEV}boot0/force_ro"
-		dd if=/boot/flash.bin of="/dev/${MMCDEV}boot0" bs=512 seek="$ubootoffset" skip="$flashbinoffset"
+		dd if=/boot/flash.bin of="/dev/${MMCDEV}boot0" bs=512 seek="$((UBOOT_OFFSET/512))" skip="$((FLASHBIN_OFFSET/512))"
 		echo 1 > "/sys/class/block/${MMCDEV}boot0/force_ro"
 		continue
 	fi
 
-	dd if=/boot/flash.bin of="$dev" bs=512 seek="$ubootoffset" skip="$flashbinoffset"
+	dd if=/boot/flash.bin of="$dev" bs=512 seek="$((UBOOT_OFFSET/512))" skip="$((FLASHBIN_OFFSET/512))"
 done
 
 # inform about the DIP switch position only on imx8mq

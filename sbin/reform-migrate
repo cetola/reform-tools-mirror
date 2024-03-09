@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -e
+set -eu
 
 echo ""
 echo "This script can copy your current OS and files to a different disk, such as an SSD installed in MNT Reform."
@@ -18,47 +18,46 @@ echo ""
 echo "You can also setup an encrypted NVMe SSD by running reform-setup-encrypted-nvme"
 echo ""
 
-case "$(cat /proc/device-tree/model)" in
-	"MNT Reform 2"|"MNT Reform 2 HDMI") MMCDEV="mmcblk0"; SDDEV="mmcblk1" ;;
-	"MNT Reform 2 with BPI-CM4 Module")                   SDDEV="mmcblk0" ;;
-	"MNT Reform 2 with LS1028A Module") MMCDEV="mmcblk1"; SDDEV="mmcblk0" ;;
-	*) echo "E: unknown platform: $(cat /proc/device-tree/model)" >&2; exit 1;;
-esac
+# shellcheck source=/dev/null
+if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
+	. "./machines/$(cat /proc/device-tree/model).conf"
+elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf" ]; then
+	. "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
+else
+	echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
+	exit 1
+fi
 
 usage() {
 	echo "Usage:"
-	case "$(cat /proc/device-tree/model)" in
-		"MNT Reform 2 with BPI-CM4 Module") echo "  reform-migrate TARGET" ;;
-		*) echo "  reform-migrate [--emmc] TARGET" ;;
-	esac
+	if [ "$EMMC_USE" = true ]; then
+		echo "  reform-migrate [--emmc] TARGET"
+	else
+		echo "  reform-migrate TARGET"
+	fi
 	echo ""
 	echo "Mounts TARGET and copies the currently running system to it using rsync. This will"
 	echo "overwrite all existing files in TARGET. At the end, reform-boot-config is run and"
-	case "$(cat /proc/device-tree/model)" in
-		"MNT Reform 2 with BPI-CM4 Module")
-			echo "will set up the first partition of the SD-card to load your newly copied rootfs"
-			echo "and adjust /etc/fstab of TARGET accordingly."
-			;;
-		*)
-			echo "will set up the first partition of the SD-card or eMMC (depending on the --emmc"
-			echo "option) to load your newly copied rootfs and adjust /etc/fstab of TARGET accordingly."
-			echo ""
-			echo "Options:"
-			echo ""
-			echo "      --emmc Record boot preference on eMMC instead of SD card."
-			echo "             This is only useful with SoM dip switch turned off."
-			;;
-	esac
+	if [ "$EMMC_USE" = true ]; then
+		echo "will set up the first partition of the SD-card or eMMC (depending on the --emmc"
+		echo "option) to load your newly copied rootfs and adjust /etc/fstab of TARGET accordingly."
+		echo ""
+		echo "Options:"
+		echo ""
+		echo "      --emmc Record boot preference on eMMC instead of SD card."
+		echo "             This is only useful with SoM dip switch turned off."
+	else
+		echo "will set up the first partition of the SD-card to load your newly copied rootfs"
+		echo "and adjust /etc/fstab of TARGET accordingly."
+	fi
 	echo ""
 	echo "Examples:"
 	echo ""
-	case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with BPI-CM4 Module") : ;;
-		*)
-			echo "  reform-migrate --emmc /dev/nvme0n1p1"
-			echo "          Mounts the first partition of an NVMe disk and mirrors your system to it."
-			echo "          Configures booting from the first partition on eMMC."
-			;;
-	esac
+	if [ "$EMMC_USE" = true ]; then
+		echo "  reform-migrate --emmc /dev/nvme0n1p1"
+		echo "          Mounts the first partition of an NVMe disk and mirrors your system to it."
+		echo "          Configures booting from the first partition on eMMC."
+	fi
 	echo "  reform-migrate /dev/mapper/crypt"
 	echo "          Mounts encrypted disk 'crypt' and mirrors your system to it."
 	echo "          The disk has to be unlocked first with: cryptsetup luksOpen /dev/nvme0n1p1 crypt"
@@ -72,17 +71,16 @@ fi
 
 EMMC=""
 TARGET="$1"
-BOOTPART="${SDDEV}p1"
+BOOTPART="${DEV_SD}p1"
 
 if [ "--emmc" = "$1" ]; then
-	case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with BPI-CM4 Module")
-		echo "E: writing to eMMC not supported on A311D" >&2
+	if [ "$EMMC_USE" = false ]; then
+		echo "E: writing to eMMC not supported on $(cat /proc/device-tree/model)" >&2
 		exit 1
-		;;
-	esac
+	fi
 	EMMC="--emmc"
 	TARGET="$2"
-	BOOTPART="${MMCDEV}p1"
+	BOOTPART="${DEV_MMC}p1"
 fi
 
 if [ -z "$TARGET" ]; then

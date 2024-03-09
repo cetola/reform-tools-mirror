@@ -23,6 +23,9 @@ case $MACHINE in
 		[ "${verbose}" = "y" ] && echo "Adding firmware ls1028a-mhdpfw.bin"
 		copy_file firmware /boot/ls1028a-mhdpfw.bin /lib/firmware
 		;;
+	"MNT Reform 2 with RCORE RK3588 Module") : ;;
+	"MNT Pocket Reform with i.MX8MP Module") : ;;
+	"MNT Pocket Reform with BPI-CM4 Module") : ;;
 	"")
 		echo "W: unable to deduce target machine for reform initramfs-hook" >&2
 		;;

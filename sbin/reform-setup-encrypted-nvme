@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -e
+set -eu
 
 if [ "$(id -u)" -ne 0 ]; then
 	echo "reform-setup-encrypted-nvme has to be run as root / using sudo."
@@ -11,11 +11,21 @@ command -v "cryptsetup" >/dev/null 2>&1 || { echo >&2 "Please install \"cryptset
 command -v "lvchange" >/dev/null 2>&1 || { echo >&2 "Please install \"lvm2\" using: apt install lvm2"; exit 1; }
 command -v "mkfs.ext4" >/dev/null 2>&1 || { echo >&2 "Please install \"e2fsprogs\" using: apt install e2fsprogs"; exit 1; }
 
-case "$(cat /proc/device-tree/model)" in
-	"MNT Reform 2"|"MNT Reform 2 HDMI"|"MNT Reform 2 with BPI-CM4 Module") HUMAN="NVMe";;
-	"MNT Reform 2 with LS1028A Module")                                    HUMAN="SATA";;
-	*) echo "E: unknown platform: $(cat /proc/device-tree/model)" >&2; exit 1;;
-esac
+# shellcheck source=/dev/null
+if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
+	. "./machines/$(cat /proc/device-tree/model).conf"
+elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf" ]; then
+	. "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
+else
+	echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
+	exit 1
+fi
+
+if [ "$DEV_SSD" = "sda" ]; then
+	HUMAN="SATA"
+else
+	HUMAN="NVMe"
+fi
 
 echo "This will ERASE ALL DATA from your $HUMAN SSD."
 
@@ -35,14 +45,8 @@ error() { echo "$0 FAILED to run" >&2; }
 
 trap error EXIT INT TERM
 
-case "$(cat /proc/device-tree/model)" in
-	"MNT Reform 2"|"MNT Reform 2 HDMI"|"MNT Reform 2 with BPI-CM4 Module") NVMEDEV=nvme0n1;;
-	"MNT Reform 2 with LS1028A Module")                                    NVMEDEV=sda;;
-	*) echo "E: unknown platform: $(cat /proc/device-tree/model)" >&2; exit 1;;
-esac
-
-if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$NVMEDEV")" ]; then
-	echo "/dev/$NVMEDEV is still in use" >&2
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$DEV_SSD")" ]; then
+	echo "/dev/$DEV_SSD is still in use" >&2
 	exit 1
 fi
 
@@ -59,9 +63,9 @@ if [ "$mem" -lt 4 ]; then
 	mem=4
 fi
 
-disksize=$(lsblk -bno SIZE "/dev/$NVMEDEV" | head -1)
+disksize=$(lsblk -bno SIZE "/dev/$DEV_SSD" | head -1)
 case "$disksize" in *[!0123456789]*|0?*|"")
-	echo "E: unable to acquire disk size of /dev/$NVMEDEV" >&2
+	echo "E: unable to acquire disk size of /dev/$DEV_SSD" >&2
 	exit 1
 esac
 # convert disk size to gigabytes, rounding down
@@ -77,9 +81,9 @@ if [ "$mem" -le 1 ]; then
 	exit 1
 fi
 
-cryptsetup luksFormat "/dev/$NVMEDEV"
+cryptsetup luksFormat "/dev/$DEV_SSD"
 trap "cleanupluks; error" EXIT INT TERM
-cryptsetup luksOpen "/dev/$NVMEDEV" reform_crypt
+cryptsetup luksOpen "/dev/$DEV_SSD" reform_crypt
 pvcreate /dev/mapper/reform_crypt
 vgcreate reformvg /dev/mapper/reform_crypt
 trap "cleanupvg; cleanupluks; error" EXIT INT TERM
@@ -88,7 +92,7 @@ mkswap /dev/reformvg/swap
 lvcreate --name root --extents 100%FREE reformvg
 mkfs.ext4 /dev/reformvg/root
 SWAPUUID=$(blkid -s UUID -o value /dev/reformvg/swap)
-CRYPTUUID=$(blkid -s UUID -o value "/dev/$NVMEDEV")
+CRYPTUUID=$(blkid -s UUID -o value "/dev/$DEV_SSD")
 
 echo ""
 printf "The encrypted %s is now set up. Do you want me to run reform-migrate now as well? [y/N] " "$HUMAN"
@@ -100,7 +104,7 @@ if [ "$response" != "y" ]; then
 	echo "echo RESUME=UUID=$SWAPUUID > /etc/initramfs-tools/conf.d/resume"
 	echo "echo reform_crypt UUID=$CRYPTUUID none luks,discard > /etc/crypttab"
 	echo "echo UUID=$SWAPUUID none swap sw 0 0 >> /etc/fstab"
-	echo "cryptsetup luksOpen /dev/$NVMEDEV reform_crypt"
+	echo "cryptsetup luksOpen /dev/$DEV_SSD reform_crypt"
 	echo "vgchange -ay reformvg"
 	echo "reform-migrate /dev/reformvg/root"
 	echo "vgchange -an reformvg"
@@ -119,19 +123,17 @@ else
 	trap "cleanupvg; cleanupluks; error" EXIT INT TERM
 	umount "$ROOTMNT"
 
-	# on A311D, do not attempt writing on eMMC
-	case "$(cat /proc/device-tree/model)" in
-		"MNT Reform 2 with BPI-CM4 Module") reform-boot-config /dev/reformvg/root;;
-		*)
-			printf "Your /boot partition will be on the SD-Card by default. Do you want it on eMMC instead? [y/N] "
-			read -r response
-			if [ "$response" != "y" ]; then
-				reform-boot-config /dev/reformvg/root
-			else
-				reform-boot-config --emmc /dev/reformvg/root
-			fi
-			;;
-	esac
+	if [ "$EMMC_BOOT" = true ]; then
+		printf "Your /boot partition will be on the SD-Card by default. Do you want it on eMMC instead? [y/N] "
+		read -r response
+		if [ "$response" != "y" ]; then
+			reform-boot-config /dev/reformvg/root
+		else
+			reform-boot-config --emmc /dev/reformvg/root
+		fi
+	else
+		reform-boot-config /dev/reformvg/root
+	fi
 fi
 
 trap "cleanupluks; error" EXIT INT TERM

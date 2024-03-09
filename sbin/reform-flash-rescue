@@ -1,23 +1,30 @@
 #!/bin/sh
 
-set -e
+set -eu
 
-case "$(cat /proc/device-tree/model)" in
-	"MNT Reform 2"|"MNT Reform 2 HDMI") : ;;
-	"MNT Reform 2 with BPI-CM4 Module") echo "E: refusing to modify eMMC on A311D" >&2; exit 1;;
-	"MNT Reform 2 with LS1028A Module") : ;;
-	*) echo "E: unknown platform: $(cat /proc/device-tree/model)" >&2; exit 1;;
-esac
+# shellcheck source=/dev/null
+if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
+	. "./machines/$(cat /proc/device-tree/model).conf"
+elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf" ]; then
+	. "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
+else
+	echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
+	exit 1
+fi
 
-# only run "reform-flash-uboot emmc" on imx8mq
-case "$(cat /proc/device-tree/model)" in "MNT Reform 2"|"MNT Reform 2 HDMI")
-	if [ ! -e /sys/class/block/mmcblk0boot0/force_ro ]; then
-		echo "/sys/class/block/mmcblk0boot0/force_ro doesn't exist" >&2
+if [ "$EMMC_USE" = false ]; then
+	echo "E: writing to eMMC not supported on $(cat /proc/device-tree/model)" >&2
+	exit 1
+fi
+
+if [ "$EMMC_BOOT" = true ]; then
+	if [ ! -e "/sys/class/block/${DEV_MMC}boot0/force_ro" ]; then
+		echo "/sys/class/block/${DEV_MMC}boot0/force_ro doesn't exist" >&2
 		exit 1
 	fi
 
-	if [ ! -w /sys/class/block/mmcblk0boot0/force_ro ]; then
-		echo "/sys/class/block/mmcblk0boot0/force_ro is not writable" >&2
+	if [ ! -w "/sys/class/block/${DEV_MMC}boot0/force_ro" ]; then
+		echo "/sys/class/block/${DEV_MMC}boot0/force_ro is not writable" >&2
 		exit 1
 	fi
 
@@ -26,7 +33,7 @@ case "$(cat /proc/device-tree/model)" in "MNT Reform 2"|"MNT Reform 2 HDMI")
 		exit 1
 	fi
 
-	for p in $(lsblk --list --noheadings --output=NAME /dev/mmcblk0) mmcblk0boot0 mmcblk0boot1; do
+	for p in $(lsblk --list --noheadings --output=NAME "/dev/$DEV_MMC") "${DEV_MMC}boot0" "${DEV_MMC}boot1"; do
 		[ -b "/dev/$p" ] || continue
 		if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$p")" ]; then
 			echo "/dev/$p is still in use" >&2
@@ -47,10 +54,9 @@ case "$(cat /proc/device-tree/model)" in "MNT Reform 2"|"MNT Reform 2 HDMI")
 
 	reform-flash-uboot --offline emmc
 
-	echo "Bootloader was successfully written to /dev/mmcblk0boot0." >&2
+	echo "Bootloader was successfully written to /dev/${DEV_MMC}boot0." >&2
 	echo "" >&2
-	;;
-esac
+fi
 
 echo "Do you want to download and install the latest sysimage-v4 to eMMC as well?" >&2
 echo "This step needs a working internet connection and either wget or curl installed." >&2
@@ -65,14 +71,7 @@ if [ "$response" != "y" ]; then
 	exit
 fi
 
-case "$(cat /proc/device-tree/model)" in
-	"MNT Reform 2"|"MNT Reform 2 HDMI") PLATFORM=imx8mq ;;
-	"MNT Reform 2 with BPI-CM4 Module") echo "E: refusing to modify eMMC on A311D" >&2; exit 1;;
-	"MNT Reform 2 with LS1028A Module") PLATFORM=ls1028a ;;
-	*) echo "E: unknown platform: $(cat /proc/device-tree/model)" >&2; exit 1;;
-esac
-
-URL="https://source.mnt.re/reform/reform-system-image/-/jobs/artifacts/main/raw/reform-system-${PLATFORM}.img.gz?job=build"
+URL="https://source.mnt.re/reform/reform-system-image/-/jobs/artifacts/main/raw/${SYSIMAGE}.img.gz?job=build"
 DECOMPRESSOR=gzip
 
 if grep --silent '^URIs: https://reform.debian.net/debian/\?$' /etc/apt/sources.list.d/reform*.sources 2>/dev/null; then
@@ -86,17 +85,12 @@ if grep --silent '^URIs: https://reform.debian.net/debian/\?$' /etc/apt/sources.
 	if [ "$response" = "y" ]; then
 		# no need to use the backports kernel because a311d is not
 		# allowed to write to emmc anyways
-		URL="https://reform.debian.net/images/reform2-system-${PLATFORM}.img.xz"
+		URL="https://reform.debian.net/images/${SYSIMAGE}.img.xz"
 		DECOMPRESSOR=xz
 	fi
 fi
 
 echo "Downloading $URL..."
-
-case "$(cat /proc/device-tree/model)" in
-	"MNT Reform 2"|"MNT Reform 2 HDMI") MMCDEV="mmcblk0";;
-	"MNT Reform 2 with LS1028A Module") MMCDEV="mmcblk1";;
-esac
 
 {
 if curl --version >/dev/null; then
@@ -106,12 +100,12 @@ elif wget --version >/dev/null; then
 else
 	echo "need curl or wget" >&2
 	exit 1
-fi; } | "$DECOMPRESSOR" --decompress --to-stdout | dd of="/dev/$MMCDEV" status=progress
-partprobe "/dev/$MMCDEV"
+fi; } | "$DECOMPRESSOR" --decompress --to-stdout | dd of="/dev/$DEV_MMC" status=progress
+partprobe "/dev/$DEV_MMC"
 
 # overwrite the partition label
-e2label "/dev/${MMCDEV}p1" reformemmcboot
-e2label "/dev/${MMCDEV}p2" reformemmcroot
+e2label "/dev/${DEV_MMC}p1" reformemmcboot
+e2label "/dev/${DEV_MMC}p2" reformemmcroot
 
 # The rescue system image that we downloaded and wrote to the eMMC above is
 # configured to use the rootfs on the SD-Card but we want the initramfs on eMMC

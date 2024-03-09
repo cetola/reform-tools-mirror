@@ -14,3 +14,4 @@ sbin/*                          /usr/sbin
 share/*                         /usr/share
 systemd/reform-sleep.conf       /usr/lib/systemd/sleep.conf.d
 u-boot-menu/reform.conf         /usr/share/u-boot-menu/conf.d
+machines/*                       /usr/share/reform-tools/machines
