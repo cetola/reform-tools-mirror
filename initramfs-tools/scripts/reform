@@ -2,15 +2,13 @@
 
 case $1 in prereqs) exit 0;; esac
 
-# If some of these modules are not loaded in the right order,
-# mxsfb produces a blank screen on roughly 50% of boots.
-# We don't know the exact dependencies yet, but this workaround
-# makes it work reliably.
-
 . /scripts/functions
 
-for m in reset_imx7 mux_mmio fixed i2c-imx fan53555 i2c_mux_pca954x pwm_imx27 pwm_bl panel_edp ti_sn65dsi86 phy-fsl-imx8-mipi-dphy nwl-dsi mxsfb; do
-    log_begin_msg "loading $m"
-    modprobe "$m"
-    log_end_msg
-done
+MACHINE=
+if [ -e /etc/flash-kernel/machine ]; then
+	MACHINE=$(cat /etc/flash-kernel/machine)
+elif [ -e /proc/device-tree/model ]; then
+	MACHINE=$(cat /proc/device-tree/model)
+fi
+
+# nothing to do
