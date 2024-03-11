@@ -13,7 +13,7 @@ from gi.repository import Notify
 from gi.repository import AyatanaAppIndicator3 as AppIndicator3
 
 APPID = "reform-tray"
-ICON = "start-here-symbolic"
+ICON = "view-more-symbolic"
 
 def handle_exit_item(question, command):
     dialog = Gtk.MessageDialog(
