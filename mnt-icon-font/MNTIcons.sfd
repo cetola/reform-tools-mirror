@@ -1,0 +1,81 @@
+SplineFontDB: 3.2
+FontName: MNTIcons
+FullName: MNTIcons
+FamilyName: MNTIcons
+Weight: Regular
+Copyright: Copyright (c) 2024, MNT Research GmbH
+UComments: "2024-2-24: Created with FontForge (http://fontforge.org)"
+Version: 001.000
+ItalicAngle: 0
+UnderlinePosition: -100
+UnderlineWidth: 50
+Ascent: 800
+Descent: 200
+InvalidEm: 0
+LayerCount: 2
+Layer: 0 0 "Back" 1
+Layer: 1 0 "Fore" 0
+XUID: [1021 289 -148438233 6802198]
+StyleMap: 0x0000
+FSType: 0
+OS2Version: 0
+OS2_WeightWidthSlopeOnly: 0
+OS2_UseTypoMetrics: 1
+CreationTime: 1708782073
+ModificationTime: 1708783385
+OS2TypoAscent: 0
+OS2TypoAOffset: 1
+OS2TypoDescent: 0
+OS2TypoDOffset: 1
+OS2TypoLinegap: 90
+OS2WinAscent: 0
+OS2WinAOffset: 1
+OS2WinDescent: 0
+OS2WinDOffset: 1
+HheadAscent: 0
+HheadAOffset: 1
+HheadDescent: 0
+HheadDOffset: 1
+MarkAttachClasses: 1
+DEI: 91125
+Encoding: ISO8859-1
+UnicodeInterp: none
+NameList: AGL For New Fonts
+DisplaySize: -48
+AntiAlias: 1
+FitToEm: 0
+WinInfo: 64 16 4
+BeginPrivate: 0
+EndPrivate
+BeginChars: 256 1
+
+StartChar: M
+Encoding: 77 77 0
+Width: 1564
+Flags: HWO
+LayerCount: 2
+Fore
+SplineSet
+0.5625 215.145507812 m 1
+ 184.38671875 215.145507812 l 1
+ 184.38671875 360.923828125 l 1
+ 552.033203125 -6.724609375 l 1
+ 552.033203125 360.923828125 l 1
+ 919.680664062 -6.724609375 l 1
+ 919.680664062 360.923828125 l 1
+ 1287.32714844 -6.724609375 l 1
+ 1287.32714844 490.879882812 l 1
+ 1563.0625 490.879882812 l 1
+ 1563.0625 674.704101562 l 1
+ 1103.50390625 674.704101562 l 1
+ 1103.50390625 437.014648438 l 1
+ 735.856445312 804.661132812 l 1
+ 735.856445312 437.014648438 l 1
+ 368.208984375 804.661132812 l 1
+ 368.208984375 437.014648438 l 1
+ 0.5625 804.661132812 l 1
+ 0.5625 215.145507812 l 1
+EndSplineSet
+EndChar
+EndChars
+EndSplineFont

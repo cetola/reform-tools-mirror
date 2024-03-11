@@ -6,8 +6,10 @@
     "modules-center": [],
     "modules-right": ["tray", "battery", "clock"],
     "custom/run": {
-        "format": "Run",
-        "on-click": "wofi --show drun -p Search -n -i -I -W 66% -H 66% -s $HOME/.config/wofi.css"
+        "format": "M",
+        "exec": "printf 'M\nApplications\n'",
+        "interval": 3600,
+        "on-click": "wofi --show drun -p 'Type to search and press enter.' -n -i -I -W 66% -H 66% -s $HOME/.config/wofi.css"
     },
     "sway/window": {
     },
@@ -38,9 +40,9 @@
         "on-click": "pavucontrol"
     },
     "battery": {
-        "format": "🔋 {capacity}%",
-        "format-charging": "⚡ {capacity}%",
-        "format-plugged": "⚡ {capacity}%",
-        "format-full": "🔋 {capacity}%"
+        "format": "{icon} {capacity}%",
+        "format-charging": " {capacity}%",
+        "format-plugged": " {capacity}%",
+        "format-icons": ["", "", "", "", ""]
     },
 }
