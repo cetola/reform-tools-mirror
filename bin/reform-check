@@ -354,6 +354,14 @@ if [ ! -e "/boot/initrd.img-$(uname -r)" ]; then
 	echo "E: no initrd.img in /boot for the currently running kernel" >&2
 fi
 
+if [ ! -e "/boot/dtb-$(uname -r)" ]; then
+	echo "E: no dtb-* symlink for the currently running kernel" >&2
+elif [ ! -e "/boot/dtbs/$(uname -r)/$DTBPATH" ]; then
+	echo "E: device tree file $DTBPATH is missing from /boot/dtbs" >&2
+elif [ "$(readlink "/boot/dtb-$(uname -r)")" != "dtbs/$(uname -r)/$DTBPATH" ]; then
+	echo "E: /boot/dtb-* symlink does not reference $DTBPATH" >&2
+fi
+
 if [ ! -e "/etc/modprobe.d/reform.conf" ]; then
 	echo "W: etc/modprobe.d/reform.conf doesn't exist" >&2
 	echo "W: it should at least contain the following lines:" >&2
