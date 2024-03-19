@@ -1,3 +1,17 @@
+reform-tools (1.36) reform; urgency=medium
+
+  [ Lukas F. Hartmann ]
+  * reform-tray: update icon to view-more-symbolic (3 dots)
+  * waybar: add mnt logo, add tooltip and instructions for launcher, fix
+    battery icons
+  * reform-tray: change icon, reorder menu to be more logical, open handbook
+    on 'Help'
+
+  [ Johannes Schauer Marin Rodrigues ]
+  * sbin/reform-hw-setup: do not run with set -e
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 19 Mar 2024 20:51:52 +0100
+
 reform-tools (1.35) reform; urgency=medium
 
   * Add support for four new setups:
