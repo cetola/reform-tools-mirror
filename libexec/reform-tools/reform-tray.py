@@ -36,16 +36,13 @@ def handle_exit_item(question, command):
     dialog.destroy()
 
 def handle_help_item(self):
-    subprocess.run(["foot", "-W", "100x80", "bash", "-c", "reform-desktop-help; bash"])
+    subprocess.run(["reform-handbook"])
 
 def handle_brt_high_item(self):
     subprocess.run(["brightnessctl", "set", "100%"])
 
 def handle_brt_low_item(self):
     subprocess.run(["brightnessctl", "set", "10%"])
-
-def handle_vol_item(self):
-    subprocess.run(["pavucontrol"])
 
 def handle_term_item(self):
     subprocess.run(["foot"])
@@ -70,13 +67,6 @@ def handle_shutdown_item(self):
 
 menu = Gtk.Menu()
 
-mi_help = Gtk.ImageMenuItem(label="Help", visible=True)
-img = Gtk.Image()
-img.set_from_icon_name("help-about-symbolic", -1)
-mi_help.set_image(img)
-mi_help.set_always_show_image(True)
-mi_help.connect("activate", handle_help_item)
-
 mi_brt_inc = Gtk.ImageMenuItem(label="High Brightness", visible=True)
 img = Gtk.Image()
 img.set_from_icon_name("weather-clear-symbolic", -1)
@@ -91,12 +81,12 @@ mi_brt_dec.set_image(img)
 mi_brt_dec.set_always_show_image(True)
 mi_brt_dec.connect("activate", handle_brt_low_item)
 
-mi_vol = Gtk.ImageMenuItem(label="Volume", visible=True)
+mi_files = Gtk.ImageMenuItem(label="File Manager", visible=True)
 img = Gtk.Image()
-img.set_from_icon_name("audio-volume-high-symbolic", -1)
-mi_vol.set_image(img)
-mi_vol.set_always_show_image(True)
-mi_vol.connect("activate", handle_vol_item)
+img.set_from_icon_name("folder-symbolic", -1)
+mi_files.set_image(img)
+mi_files.set_always_show_image(True)
+mi_files.connect("activate", handle_files_item)
 
 mi_term = Gtk.ImageMenuItem(label="Terminal", visible=True)
 img = Gtk.Image()
@@ -105,12 +95,12 @@ mi_term.set_image(img)
 mi_term.set_always_show_image(True)
 mi_term.connect("activate", handle_term_item)
 
-mi_files = Gtk.ImageMenuItem(label="File Manager", visible=True)
+mi_software = Gtk.ImageMenuItem(label="Install Software", visible=True)
 img = Gtk.Image()
-img.set_from_icon_name("folder-symbolic", -1)
-mi_files.set_image(img)
-mi_files.set_always_show_image(True)
-mi_files.connect("activate", handle_files_item)
+img.set_from_icon_name("system-software-install-symbolic", -1)
+mi_software.set_image(img)
+mi_software.set_always_show_image(True)
+mi_software.connect("activate", handle_software_item)
 
 mi_sysmon = Gtk.ImageMenuItem(label="System Monitor", visible=True)
 img = Gtk.Image()
@@ -119,12 +109,12 @@ mi_sysmon.set_image(img)
 mi_sysmon.set_always_show_image(True)
 mi_sysmon.connect("activate", handle_sysmon_item)
 
-mi_software = Gtk.ImageMenuItem(label="Software", visible=True)
+mi_help = Gtk.ImageMenuItem(label="Help", visible=True)
 img = Gtk.Image()
-img.set_from_icon_name("system-software-install-symbolic", -1)
-mi_software.set_image(img)
-mi_software.set_always_show_image(True)
-mi_software.connect("activate", handle_software_item)
+img.set_from_icon_name("help-about-symbolic", -1)
+mi_help.set_image(img)
+mi_help.set_always_show_image(True)
+mi_help.connect("activate", handle_help_item)
 
 mi_logout = Gtk.ImageMenuItem(label="Logout", visible=True)
 img = Gtk.Image()
@@ -150,7 +140,6 @@ mi_shutdown.connect("activate", handle_shutdown_item)
 menu.append(mi_help)
 menu.append(mi_brt_inc)
 menu.append(mi_brt_dec)
-menu.append(mi_vol)
 menu.append(mi_term)
 menu.append(mi_files)
 menu.append(mi_sysmon)
