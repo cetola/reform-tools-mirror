@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -eu
+set -u
 
 case "$(cat /proc/device-tree/model)" in
 "MNT Reform 2"|"MNT Reform 2 HDMI")
