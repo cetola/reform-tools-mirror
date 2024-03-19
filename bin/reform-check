@@ -56,6 +56,11 @@ else
 	MIRROR="mntre.com"
 fi
 
+if [ -z "$(apt-get indextargets)" ]; then
+	echo "E: the apt cache is empty. Please run 'apt update' before running reform-check" >&2
+	exit 1
+fi
+
 # shellcheck source=/dev/null
 if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
 	. "./machines/$(cat /proc/device-tree/model).conf"
