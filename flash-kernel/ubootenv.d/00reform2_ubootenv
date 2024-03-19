@@ -1,7 +1,7 @@
 # Default bootargs for Linux are set here and can be overwritten using
 # LINUX_KERNEL_CMDLINE in /etc/default/flash-kernel or by setting ${bootargs}
 # in u-boot itself via the setenv command.
-setenv bootargs "ro no_console_suspend cryptomgr.notests ${bootargs}"
+setenv bootargs "ro no_console_suspend cryptomgr.notests loglevel=3 ${bootargs}"
 
 # Board-specific bootargs cannot be overwritten by above methods. If you
 # really need to overwrite below lines, create
