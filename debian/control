@@ -9,6 +9,7 @@ Standards-Version: 4.6.0.1
 Build-Depends:
  debhelper-compat (= 13),
  dh-sequence-dkms,
+ fontforge,
 Rules-Requires-Root: no
 Testsuite: autopkgtest-pkg-dkms
 
