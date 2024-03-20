@@ -1,3 +1,12 @@
+reform-tools (1.37) reform; urgency=medium
+
+  * debian/rules: regenerate MNTIcons.ttf from source using fontforge
+  * debian/copyright: document license of ./mnt-icon-font/MNTIcons.sfd
+  * install /usr/share/reform-setup-wizard/cleanup.d/reform-setup-cleanup.sh
+  * install /usr/share/reform-setup-wizard/reform-setup-sway-config
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Wed, 20 Mar 2024 11:49:12 +0100
+
 reform-tools (1.36) reform; urgency=medium
 
   [ Lukas F. Hartmann ]
