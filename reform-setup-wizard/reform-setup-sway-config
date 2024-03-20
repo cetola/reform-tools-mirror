@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2024 MNT Research GmbH
+#
+# This is a special configuration file for sway so we can
+# use sway as a minimal compositor for running the
+# MNT Reform Setup Wizard (a GTK4 application).
+# We use sway as it ships with Reform and is much more
+# customizable than cage, while still being lightweight.
+#
+
+# import variables into system-user enviroment
+# based on the instructions in the sway wiki
+# see also https://github.com/swaywm/sway/issues/5732
+# and https://github.com/systemd/systemd/blob/dfc637d0ff756889e8e5b7cb4ec991eb06069aa1/xorg/50-systemd-user.sh
+
+exec systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK
+
+exec hash dbus-update-activation-environment 2>/dev/null && \
+        dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK
+
+# emergency/debug terminal
+set $mod Mod4
+bindsym $mod+Return exec foot
+
+# reload the configuration file
+bindsym $mod+Shift+c reload
+
+# workaround for RK3588, to be removed
+output HDMI-A-2 disable
+
+# background image
+exec swaybg -i /usr/share/backgrounds/reform-mountains.jpg
+
+# start gnome xsettings daemon
+exec /usr/libexec/gsd-xsettings
+
+# default theme settings
+exec gsettings set org.gnome.desktop.interface icon-theme 'Papirus-Dark'
+exec gsettings set org.gnome.desktop.interface font-name 'Inter Medium 11'
+exec gsettings set org.gnome.desktop.interface monospace-font-name 'Iosevka Term 11'
+exec gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'
+exec gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
+
+# remove sway's decorations
+default_border pixel 0
+hide_edge_borders both
+
+# ADW_DISABLE_PORTAL so that dark theme works
+exec ADW_DISABLE_PORTAL=1 reform-setup
