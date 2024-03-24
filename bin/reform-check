@@ -384,3 +384,11 @@ fi
 if [ -e /proc/modules ] && ! grep --quiet '^reform2_lpc ' /proc/modules; then
 	echo "E: reform2_lpc is not loaded" >&2
 fi
+
+if [ ! -e "/usr/lib/modules/$(uname -r)/updates/dkms/reform2_lpc.ko" ]; then
+	echo "E: /usr/lib/modules/$(uname -r)/updates/dkms/reform2_lpc.ko does not exist" >&2
+fi
+
+if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-headers-$(uname -r)" 2>/dev/null | grep -q '^installed$'; then
+	echo "E: the linux header package linux-headers-$(uname -r) for the currently running kernel is not installed" >&2
+fi
