@@ -30,6 +30,7 @@ Depends:
  ${misc:Depends},
 Recommends:
  brightnessctl,
+ fonts-font-awesome,
  foot,
  gir1.2-ayatanaappindicator3-0.1,
  gir1.2-notify-0.7,
