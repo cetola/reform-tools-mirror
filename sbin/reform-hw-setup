@@ -2,31 +2,7 @@
 
 set -u
 
-case "$(cat /proc/device-tree/model)" in
-"MNT Reform 2"|"MNT Reform 2 HDMI")
-    # Workaround for WM8960 sometimes not coming out of reset
-    echo 2-001a > /sys/bus/i2c/drivers/wm8960/bind
-
-    # This switch in WM8960 needs to be on for the headset mic input to work
-    amixer -c 0 sset 'Left Input Mixer Boost' on
-
-    # Fix WM8960 being too quiet
-    amixer -c 0 sset Playback 255
-
-    # Enable wakeup from suspend on all UARTs (i.MX8MQ)
-    echo enabled > /sys/devices/platform/soc@0/30800000.bus/30860000.serial/tty/ttymxc0/power/wakeup
-    echo enabled > /sys/devices/platform/soc@0/30800000.bus/30890000.serial/tty/ttymxc1/power/wakeup
-    echo enabled > /sys/devices/platform/soc@0/30800000.bus/30880000.serial/tty/ttymxc2/power/wakeup
-    ;;
-"MNT Reform 2 with BPI-CM4 Module"|"MNT Pocket Reform with BPI-CM4 Module")
-    # Workaround for WM8960 sometimes not coming out of reset
-    echo 1-001a > /sys/bus/i2c/drivers/wm8960/bind
-
-    # Fix WM8960 being too quiet
-    amixer -c 0 sset Playback 255
-    amixer -c 0 sset 'Left Output Mixer PCM' on
-    amixer -c 0 sset 'Right Output Mixer PCM' on
-
+init_a311d() {
     # A311D sound controls
     # without setting these, there is no UCM profile and messages like this are produced:
     # no backend DAIs enabled for fe.dai-link-0, possibly missing ALSA mixer-based routing or UCM profile
@@ -37,11 +13,46 @@ case "$(cat /proc/device-tree/model)" in
     amixer -c 0 sset 'TODDR_A SRC SEL' 'IN 1'
 
     # Workaround for ethernet PHY reset problem
-
     rmmod dwmac_meson8b dwmac_generic stmmac_platform stmmac mdio_mux_meson_g12a mdio_mux of_mdio
     sleep 0.5
     modprobe mdio_mux_meson_g12a
     modprobe dwmac_meson8b
+}
+
+init_wm8960() {
+    # Fix WM8960 being too quiet
+    amixer -c 0 sset Playback 255
+    amixer -c 0 sset 'Left Output Mixer PCM' on
+    amixer -c 0 sset 'Right Output Mixer PCM' on
+    # This switch in WM8960 needs to be on for the headset mic input to work
+    amixer -c 0 sset 'Left Input Mixer Boost' on
+}
+
+init_pocket_display() {
+    # Increase console font size (MNT Pocket Reform has a Hi-DPI display)
+    for c in 1 2 3 4 5 6 7
+        do setfont -C /dev/tty$c /usr/share/consolefonts/Uni2-TerminusBold32x16.psf.gz
+    done
+}
+
+case "$(cat /proc/device-tree/model)" in
+"MNT Reform 2"|"MNT Reform 2 HDMI")
+    # Workaround for WM8960 sometimes not coming out of reset
+    echo 2-001a > /sys/bus/i2c/drivers/wm8960/bind
+
+    init_wm8960
+
+    # Enable wakeup from suspend on all UARTs (i.MX8MQ)
+    echo enabled > /sys/devices/platform/soc@0/30800000.bus/30860000.serial/tty/ttymxc0/power/wakeup
+    echo enabled > /sys/devices/platform/soc@0/30800000.bus/30890000.serial/tty/ttymxc1/power/wakeup
+    echo enabled > /sys/devices/platform/soc@0/30800000.bus/30880000.serial/tty/ttymxc2/power/wakeup
+    ;;
+"MNT Reform 2 with BPI-CM4 Module")
+    # Workaround for WM8960 sometimes not coming out of reset
+    echo 1-001a > /sys/bus/i2c/drivers/wm8960/bind
+
+    init_a311d
+    init_wm8960
     ;;
 "MNT Reform 2 with LS1028A Module")
     # Workaround for a DWC3 USB Controller regression
@@ -57,6 +68,12 @@ case "$(cat /proc/device-tree/model)" in
     # Select "ondemand" CPU frequency scaling governor
     echo ondemand > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
     ;;
+"MNT Pocket Reform with i.MX8MP Module")
+    init_pocket_display
+    ;;
+"MNT Pocket Reform with BPI-CM4 Module")
+    init_pocket_display
+    init_a311d
+    ;;
 "MNT Reform 2 with RCORE RK3588 Module") : ;;
-"MNT Pocket Reform with i.MX8MP Module") : ;;
 esac
