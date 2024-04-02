@@ -31,7 +31,7 @@ init_wm8960() {
 init_pocket_display() {
     # Increase console font size (MNT Pocket Reform has a Hi-DPI display)
     for c in 1 2 3 4 5 6 7
-        do setfont -C /usr/share/consolefonts/Uni2-TerminusBold32x16.psf.gz
+        do setfont -C /dev/tty$c /usr/share/consolefonts/Uni2-TerminusBold32x16.psf.gz
     done
 }
 
