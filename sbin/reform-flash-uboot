@@ -21,28 +21,46 @@ if [ "$EMMC_BOOT" = false ]; then
 		esac
 	done
 fi
+if [ "$SD_BOOT" = false ]; then
+	for dev in "$@"; do
+		case $dev in emmc|"/dev/${DEV_SD}"*)
+			echo "E: writing uboot to SD-Card not supported on $(cat /proc/device-tree/model)" >&2
+			exit 1
+			;;
+		esac
+	done
+fi
 
 usage() {
 	echo "Usage: " >&2
 	echo "  reform-flash-uboot [--offline] [device...]" >&2
 	echo "" >&2
-	if [ "$EMMC_BOOT" = true ]; then
+	if [ "$EMMC_BOOT" = true ] && [ "$SD_BOOT" = true ]; then
 		echo "Download and write recent uboot to eMMC or SD-Card." >&2
-	else
+	elif [ "$SD_BOOT" = true ]; then
 		echo "Download and write recent uboot to SD-Card." >&2
+	elif [ "$MMC_BOOT" = true ]; then
+		echo "Download and write recent uboot to eMMC." >&2
+	else
+		echo "Download and write recent uboot to chosen device." >&2
 	fi
 	echo "Without arguments only /boot/flash.bin will be updated unless --offline is given." >&2
 	echo "Otherwise, the arguments are the devices onto which to install uboot." >&2
-	if [ "$EMMC_BOOT" = true ]; then
+	if [ "$EMMC_BOOT" = true ] && [ "$SD_BOOT" = true ]; then
 		echo "Two device shortcuts are provided:" >&2
 		echo "" >&2
 		echo "   emmc -> /dev/${DEV_MMC}boot0" >&2
 		echo "   sd -> /dev/${DEV_SD}" >&2
 		echo "" >&2
-	else
+	elif [ "$SD_BOOT" = true ]; then
 		echo "A device shortcut is provided:" >&2
 		echo "" >&2
 		echo "   sd -> /dev/${DEV_SD}" >&2
+		echo "" >&2
+	elif [ "$MMC_BOOT" = true ]; then
+		echo "A device shortcut is provided:" >&2
+		echo "" >&2
+		echo "   emmc -> /dev/${DEV_MMC}boot0" >&2
 		echo "" >&2
 	fi
 }
