@@ -36,13 +36,13 @@ usage() {
 	if [ "$EMMC_BOOT" = true ]; then
 		echo "Two device shortcuts are provided:" >&2
 		echo "" >&2
-		echo "   emmc -> /dev/${MMCDEV}boot0" >&2
-		echo "   sd -> /dev/${SDDEV}" >&2
+		echo "   emmc -> /dev/${DEV_MMC}boot0" >&2
+		echo "   sd -> /dev/${DEV_SD}" >&2
 		echo "" >&2
 	else
 		echo "A device shortcut is provided:" >&2
 		echo "" >&2
-		echo "   sd -> /dev/${SDDEV}" >&2
+		echo "   sd -> /dev/${DEV_SD}" >&2
 		echo "" >&2
 	fi
 }
@@ -90,11 +90,11 @@ ubootsize=$(stat --format=%s "/boot/flash.bin")
 # check if there is enough free space at the beginning of the disk
 for dev in "$@"; do
 	case $dev in
-		emmc) dev=/dev/${MMCDEV}boot0;;
-		sd)   dev=/dev/${SDDEV};;
+		emmc) dev=/dev/${DEV_MMC}boot0;;
+		sd)   dev=/dev/${DEV_SD};;
 	esac
 
-	if [ "$dev" = "/dev/${MMCDEV}boot0" ]; then
+	if [ "$dev" = "/dev/${DEV_MMC}boot0" ]; then
 		continue
 	fi
 
@@ -126,16 +126,16 @@ done
 # do the flashing
 for dev in "$@"; do
 	case $dev in
-		emmc) dev=/dev/${MMCDEV}boot0;;
-		sd)   dev=/dev/${SDDEV};;
+		emmc) dev=/dev/${DEV_MMC}boot0;;
+		sd)   dev=/dev/${DEV_SD};;
 	esac
 
 	echo "Writing /boot/flash.bin to $dev" >&2
 
-	if [ "$dev" = "/dev/${MMCDEV}boot0" ]; then
-		echo 0 > "/sys/class/block/${MMCDEV}boot0/force_ro"
-		dd if=/boot/flash.bin of="/dev/${MMCDEV}boot0" bs=512 seek="$((UBOOT_OFFSET/512))" skip="$((FLASHBIN_OFFSET/512))"
-		echo 1 > "/sys/class/block/${MMCDEV}boot0/force_ro"
+	if [ "$dev" = "/dev/${DEV_MMC}boot0" ]; then
+		echo 0 > "/sys/class/block/${DEV_MMC}boot0/force_ro"
+		dd if=/boot/flash.bin of="/dev/${DEV_MMC}boot0" bs=512 seek="$((UBOOT_OFFSET/512))" skip="$((FLASHBIN_OFFSET/512))"
+		echo 1 > "/sys/class/block/${DEV_MMC}boot0/force_ro"
 		continue
 	fi
 
@@ -148,12 +148,12 @@ case "$(cat /proc/device-tree/model)" in "MNT Reform 2"|"MNT Reform 2 HDMI")
 	DOSD=0
 	for dev in "$@"; do
 		case $dev in
-			emmc) dev=/dev/${MMCDEV}boot0;;
-			sd)   dev=/dev/${SDDEV};;
+			emmc) dev=/dev/${DEV_MMC}boot0;;
+			sd)   dev=/dev/${DEV_SD};;
 		esac
 		case $dev in
-			"/dev/${MMCDEV}"*) DOMMC=1;;
-			"/dev/${SDDEV}"*)  DOSD=1;;
+			"/dev/${DEV_MMC}"*) DOMMC=1;;
+			"/dev/${DEV_SD}"*)  DOSD=1;;
 		esac
 	done
 	if [ "$DOMMC" != "0" ]; then
