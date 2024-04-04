@@ -71,6 +71,11 @@ else
 	exit 1
 fi
 
+echo "I: Your platform name is: $(cat /proc/device-tree/model)" >&2
+echo "I: You are running kernel version: $(uname -r)" >&2
+echo "I: Your installed kernel version: $(dpkg-query --show --showformat '${Version}' linux-image-arm64)" >&2
+echo "I: Your installed reform-tools version: $(dpkg-query --show --showformat '${Version}' reform-tools)" >&2
+
 if [ ! -e "/etc/flash-kernel/machine" ]; then
 	# /etc/flash-kernel/machine not existing is only a potential problem
 	# on imx8mq
@@ -137,8 +142,10 @@ if [ -z "$(findmnt --fstab --noheadings --evaluate --mountpoint /boot --output S
 		echo "E: for eMMC booting, add:" >&2
 		echo "/dev/${DEV_MMC}p1 /boot auto errors=remount-ro 0 1" >&2
 	fi
-	echo "E: for SD-Card booting, add:" >&2
-	echo "/dev/${DEV_SD}p1 /boot auto errors=remount-ro 0 1" >&2
+	if [ "$SD_BOOT" = true ]; then
+		echo "E: for SD-Card booting, add:" >&2
+		echo "/dev/${DEV_SD}p1 /boot auto errors=remount-ro 0 1" >&2
+	fi
 fi
 
 if ! mountpoint --quiet /boot; then
@@ -167,7 +174,7 @@ if [ "$EMMC_BOOT" = true ] && ! cmp --quiet --bytes="$ubootsize" "--ignore-initi
 	echo "reform-flash-uboot emmc" >&2
 fi
 
-if [ -e "/dev/$DEV_SD" ] && ! cmp --quiet --bytes="$ubootsize" --ignore-initial="0:$UBOOT_OFFSET" "$ubootbin" "/dev/$DEV_SD" 2>/dev/null; then
+if [ "$SD_BOOT" = true ] && [ -e "/dev/$DEV_SD" ] && ! cmp --quiet --bytes="$ubootsize" --ignore-initial="0:$UBOOT_OFFSET" "$ubootbin" "/dev/$DEV_SD" 2>/dev/null; then
 	echo "W: SD-Card does not contain latest uboot" >&2
 	echo "W: You can update it to the latest version by running as root:" >&2
 	echo "reform-flash-uboot sd" >&2
