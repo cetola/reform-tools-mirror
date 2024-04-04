@@ -83,7 +83,7 @@ case "$(cat /proc/device-tree/model)" in
     init_pocket_display
     init_a311d
     ;;
-"MNT Reform 2 with i.MX8MPlus Module")
+"MNT Reform 2 with i.MX8MP Module")
     init_wm8960
     init_qca9377_wifi
     ;;
