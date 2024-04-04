@@ -35,6 +35,13 @@ init_pocket_display() {
     done
 }
 
+init_qca9377_wifi() {
+    # load out-of-tree Wi-Fi driver
+    KERNVER=$(dpkg-query --show --showformat '${Version}' "linux-image-$(uname -r)")
+    modprobe cfg80211
+    insmod -f "/opt/reform-qcacld2/qcacld2-${KERNVER}.ko"
+}
+
 case "$(cat /proc/device-tree/model)" in
 "MNT Reform 2"|"MNT Reform 2 HDMI")
     # Workaround for WM8960 sometimes not coming out of reset
@@ -70,10 +77,17 @@ case "$(cat /proc/device-tree/model)" in
     ;;
 "MNT Pocket Reform with i.MX8MP Module")
     init_pocket_display
+    init_qca9377_wifi
     ;;
 "MNT Pocket Reform with BPI-CM4 Module")
     init_pocket_display
     init_a311d
     ;;
-"MNT Reform 2 with RCORE RK3588 Module") : ;;
+"MNT Reform 2 with i.MX8MP Module")
+    init_wm8960
+    init_qca9377_wifi
+    ;;
+"MNT Reform 2 with RCORE RK3588 Module")
+    init_wm8960
+    ;;
 esac
