@@ -1,3 +1,16 @@
+reform-tools (1.39) reform; urgency=medium
+
+  * sbin/reform-flash-uboot: fixup MMCDEV -> DEV_MMC
+  * bin/reform-check: print additional information about the current system
+  * machines/*: introduce SD_BOOT which is false on i.MX8MP
+  * reform-hw-setup: add loader for qca9377 wifi on imx8mp platforms
+  * firefox syspref.js: remove ads on new tab page
+  * modprobe: block ath10k_sdio for imx8mp
+  * reform-tray: include reform-help in reform-desktop-help
+  * reform-hw-setup: add audio init for pocket reform
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 16 Apr 2024 22:45:45 +0200
+
 reform-tools (1.38) reform; urgency=medium
 
   * libexec/reform-tools/reform-tray.py: make GUI utilities optional
