@@ -37,7 +37,7 @@ init_pocket_display() {
 
 init_qca9377_wifi() {
     # load out-of-tree Wi-Fi driver
-    KERNVER=$(uname -v | cut -d ' ' -f 4)
+    KERNVER=$(dpkg-query --show --showformat '${Version}' "linux-image-$(uname -r)")
     modprobe cfg80211
     insmod -f "/opt/reform-qcacld2/qcacld2-${KERNVER}.ko"
 }
