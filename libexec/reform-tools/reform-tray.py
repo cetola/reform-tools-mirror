@@ -58,7 +58,7 @@ class MenuItem(Gtk.ImageMenuItem):
 
 
 menuitems = [
-    MenuItem("Help", "help-about-symbolic", ["foot","bash -c","reform-desktop-help; bash"], None),
+    MenuItem("Help", "help-about-symbolic", ["foot", "bash", "-c", "reform-desktop-help; bash"], None),
     MenuItem(
         "High Brightness",
         "weather-clear-symbolic",
