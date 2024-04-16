@@ -1,3 +1,16 @@
+reform-tools (1.38) reform; urgency=medium
+
+  * libexec/reform-tools/reform-tray.py: make GUI utilities optional
+  * debian/copyright: add missing closing triangular bracket
+  * bin/reform-check: more reform2_lpc.ko and linux-headers package check
+  * debian/control: add fonts-font-awesome to Recommends for waybar battery
+    icon
+  * sway+wayfire: properly rotate and scale the pocket reform display
+  * sway+wayfire: use hyper f1/f2 for brightness, use percentages, use 10% steps
+  * refactor reform-hw-setup a bit and set big console font on pocket reform
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sun, 24 Mar 2024 23:25:31 +0100
+
 reform-tools (1.37) reform; urgency=medium
 
   * debian/rules: regenerate MNTIcons.ttf from source using fontforge
