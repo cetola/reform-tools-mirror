@@ -41,7 +41,6 @@ def handle_exit_item(question, command):
 
     dialog.destroy()
 
-
 class MenuItem(Gtk.ImageMenuItem):
     def __init__(self, label, icon, args, exitmsg=None):
         Gtk.ImageMenuItem.__init__(self, label=label, visible=True)
@@ -59,7 +58,7 @@ class MenuItem(Gtk.ImageMenuItem):
 
 
 menuitems = [
-    MenuItem("Help", "help-about-symbolic", ["reform-handbook"], None),
+    MenuItem("Help", "help-about-symbolic", ["foot", "bash", "-c", "reform-desktop-help; bash"], None),
     MenuItem(
         "High Brightness",
         "weather-clear-symbolic",
