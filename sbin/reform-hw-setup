@@ -28,6 +28,19 @@ init_wm8960() {
     amixer -c 0 sset 'Left Input Mixer Boost' on
 }
 
+init_tlv320aic3100() {
+    # Set up speaker on MNT Pocket Reform
+    amixer -c 0 sset 'Speaker Driver' on
+    amixer -c 0 sset 'Output Left From Left DAC' on
+    amixer -c 0 sset 'Output Right From Right DAC' on
+    amixer -c 0 sset 'Speaker Analog' 127
+    amixer -c 0 sset 'DAC' 127
+    amixer -c 0 sset 'HP Analog' 127
+    amixer -c 0 sset 'HP Driver' on
+    amixer -c 0 sset 'HP Left' on
+    amixer -c 0 sset 'HP Right' on
+}
+
 init_pocket_display() {
     # Increase console font size (MNT Pocket Reform has a Hi-DPI display)
     for c in 1 2 3 4 5 6 7
@@ -78,10 +91,12 @@ case "$(cat /proc/device-tree/model)" in
 "MNT Pocket Reform with i.MX8MP Module")
     init_pocket_display
     init_qca9377_wifi
+    init_tlv320aic3100
     ;;
 "MNT Pocket Reform with BPI-CM4 Module")
     init_pocket_display
     init_a311d
+    init_tlv320aic3100
     ;;
 "MNT Reform 2 with i.MX8MP Module")
     init_wm8960
