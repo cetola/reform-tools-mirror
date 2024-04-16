@@ -36,7 +36,7 @@ def handle_exit_item(question, command):
     dialog.destroy()
 
 def handle_help_item(self):
-    subprocess.run(["reform-handbook"])
+    subprocess.run(["foot bash -c 'reform-desktop-help; bash'"])
 
 def handle_brt_high_item(self):
     subprocess.run(["brightnessctl", "set", "100%"])

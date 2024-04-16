@@ -269,9 +269,6 @@ seat seat0 xcursor_theme Adwaita 24
 # waybar
 exec waybar
 
-# start a terminal
-exec foot bash -c "reform-desktop-help; bash"
-
 # start gnome xsettings daemon
 exec /usr/libexec/gsd-xsettings
 
