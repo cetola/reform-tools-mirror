@@ -396,6 +396,30 @@ if [ ! -e "/usr/lib/modules/$(uname -r)/updates/dkms/reform2_lpc.ko" ]; then
 	echo "E: /usr/lib/modules/$(uname -r)/updates/dkms/reform2_lpc.ko does not exist" >&2
 fi
 
+worddiff() {
+	for word in $1; do
+		case $2 in
+			"$word"|"$word "*|*" $word"|*" $word "*) : ;;
+			*) echo "$word" ;;
+		esac
+	done
+}
+if [ "$(tr ' ' '\n' < /proc/cmdline  | sort -u)" != "$(echo "$BOOTARGS" | tr ' ' '\n' | sort -u)" ]; then
+	if [ -n "$(worddiff "$(cat /proc/cmdline)" "$BOOTARGS")" ]; then
+		echo "I: kernel boot parameters your system does use but which are not the default:" >&2
+		worddiff "$(cat /proc/cmdline)" "$BOOTARGS" | sed 's/^/ + /' >&2
+	fi
+	if [ -n "$(worddiff "$BOOTARGS" "$(cat /proc/cmdline)")" ]; then
+		echo "I: kernel boot parameters which are the default but your system doesn't use them:" >&2
+		worddiff "$BOOTARGS" "$(cat /proc/cmdline)" | sed 's/^/ - /' >&2
+	fi
+fi
+
+if [ "$(tr ' ' '\n' < /proc/cmdline  | grep console= | tail -1)" != "console=tty1" ]; then
+	echo "W: The last console= parameter in your cmdline is not console=tty1." >&2
+	echo "W: This could lead to the luks password prompt being printed to serial instead of your screen." >&2
+fi
+
 if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-headers-$(uname -r)" 2>/dev/null | grep -q '^installed$'; then
 	echo "E: the linux header package linux-headers-$(uname -r) for the currently running kernel is not installed" >&2
 fi
