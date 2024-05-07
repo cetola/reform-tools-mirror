@@ -1,3 +1,13 @@
+reform-tools (1.42) reform; urgency=medium
+
+  * reform-setup-cleanup.sh and reform-setup-sway-config are now shipped by
+    reform-setup-wizard
+  * imx8mp machines: add u-boot sha1 and tag
+  * machines: add BOOTARGS
+  * reform-check: check for abnormalities in kernel cmdline
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 07 May 2024 06:41:32 +0200
+
 reform-tools (1.41) reform; urgency=medium
 
   [ Lukas F. Hartmann ]
