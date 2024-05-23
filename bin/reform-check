@@ -73,7 +73,7 @@ fi
 
 echo "I: Your platform name is: $(cat /proc/device-tree/model)" >&2
 echo "I: You are running kernel version: $(uname -r)" >&2
-echo "I: Your installed kernel version: $(dpkg-query --show --showformat '${Version}' linux-image-arm64)" >&2
+echo "I: Your installed kernel version: $(dpkg-query --show --showformat '${Version}' linux-image-mnt-reform-arm64)" >&2
 echo "I: Your installed reform-tools version: $(dpkg-query --show --showformat '${Version}' reform-tools)" >&2
 
 if [ ! -e "/etc/flash-kernel/machine" ]; then
@@ -100,7 +100,7 @@ esac
 PKGSNET="iproute2 iptables inetutils-ping ircii elinks isc-dhcp-client netcat-traditional net-tools network-manager network-manager-gnome nfacct ntp ntpdate rsync telnet traceroute wpasupplicant curl wget w3m rfkill ifupdown netbase openssh-client blueman firmware-realtek"
 PKGSADMIN="apt apt-utils apt-listbugs apt-file cron cryptsetup lvm2 dbus-bin e2fsprogs fbset init-system-helpers ncdu parted pciutils policykit-1 procps sudo systemd systemd-sysv tmux u-boot-tools screen"
 PKGSUTILS="busybox console-data console-setup cpio file flash-kernel gnupg gpgv htop kbd lm-sensors readline-common usbutils xdg-utils bsdmainutils less nano micro vim alsa-utils dosfstools python3-psutil reform-handbook"
-PKGSMISC="brightnessctl brightness-udev ca-certificates debian-archive-keyring dialog gpm ncurses-term locales bash-completion man-db cryptsetup-initramfs linux-image-arm64 linux-headers-arm64 reform-tools gpiod"
+PKGSMISC="brightnessctl brightness-udev ca-certificates debian-archive-keyring dialog gpm ncurses-term locales bash-completion man-db cryptsetup-initramfs linux-image-mnt-reform-arm64 linux-headers-mnt-reform-arm64 reform-tools gpiod"
 
 case "$MIRROR" in
 	mntre.com) aptprefcontent="Package: *\nPin: release n=reform, l=reform\nPin-Priority: 990\n";;
@@ -318,26 +318,56 @@ if [ "$NEED_NONFREE" = true ] && ! apt-get indextargets 'Created-By: Packages' '
 	echo "deb http://deb.debian.org/debian unstable non-free-firmware" >&2
 fi
 
-case "$MIRROR" in mntre.com)
-	if ! apt-cache policy linux-image-arm64 | grep --quiet mntre.com; then
-		echo "E: the linux-image-arm64 package cannot come from the MNT repos" >&2
+if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-arm64" 2>/dev/null | grep -q '^installed$'; then
+	case "$MIRROR" in mntre.com)
+		if ! apt-cache policy linux-image-arm64 | grep --quiet mntre.com; then
+			echo "E: the linux-image-arm64 package cannot come from the MNT repos" >&2
+		fi
+		;;
+	reform.debian.net)
+		if ! apt-cache policy linux-image-arm64 | grep --quiet /reform.debian.net/; then
+			echo "E: the linux-image-arm64 package cannot come from the reform.debian.net repos" >&2
+		fi
+		;;
+	*)
+		echo "invalid mirror: $MIRROR" >&2
+		exit 1
+	esac
+	echo "W: The deprecated meta-package linux-image-arm64 is installed." >&2
+	if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-mnt-reform-arm64" 2>/dev/null | grep -q '^installed$'; then
+		echo "W: Since the new meta-package linux-image-mnt-reform-arm64 is installed," >&2
+		echo "W: the old meta-package linux-image-arm64 should be removed." >&2
+	else
+		echo "W: Please install the new meta-package linux-image-mnt-reform-arm64" >&2
+		echo "W: and remove the old meta-package linux-image-arm64." >&2
 	fi
-	;;
-reform.debian.net)
-	if ! apt-cache policy linux-image-arm64 | grep --quiet /reform.debian.net/; then
-		echo "E: the linux-image-arm64 package cannot come from the reform.debian.net repos" >&2
+	if ! dpkg-query --showformat '${Version}' --show linux-image-arm64 | grep --quiet reform; then
+		echo "E: the currently installed package linux-image-arm64 does not come with Reform patches" >&2
 	fi
-	;;
-*)
-	echo "invalid mirror: $MIRROR" >&2
-	exit 1
-esac
+fi
 
-if ! dpkg-query --showformat '${Version}' --show linux-image-arm64 | grep --quiet reform; then
-	echo "E: the currently installed package linux-image-arm64 does not come with Reform patches" >&2
+if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-mnt-reform-arm64" 2>/dev/null | grep -q '^installed$'; then
+	case "$MIRROR" in mntre.com)
+		if ! apt-cache policy linux-image-mnt-reform-arm64 | grep --quiet mntre.com; then
+			echo "E: the linux-image-mnt-reform-arm64 package cannot come from the MNT repos" >&2
+		fi
+		;;
+	reform.debian.net)
+		if ! apt-cache policy linux-image-mnt-reform-arm64 | grep --quiet /reform.debian.net/; then
+			echo "E: the linux-image-mnt-reform-arm64 package cannot come from the reform.debian.net repos" >&2
+		fi
+		;;
+	*)
+		echo "invalid mirror: $MIRROR" >&2
+		exit 1
+	esac
 fi
 
 for file in /boot/initrd.img-*-reform2-arm64 /boot/vmlinuz-*-reform2-arm64; do
+	echo "I: file from deprecated kernel flavour found: $file" >&2
+done
+
+for file in /boot/initrd.img-*-mnt-reform-arm64 /boot/vmlinuz-*-mnt-reform-arm64; do
 	suffix="${file##/boot/}"
 	suffix="${suffix##initrd.img-}"
 	suffix="${suffix##vmlinuz-}"
@@ -345,7 +375,6 @@ for file in /boot/initrd.img-*-reform2-arm64 /boot/vmlinuz-*-reform2-arm64; do
 		echo "I: $file does not belong to any installed kernel package" >&2
 	fi
 done
-
 
 if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-$(uname -r)" 2>/dev/null | grep -q '^installed$'; then
 	echo "E: the currently running kernel is not installed as a package" >&2

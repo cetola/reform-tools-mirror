@@ -1,3 +1,9 @@
+reform-tools (1.43) UNRELEASED; urgency=medium
+
+  * reform-check: adjustments for new kernel flavour mnt-reform-arm64 in 6.8
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Thu, 23 May 2024 06:59:42 +0200
+
 reform-tools (1.42) reform; urgency=medium
 
   * reform-setup-cleanup.sh and reform-setup-sway-config are now shipped by
