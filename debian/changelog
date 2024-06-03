@@ -1,8 +1,11 @@
-reform-tools (1.43) UNRELEASED; urgency=medium
+reform-tools (1.43) reform; urgency=medium
 
   * reform-check: adjustments for new kernel flavour mnt-reform-arm64 in 6.8
+  * machines: on imx8mp, mmc is mmcblk2 and sd is mmcblk0
+  * sbin/reform-hw-setup: adjust for different /sys path in linux 6.8
+  * sbin/reform-hw-setup: add loglevel=7 workaround for dwc3 module on ls1028a
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Thu, 23 May 2024 06:59:42 +0200
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Mon, 03 Jun 2024 11:06:33 +0200
 
 reform-tools (1.42) reform; urgency=medium
 
