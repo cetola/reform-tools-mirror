@@ -94,6 +94,12 @@ case "$(cat /proc/device-tree/model)" in
 
     # Select "ondemand" CPU frequency scaling governor
     echo ondemand > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
+
+    # the functionality of the dwc3 module depends on the loglevel
+    # loglevel=3 makes usb not work
+    # loglevel=7 makes usb work most of the time
+    # https://community.mnt.re/t/no-keyboard-input-with-ls1028-board-and-latest-image/1994/13
+    dmesg -n 7
     ;;
 "MNT Pocket Reform with i.MX8MP Module")
     init_pocket_display
