@@ -63,9 +63,16 @@ case "$(cat /proc/device-tree/model)" in
     init_wm8960
 
     # Enable wakeup from suspend on all UARTs (i.MX8MQ)
-    echo enabled > /sys/devices/platform/soc@0/30800000.bus/30860000.serial/tty/ttymxc0/power/wakeup
-    echo enabled > /sys/devices/platform/soc@0/30800000.bus/30890000.serial/tty/ttymxc1/power/wakeup
-    echo enabled > /sys/devices/platform/soc@0/30800000.bus/30880000.serial/tty/ttymxc2/power/wakeup
+    # kernel 6.8 changed the /sys path for the serial lines from
+    # /sys/devices/platform/soc@0/30800000.bus/308?0000.serial/tty/ttymxc?/power/wakeup
+    # to
+    # /sys/devices/platform/soc@0/30800000.bus/308?0000.serial/308?0000.serial:0/308?0000.serial:0.0/tty/ttymxc?/power/wakeup
+    # use `find` to acquire either path
+    find /sys/devices/platform/soc@0/30800000.bus/308?0000.serial/ -wholename '*/tty/ttymxc?/power/wakeup' \
+	| while read -r f; do
+		[ -e "$f" ] || continue
+		echo enabled > "$f"
+	done
     ;;
 "MNT Reform 2 with BPI-CM4 Module")
     # Workaround for WM8960 sometimes not coming out of reset
