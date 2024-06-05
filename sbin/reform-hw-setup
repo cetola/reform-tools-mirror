@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -u
+set -eu
 
 usage () {
 	echo "Hardware setup specific to your MNT Reform platform." >&2
@@ -33,7 +33,10 @@ init_a311d() {
     amixer -c 0 sset 'TODDR_A SRC SEL' 'IN 1'
 
     # Workaround for ethernet PHY reset problem
-    rmmod dwmac_meson8b dwmac_generic stmmac_platform stmmac mdio_mux_meson_g12a mdio_mux of_mdio
+    for m in dwmac_meson8b dwmac_generic stmmac_platform stmmac mdio_mux_meson_g12a mdio_mux of_mdio; do
+      grep --quiet "^$m " /proc/modules || continue;
+      rmmod "$m"
+    done
     sleep 0.5
     modprobe mdio_mux_meson_g12a
     modprobe dwmac_meson8b
@@ -82,7 +85,10 @@ init_qca9377_wifi() {
 case "$(cat /proc/device-tree/model)" in
 "MNT Reform 2"|"MNT Reform 2 HDMI")
     # Workaround for WM8960 sometimes not coming out of reset
-    echo 2-001a > /sys/bus/i2c/drivers/wm8960/bind
+    if [ ! -e /sys/bus/i2c/drivers/wm8960/2-001a ]; then
+      echo 2-001a > /sys/bus/i2c/drivers/wm8960/bind
+    fi
+    test -e /sys/bus/i2c/drivers/wm8960/2-001a
 
     init_wm8960
 
@@ -100,7 +106,10 @@ case "$(cat /proc/device-tree/model)" in
     ;;
 "MNT Reform 2 with BPI-CM4 Module")
     # Workaround for WM8960 sometimes not coming out of reset
-    echo 1-001a > /sys/bus/i2c/drivers/wm8960/bind
+    if [ ! -e /sys/bus/i2c/drivers/wm8960/1-001a ]; then
+      echo 1-001a > /sys/bus/i2c/drivers/wm8960/bind
+    fi
+    test -e /sys/bus/i2c/drivers/wm8960/1-001a
 
     init_a311d
     init_wm8960
@@ -147,4 +156,7 @@ case "$(cat /proc/device-tree/model)" in
     ;;
 "MNT Reform Next with RCORE RK3588 Module")
     ;;
+*)
+    echo "Your platform $(cat /proc/device-tree/model) is not supported by reform-tools" >&2
+    exit 1
 esac
