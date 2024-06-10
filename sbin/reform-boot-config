@@ -64,6 +64,27 @@ usage() {
 	echo "    reform-boot-config /dev/reformvg/root" >&2
 }
 
+maybe_umount() {
+	what="$1"
+	printf "Should this script run 'umount %s' for you? [y/N] " "$what"
+	read -r response
+	if [ "$response" != "y" ]; then
+		echo "I: Not unmounting as requested." >&2
+		return 1
+	else
+		echo "I: Unmounting $what..."
+		ret=0
+		umount "$what" || ret=$?
+		if [ "$ret" -eq 0 ]; then
+			echo "I: Unmounting $what successful." >&2
+			return 0
+		else
+			echo "E: Tried to unmount $what but failed." >&2
+			return 1
+		fi
+	fi
+}
+
 if [ $# -ne 1 ] && [ $# -ne 2 ]; then
 	usage
 	exit 1
@@ -148,8 +169,10 @@ trap 'cleanup "$@"' EXIT INT TERM
 MOUNTROOT="$(lsblk --noheadings --output=MOUNTPOINT "/dev/$ROOTPART")"
 if [ "$MOUNTROOT" != "" ] && [ "$MOUNTROOT" != "/" ]; then
 	echo "/dev/$ROOTPART is still mounted on $MOUNTROOT." >&2
-	echo "Please unmount before running this script" >&2
-	exit 1
+	if ! maybe_umount "/dev/$ROOTPART"; then
+		echo "Please unmount before running this script" >&2
+		exit 1
+	fi
 fi
 
 # mount the desired root partition somewhere if it isn't mounted yet
@@ -189,8 +212,10 @@ if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART")" ]; then
 	if [ "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART")" != "/boot" ] \
 		|| [ "$BOOTPART" != "${DEV_SD}p1" ] \
 		|| [ "$(lsblk --noheadings --output=LABEL "/dev/$BOOTPART")" != "reformsdboot" ]; then
-		echo "Please unmount before running this script" >&2
-		exit 1
+		if ! maybe_umount "/dev/$BOOTPART"; then
+			echo "Please unmount before running this script" >&2
+			exit 1
+		fi
 	fi
 	# otherwise, this is very likely a rescue system sd-card so we suggest
 	# to automatically umount it and overwrite its contents
@@ -209,8 +234,10 @@ fi
 # check that the new mountpoint for /boot is empty
 if mountpoint --quiet "$MOUNTROOT/boot"; then
 	echo "Something is still mounted on $MOUNTROOT/boot." >&2
-	echo "Please unmount before running this script" >&2
-	exit 1
+	if ! maybe_umount "$MOUNTROOT/boot"; then
+		echo "Please unmount before running this script" >&2
+		exit 1
+	fi
 fi
 
 # mount the new boot partition
