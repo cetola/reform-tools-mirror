@@ -22,6 +22,8 @@ case $MACHINE in
 	"MNT Reform 2 with LS1028A Module")
 		[ "${verbose}" = "y" ] && echo "Adding firmware ls1028a-mhdpfw.bin"
 		copy_file firmware /boot/ls1028a-mhdpfw.bin /lib/firmware
+		[ "${verbose}" = "y" ] && echo "Adding /usr/bin/dmesg"
+		copy_exec /usr/bin/dmesg
 		;;
 	"MNT Reform 2 with RCORE RK3588 Module") : ;;
 	"MNT Pocket Reform with i.MX8MP Module") : ;;

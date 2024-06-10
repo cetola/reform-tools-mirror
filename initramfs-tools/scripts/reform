@@ -11,4 +11,9 @@ elif [ -e /proc/device-tree/model ]; then
 	MACHINE=$(cat /proc/device-tree/model)
 fi
 
-# nothing to do
+case $MACHINE in
+	"MNT Reform 2 with LS1028A Module")
+		# https://source.mnt.re/reform/reform-debian-packages/-/issues/5
+		dmesg -n 7 || echo "E: failed to set kernel loglevel" >&2
+		;;
+esac
