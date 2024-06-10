@@ -124,12 +124,12 @@ else
 	umount "$ROOTMNT"
 
 	if [ "$EMMC_USE" = true ]; then
-		printf "Your /boot partition will be on the SD-Card by default. Do you want it on eMMC instead? [y/N] "
+		printf "Your /boot partition will be on eMMC by default. Do you want it on the SD-Card instead? [y/N] "
 		read -r response
 		if [ "$response" != "y" ]; then
-			reform-boot-config /dev/reformvg/root
-		else
 			reform-boot-config --emmc /dev/reformvg/root
+		else
+			reform-boot-config /dev/reformvg/root
 		fi
 	else
 		reform-boot-config /dev/reformvg/root
