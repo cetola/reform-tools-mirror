@@ -1,3 +1,20 @@
+reform-tools (1.44) reform; urgency=medium
+
+  [ Lukas F. Hartmann ]
+  * imx8mp: add missing initramfs drivers; fixes display, pcie and usb in
+    initramfs
+
+  [ Johannes Schauer Marin Rodrigues ]
+  * sbin/reform-setup-encrypted-nvme: make /boot on eMMC the default for
+    reform-boot-config
+  * sbin/reform-boot-config: allow interactive umount
+  * initramfs-tools/scripts/reform: run 'dmesg -n 7' in the initramfs on
+    ls1028 as workaround for dwc3 unreliability
+  * sbin/reform-setup-encrypted-nvme: if reform-boot-config fails, print steps
+    how to re-run it
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Mon, 10 Jun 2024 22:39:23 +0200
+
 reform-tools (1.43) reform; urgency=medium
 
   * reform-check: adjustments for new kernel flavour mnt-reform-arm64 in 6.8
