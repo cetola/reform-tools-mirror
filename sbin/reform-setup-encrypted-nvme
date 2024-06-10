@@ -123,16 +123,24 @@ else
 	trap "cleanupvg; cleanupluks; error" EXIT INT TERM
 	umount "$ROOTMNT"
 
+	emmc_flag=
 	if [ "$EMMC_USE" = true ]; then
 		printf "Your /boot partition will be on eMMC by default. Do you want it on the SD-Card instead? [y/N] "
 		read -r response
 		if [ "$response" != "y" ]; then
-			reform-boot-config --emmc /dev/reformvg/root
-		else
-			reform-boot-config /dev/reformvg/root
+			emmc_flag="--emmc"
 		fi
-	else
-		reform-boot-config /dev/reformvg/root
+	fi
+	ret=0
+	reform-boot-config $emmc_flag /dev/reformvg/root || ret=$?
+	if [ "$ret" -ne 0 ]; then
+		echo "reform-boot-config failed. To re-run it manually, perform the following steps:" >&2
+		echo "    $ cryptsetup luksOpen \"/dev/$DEV_SSD\" reform_crypt" >&2
+		echo "    $ vgchange -ay reformvg" >&2
+		echo "    $ reform-boot-config $emmc_flag /dev/reformvg/root >&2"
+		echo "    $ vgchange -an reformvg" >&2
+		echo "    $ cryptsetup luksClose reform_crypt" >&2
+		exit "$ret"
 	fi
 fi
 
