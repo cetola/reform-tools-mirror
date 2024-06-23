@@ -77,11 +77,38 @@ init_pocket_display() {
 
 init_qca9377_wifi() {
     # load out-of-tree Wi-Fi driver
-    KERNVER=$(dpkg-query --show --showformat '${Version}' "linux-image-$(uname -r)")
+    KERNVER_EXACT=$(dpkg-query --show --showformat '${Version}' "linux-image-$(uname -r)")
     modprobe cfg80211
-    insmod -f "/opt/reform-qcacld2/qcacld2-${KERNVER}.ko"
-}
+    
+    echo "Try to load exact match wifi driver: ${KERNVER_EXACT}"
+    if [ -f "/opt/reform-qcacld2/qcacld2-${KERNVER_EXACT}.ko" ]; then
+        echo "Found exact match for kernel ${KERNVER_EXACT}"
+        if insmod "/opt/reform-qcacld2/qcacld2-${KERNVER_EXACT}.ko"; then
+            echo "Successfully loaded exact match driver"
+            return 0
+        else
+            echo "Failed to load exact match driver. Try other available driver"
+        fi
+    fi
 
+    # Find other potential qcacld2 drivers
+    potential_drivers=$(ls /opt/reform-qcacld2/qcacld2-*.ko | sort -Vr)
+
+    # Try to load available drivers, starting with the highest version number, until one works
+    for driver in $potential_drivers; do
+        echo "Attempting to load wifi driver: $driver"
+        if insmod -f "$driver"; then
+            echo "Successfully loaded driver: $driver"
+            return 0
+        else
+            echo "Failed to load driver: $driver, trying next"
+        fi
+    done
+
+    echo "Failed to load any compatible qcacld2 driver"
+    return 1
+
+}
 case "$(cat /proc/device-tree/model)" in
 "MNT Reform 2"|"MNT Reform 2 HDMI")
     # Workaround for WM8960 sometimes not coming out of reset
