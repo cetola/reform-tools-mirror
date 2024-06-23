@@ -222,7 +222,7 @@ if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART")" ]; then
 	echo "It seems that the current /boot partition is only booting a rescue" >&2
 	echo "system on SD-Card.">&2
 	echo "" >&2
-	printf "Do you want to unmount it? [y/N]"
+	printf "Do you want to unmount it? [y/N] "
 	read -r response
 	if [ "$response" != "y" ]; then
 		echo "Exiting."
