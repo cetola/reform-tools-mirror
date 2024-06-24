@@ -17,6 +17,10 @@ init_a311d() {
     sleep 0.5
     modprobe mdio_mux_meson_g12a
     modprobe dwmac_meson8b
+
+    # Workaround for SDIO wifi not loading
+    echo ffe03000.mmc > /sys/class/mmc_host/mmc2/device/driver/unbind
+    echo ffe03000.mmc > /sys/bus/platform/drivers/meson-gx-mmc/bind
 }
 
 init_wm8960() {
