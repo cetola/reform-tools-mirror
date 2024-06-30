@@ -1,3 +1,19 @@
+reform-tools (1.45) reform; urgency=medium
+
+  [ Lukas F. Hartmann ]
+  * reform-hw-setup: a311d: rebind wifi sdio after booting to make sure it
+    works
+  * a311d: disable wifi powersaving to make wifi more reliable
+
+  [ Johannes Schauer Marin Rodrigues ]
+  * sbin/reform-boot-config: add missing space
+  * place default-wifi-powersave-off.conf into /usr/lib/NetworkManager/conf.d/
+  * machines/*.conf: update u-boot tags and hashes for reform with imx8mq,
+    a311d and ls1028a
+  * sbin/reform-flash-uboot: download flash.bin by dtb basename
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sun, 30 Jun 2024 08:07:27 +0200
+
 reform-tools (1.44) reform; urgency=medium
 
   [ Lukas F. Hartmann ]
