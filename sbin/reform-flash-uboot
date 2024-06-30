@@ -78,7 +78,7 @@ fi
 if [ "$#" -eq 0 ] || [ "$1" != "--offline" ]; then
 	echo "Downloading uboot to /boot/flash.bin and comparing checksum" >&2
 
-	ubooturl="https://source.mnt.re/reform/${UBOOT_PROJECT}/-/jobs/artifacts/${UBOOT_TAG}/raw/flash.bin?job=build"
+	ubooturl="https://source.mnt.re/reform/${UBOOT_PROJECT}/-/jobs/artifacts/${UBOOT_TAG}/raw/$(basename "$DTBPATH" .dtb)-flash.bin?job=build"
 	/usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file "$ubooturl" "/boot/flash.bin" "SHA1:$UBOOT_SHA1"
 	# download mhdpfw.bin on ls1028a
 	case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with LS1028A Module")
