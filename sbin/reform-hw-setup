@@ -92,7 +92,7 @@ init_qca9377_wifi() {
     fi
 
     # Find other potential qcacld2 drivers
-    potential_drivers=$(ls /opt/reform-qcacld2/qcacld2-*.ko | sort -Vr)
+    potential_drivers=$(find /opt/reform-qcacld2/qcacld2-*.ko -maxdepth 1 -type f -print0 | sort -Vzr)
 
     # Try to load available drivers, starting with the highest version number, until one works
     for driver in $potential_drivers; do
