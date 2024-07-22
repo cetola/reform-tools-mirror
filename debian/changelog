@@ -1,10 +1,14 @@
 reform-tools (1.46) UNRELEASED; urgency=medium
 
+  [ Johannes Schauer Marin Rodrigues ]
   * bin/reform-check: download uboot with dtbpath prefix
   * bin/reform-check: do not fail script if u-boot cannot be downloaded
   * machines/MNT Reform 2.conf: update to u-boot 2024-07-19
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Mon, 22 Jul 2024 22:25:46 +0200
+  [ Esther Weidauer ]
+  * add "sudo" to root commands in reform-help
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Mon, 22 Jul 2024 23:08:38 +0200
 
 reform-tools (1.45) reform; urgency=medium
 

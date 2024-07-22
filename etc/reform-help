@@ -18,9 +18,9 @@ View this message again:           [1mreform-help[0m
 Read the Operator Handbook:        [1mreform-handbook[0m (press % to fix contrast, Q to quit)
 Set keyboard layout and timezone:  [1msudo reform-config[0m
 Chat in Reform community:          [1mreform-chat[0m
-Select boot device:                [1mreform-boot-config[0m
+Select boot device:                [1msudo reform-boot-config[0m
 Select display configuration:      [1mreform-display-config[0m
-Set up encrypted NVMe:             [1mreform-setup-encrypted-nvme[0m
+Set up encrypted NVMe:             [1msudo reform-setup-encrypted-nvme[0m
 Update / install software:         [1msudo apt update[0m
                                    [1mapt search [1;4mkeyword[0m
                                    [1msudo apt install [1;4mpackage[0m
