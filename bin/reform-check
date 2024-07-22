@@ -154,7 +154,7 @@ fi
 
 # FIXME: on ls1028a, also check for /boot/ls1028a-mhdpfw.bin
 
-ubooturl="https://source.mnt.re/reform/${UBOOT_PROJECT}/-/jobs/artifacts/${UBOOT_TAG}/raw/flash.bin?job=build"
+ubooturl="https://source.mnt.re/reform/${UBOOT_PROJECT}/-/jobs/artifacts/${UBOOT_TAG}/raw/$(basename "$DTBPATH" .dtb)-flash.bin?job=build"
 ubootbin=$(mktemp)
 /usr/lib/apt/apt-helper download-file "$ubooturl" "$ubootbin" "SHA1:$UBOOT_SHA1" >/dev/null
 if [ ! -e /boot/flash.bin ]; then
