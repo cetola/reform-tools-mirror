@@ -1,5 +1,6 @@
 [Unit]
 Description=MNT Reform Hardware Defaults Setup
+Documentation=man:reform-hw-setup(1)
 
 [Service]
 Type=oneshot

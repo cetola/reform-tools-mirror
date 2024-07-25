@@ -1,5 +1,6 @@
 [Unit]
 Description=Reform Suspend Helper
+Documentation=man:reform-standby(1)
 Before=sleep.target
 StopWhenUnneeded=yes
 
