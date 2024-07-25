@@ -1,14 +1,25 @@
 reform-tools (1.46) UNRELEASED; urgency=medium
 
   [ Johannes Schauer Marin Rodrigues ]
-  * bin/reform-check: download uboot with dtbpath prefix
-  * bin/reform-check: do not fail script if u-boot cannot be downloaded
   * machines/MNT Reform 2.conf: update to u-boot 2024-07-19
+  * instead of explicitly running foot, run x-terminal-emulator which defaults
+    to foot in the system images. Change the default terminal by running
+        $ sudo update-alternatives --config x-terminal-emulator
+  * bin/reform-check:
+     - download uboot with dtbpath prefix
+     - do not fail script if u-boot cannot be downloaded
+  * sbin/reform-flash-rescue
+     - use bmaptool if available
+     - resize root partition to fill remaining space on emmc
+  * sbin/reform-boot-config: do not offer unmounting /boot twice
+  * etc/reform-help: point out that reform-display-config is only for imx8mq
+  * flash-kernel: put markers around preboot.d and ubootenv.d snippets
+  * only inform about the dip-switch position on imx8mq
 
   [ Esther Weidauer ]
   * add "sudo" to root commands in reform-help
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Mon, 22 Jul 2024 23:08:38 +0200
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Thu, 25 Jul 2024 12:12:45 +0200
 
 reform-tools (1.45) reform; urgency=medium
 
