@@ -1,2 +1,1 @@
-activate-noawait update-initramfs
 activate-noawait flash-kernel
