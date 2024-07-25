@@ -1,3 +1,4 @@
+######### BEGIN /usr/share/flash-kernel/preboot.d/00reform2_preboot ###########
 # We need to set ${fdtfile} in uboot to select a default dtb for boot mediums
 # that are supposed to boot on multiple devices like the Debian installer.
 #
@@ -12,4 +13,4 @@
 if test -e ${devtype} ${devnum}:${partition} ${prefix}dtb-${fk_kvers}; then
   setenv fdtpath dtb-${fk_kvers}
 fi
-
+########## END /usr/share/flash-kernel/preboot.d/00reform2_preboot ############

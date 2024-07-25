@@ -1,3 +1,4 @@
+######### BEGIN /usr/share/flash-kernel/ubootenv.d/00reform2_ubootenv #########
 # Default bootargs for Linux are set here and can be overwritten using
 # LINUX_KERNEL_CMDLINE in /etc/default/flash-kernel or by setting ${bootargs}
 # in u-boot itself via the setenv command.
@@ -26,3 +27,4 @@ fi
 # passphrase prompt will show up on the last console which must not be the
 # serial terminal but the tty displayed to the screen
 setenv bootargs "${bootargs} console=tty1"
+########## END /usr/share/flash-kernel/ubootenv.d/00reform2_ubootenv ##########
