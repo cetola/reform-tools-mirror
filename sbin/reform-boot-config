@@ -45,7 +45,9 @@ usage() {
 		echo "  reform-boot-config [--emmc] emmc  # rootfs on eMMC (/dev/${DEV_MMC}p2)." >&2
 		echo "" >&2
 		echo "      --emmc Record boot preference on eMMC instead of SD card." >&2
-		echo "             This is only useful with SoM dip switch turned off." >&2
+		case "$(cat /proc/device-tree/model)" in "MNT Reform 2"|"MNT Reform 2 HDMI")
+			echo "             This is only useful with SoM dip switch turned off." >&2 ;;
+		esac
 		echo "" >&2
 		echo "Choosing sd, nvme, usb or emmc will set the root partition to" >&2
 		echo "/dev/${DEV_SD}p2, /dev/${DEV_SSD}p1, /dev/${DEV_USB}1 or /dev/${DEV_MMC}p2," >&2

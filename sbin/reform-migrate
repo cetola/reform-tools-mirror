@@ -45,7 +45,9 @@ usage() {
 		echo "Options:"
 		echo ""
 		echo "      --emmc Record boot preference on eMMC instead of SD card."
-		echo "             This is only useful with SoM dip switch turned off."
+		case "$(cat /proc/device-tree/model)" in "MNT Reform 2"|"MNT Reform 2 HDMI")
+			echo "             This is only useful with SoM dip switch turned off." ;;
+		esac
 	else
 		echo "will set up the first partition of the SD-card to load your newly copied rootfs"
 		echo "and adjust /etc/fstab of TARGET accordingly."

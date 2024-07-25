@@ -113,7 +113,10 @@ e2label "/dev/${DEV_MMC}p2" reformemmcroot
 # reform-boot-config to update the /etc/fstab and initramfs to use the eMMC
 reform-boot-config --emmc emmc
 
-echo "If the SoM dip switch is turned off and no SD-Card is present, your" >&2
-echo "system will now boot from eMMC and load the rootfs from there as well." >&2
-echo "If you want to boot from eMMC but load the rootfs from elsewhere, run" >&2
-echo "reform-boot-config with the --emmc switch." >&2
+case "$(cat /proc/device-tree/model)" in "MNT Reform 2"|"MNT Reform 2 HDMI")
+	echo "If the SoM dip switch is turned off and no SD-Card is present, your" >&2
+	echo "system will now boot from eMMC and load the rootfs from there as well." >&2
+	echo "If you want to boot from eMMC but load the rootfs from elsewhere, run" >&2
+	echo "reform-boot-config with the --emmc switch." >&2
+	;;
+esac
