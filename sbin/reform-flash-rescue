@@ -92,15 +92,29 @@ fi
 
 echo "Downloading $URL..."
 
-{
-if curl --version >/dev/null; then
-	curl --silent --location "$URL"
-elif wget --version >/dev/null; then
-	wget --quiet --output-document=- "$URL"
+# flash with bmaptool if available and use dd otherwise
+if command -v bmaptool >/dev/null 2>&1; then
+	# force gpg signature verification when downloading from reform.d.n
+	case $URL in
+		https://reform.debian.net/images/*)
+			# FIXME: use --keyring and --fingerprint options from
+			# https://github.com/yoctoproject/bmaptool/pull/32
+			bmaptool copy "$URL" "/dev/$DEV_MMC" ;;
+		*) bmaptool copy "$URL" "/dev/$DEV_MMC" ;;
+	esac
 else
-	echo "need curl or wget" >&2
-	exit 1
-fi; } | "$DECOMPRESSOR" --decompress --to-stdout | dd of="/dev/$DEV_MMC" status=progress
+	{
+	if curl --version >/dev/null; then
+		curl --silent --location "$URL"
+	elif wget --version >/dev/null; then
+		wget --quiet --output-document=- "$URL"
+	else
+		echo "need curl or wget" >&2
+		exit 1
+	fi; } | "$DECOMPRESSOR" --decompress --to-stdout | dd of="/dev/$DEV_MMC" status=progress
+fi
+
+
 partprobe "/dev/$DEV_MMC"
 
 # overwrite the partition label
