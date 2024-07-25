@@ -62,7 +62,7 @@ menuitems = [
     MenuItem(
         "Help",
         "help-about-symbolic",
-        ["foot", "bash", "-c", "reform-desktop-help; bash"],
+        ["x-terminal-emulator", "bash", "-c", "reform-desktop-help; bash"],
         None,
     ),
     MenuItem(
@@ -77,7 +77,7 @@ menuitems = [
         ["brightnessctl", "set", "10%"],
         None,
     ),
-    MenuItem("Terminal", "utilities-terminal-symbolic", ["foot"], None),
+    MenuItem("Terminal", "utilities-terminal-symbolic", ["x-terminal-emulator"], None),
     MenuItem("File Manager", "folder-symbolic", ["thunar", os.environ["HOME"]], None),
     MenuItem(
         "System Monitor",
