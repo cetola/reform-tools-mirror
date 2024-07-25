@@ -117,6 +117,16 @@ fi
 
 partprobe "/dev/$DEV_MMC"
 
+# resize the second partition to fill the emmc
+parted "/dev/$DEV_MMC" resizepart 2 100%
+partprobe "/dev/$DEV_MMC"
+sync
+
+# resize the filesystem
+e2fsck -fy "/dev/${DEV_MMC}p2"
+resize2fs -p "/dev/${DEV_MMC}p2"
+e2fsck -fy "/dev/${DEV_MMC}p2"
+
 # overwrite the partition label
 e2label "/dev/${DEV_MMC}p1" reformemmcboot
 e2label "/dev/${DEV_MMC}p2" reformemmcroot
