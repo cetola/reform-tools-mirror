@@ -54,6 +54,7 @@ Description: MNT Reform System Tools
 
 Package: reform2-lpc-dkms
 Architecture: all
+Section: kernel
 Depends:
  ${misc:Depends},
 Description: dkms driver sources for reform2 lpc
