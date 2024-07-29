@@ -19,6 +19,7 @@ Depends:
  alsa-utils,
  console-setup,
  debconf,
+ fonts-reform-iosevka-term (= 2.3.0-1),
  keyboard-configuration,
  mount,
  parted,
@@ -31,6 +32,7 @@ Depends:
 Recommends:
  brightnessctl,
  fonts-font-awesome,
+ fonts-jetbrains-mono,
  foot,
  gir1.2-ayatanaappindicator3-0.1,
  gir1.2-notify-0.7,

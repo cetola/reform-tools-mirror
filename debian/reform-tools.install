@@ -1,4 +1,3 @@
-Iosevka-Term                    /usr/share/fonts
 NetworkManager/*                /usr/lib/NetworkManager/conf.d/
 audio/99-reform.rules           /usr/lib/udev/rules.d
 audio/analog-input-reform.conf  /usr/share/pulseaudio/alsa-mixer/paths

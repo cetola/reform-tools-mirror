@@ -26,7 +26,7 @@ MiscSlimTabs=FALSE
 MiscNewTabAdjacent=FALSE
 MiscSearchDialogOpacity=100
 MiscShowUnsafePasteDialog=TRUE
-FontName=Iosevka Term Light 14
+FontName=JetBrains Mono Regular 14
 ScrollingLines=10000
 TitleMode=TERMINAL_TITLE_REPLACE
 ;

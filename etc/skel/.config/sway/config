@@ -291,7 +291,7 @@ exec /usr/libexec/reform-tools/reform-tray.py
 # default theme settings
 exec gsettings set org.gnome.desktop.interface icon-theme 'Papirus-Dark'
 exec gsettings set org.gnome.desktop.interface font-name 'Inter Medium 11'
-exec gsettings set org.gnome.desktop.interface monospace-font-name 'Iosevka Term 11'
+exec gsettings set org.gnome.desktop.interface monospace-font-name 'JetBrains Mono Regular 11'
 exec gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'
 exec gsettings set org.gnome.desktop.interface cursor-theme 'Adwaita'
 exec gsettings set org.gnome.gedit.preferences.editor scheme 'cobalt'
