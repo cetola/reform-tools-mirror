@@ -50,7 +50,7 @@ static enum power_supply_property bat_props[] = {
 };
 
 static struct power_supply_desc bat_desc = {
-    .name = "8xlifepo4",
+    .name = "BAT0",
     .properties = bat_props,
     .num_properties = ARRAY_SIZE(bat_props),
     .get_property = getBatProperty,
