@@ -285,7 +285,7 @@ if [ ! -e /etc/skel/.profile ]; then
 	echo "E: install the package bash to create it" >&2
 else
 	# shellcheck disable=SC2016
-	skelprofilecontent='if [ "$(whoami)" = "root" ]; then cat /etc/reform-root-help; elif [ -z "$WAYLAND_DISPLAY" ]; then cat /etc/reform-help; fi'
+	skelprofilecontent='if [ "$(whoami)" = "root" ]; then reform-help --root; elif [ -z "$WAYLAND_DISPLAY" ]; then reform-help; fi'
 	if [ "$(tail -1 /etc/skel/.profile)" != "$skelprofilecontent" ]; then
 		echo "E: unexpected last line in /etc/skel/.profile, should be:" >&2
 		echo "$skelprofilecontent" >&2

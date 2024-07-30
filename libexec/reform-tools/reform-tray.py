@@ -62,7 +62,7 @@ menuitems = [
     MenuItem(
         "Help",
         "help-about-symbolic",
-        ["x-terminal-emulator", "bash", "-c", "reform-desktop-help; bash"],
+        ["x-terminal-emulator", "bash", "-c", "reform-help --desktop; bash"],
         None,
     ),
     MenuItem(

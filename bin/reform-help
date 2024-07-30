@@ -1,3 +1,160 @@
 #!/bin/sh
 
-exec cat /etc/reform-help
+set -eu
+
+usage() {
+	echo "usage: $0 [--desktop,--root]" >&2
+}
+
+reform_help () {
+	cat << 'END'
+Some useful commands to explore the system:
+
+Learn more about a command:        [1mman[0m [1;4mname-of-command[0m
+Move around:                       [1mls[0m, [1mcd[0m, [1mcd ..[0m
+
+Start a graphical environment:     [1mwayfire[0m (overlapping windows, traditional)
+                                   [1msway[0m (tiling windows, advanced)
+
+See all running processes:         [1mhtop[0m
+See system services:               [1msystemctl[0m
+Analyze disk usage:                [1mncdu /[0m
+List hardware/peripherals:         [1mlsblk[0m
+                                   [1mlsusb[0m
+                                   [1mlspci[0m
+                                   [1mip a[0m
+View this message again:           [1mreform-help[0m
+END
+	case "$(cat /proc/device-tree/model)" in
+		"MNT Pocket Reform with "*)
+			cat << 'END' ;;
+Read the Operator Handbook:        [1mpocket-reform-handbook[0m (press % to fix contrast, Q to quit)
+END
+		*)
+			cat << 'END' ;;
+Read the Operator Handbook:        [1mreform-handbook[0m (press % to fix contrast, Q to quit)
+END
+	esac
+	cat << 'END'
+Set keyboard layout and timezone:  [1msudo reform-config[0m
+Chat in Reform community:          [1mreform-chat[0m
+Select boot device:                [1msudo reform-boot-config[0m
+END
+	case "$(cat /proc/device-tree/model)" in "MNT Reform 2"|"MNT Reform 2 HDMI")
+		cat << 'END' ;;
+Select display configuration:      [1msudo reform-display-config[0m # imx8mq only
+END
+	esac
+	cat << 'END'
+Set up encrypted NVMe:             [1msudo reform-setup-encrypted-nvme[0m
+Update / install software:         [1msudo apt update[0m
+                                   [1mapt search [1;4mkeyword[0m
+                                   [1msudo apt install [1;4mpackage[0m
+View a text file:                  [1mless[0m [1;4mfilename[0m
+Edit a text file:                  [1mmicro[0m [1;4mfilename[0m
+Log out:                           [1mexit[0m
+
+Most programs can be quit with Ctrl+C, Q, or Ctrl+Q.
+Exit the chat with /quit.
+END
+}
+
+reform_root_help () {
+	cat << 'END'
+You are logged in as [1mroot[0m. This account
+can change anything in the system.
+To use the graphical environment [1msway[0m,
+create a normal user account by entering:
+
+  [1madduser [1;4myour-name[0m
+
+Afterwards, to be able to become root by using sudo, enter:
+
+  [1madduser [1;4myour-name[0m [1msudo[0m
+
+Then, log out using [1mexit[0m and log in as [1;4myour-name[0m.
+
+To read the MNT Reform Operator Handbook, enter:
+
+END
+	case "$(cat /proc/device-tree/model)" in
+		"MNT Pocket Reform with "*)
+			cat << 'END' ;;
+  [1mpocket-reform-handbook[0m   # (in the browser, press %
+                           # to fix contrast, Q to quit)
+END
+		*)
+			cat << 'END' ;;
+  [1mreform-handbook[0m   # (in the browser, press %
+                    # to fix contrast, Q to quit)
+END
+	esac
+}
+
+reform_desktop_help () {
+	cat /etc/motd
+	cat << 'END'
+Welcome to the MNT Reform desktop.
+
+Useful keyboard shortcuts ([1mSUPER[0m is the MNT logo key):
+
+  [1mSUPER ENTER[0m    Open a terminal
+  [1mSUPER ESC[0m      Close active window
+  [1mSUPER D[0m        Find and launch programs
+  [1mSUPER F1[0m       Decrease backlight brightness
+  [1mSUPER F2[0m       Decrease backlight brightness
+  [1mSUPER SHIFT S[0m  Take screenshot (in ~/Pictures)
+  [1mSUPER SHIFT X[0m  Take screenshot of an area
+  [1mSUPER 1[0m …      Go to workspace 1 - 9
+  [1mSUPER 9[0m
+
+  To move the active window to a workspace, press the same
+  combination, but together with [1mSHIFT[0m.
+
+Only on wayfire:
+
+  [1mSUPER ←/→[0m      Tile window to left or right
+  [1mSUPER ↑/↓[0m      (Un)maximize window
+  [1mSUPER TAB[0m      Overview of all windows
+  [1mALT TAB[0m        Cycle through windows
+
+Customize the sway or wayfire configuration:
+
+  [1mmicro ~/.config/sway/config[0m
+  [1mmicro ~/.config/wayfire/config[0m
+
+To learn more about the command line, enter: [1mreform-help[0m
+END
+	case "$(cat /proc/device-tree/model)" in
+		"MNT Pocket Reform with "*)
+			cat << 'END' ;;
+Read the MNT Pocket Reform handbook in a browser: [1mpocket-reform-handbook[0m
+END
+		*)
+			cat << 'END' ;;
+Read the MNT Reform handbook in a browser: [1mreform-handbook[0m
+END
+	esac
+	echo
+	reform_help
+}
+
+if [ "$#" -eq "0" ]; then
+	reform_help
+	exit
+elif [ "$#" -gt "1" ]; then
+	echo "too many arguments" >&2
+	usage
+	exit 1
+fi
+
+case "$1" in
+	--help) usage;;
+	--desktop) reform_desktop_help;;
+	--root) reform_root_help;;
+	*)	
+		echo "unknown option: $1" >&2
+		usage
+		exit 1
+		;;
+esac
