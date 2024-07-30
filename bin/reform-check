@@ -38,12 +38,17 @@ if [ "$#" -gt 0 ]; then case "$1" in
 	--mirror=mntre.com)
 		if [ "$#" -gt 1 ]; then echo "too many arguments" >&2; exit 1; fi
 		MIRROR="mntre.com";;
+	--mirror=reform.debian.net)
+		if [ "$#" -gt 1 ]; then echo "too many arguments" >&2; exit 1; fi
+		MIRROR="reform.debian.net";;
 	--mirror=*) echo "invalid argument for --mirror" >&2; exit 1;;
 	--mirror)
 		if [ "$#" -eq 1 ]; then            echo "missing argument" >&2; exit 1
-		elif [ "$2" != "mntre.com" ]; then echo "invalid argument for --mirror" >&2; exit 1
 		elif [ "$#" -gt 2 ]; then          echo "too many arguments" >&2; exit 1; fi
-		MIRROR="mntre.com";;
+		case "$2" in
+			mntre.com)         MIRROR="mntre.com" ;;
+			reform.debian.net) MIRROR="reform.debian.net" ;;
+		esac
 esac; fi
 
 if [ -z "$MIRROR" ] && grep --silent '^URIs: https://reform.debian.net/debian/\?$' /etc/apt/sources.list.d/reform*.sources 2>/dev/null; then
@@ -52,7 +57,9 @@ if [ -z "$MIRROR" ] && grep --silent '^URIs: https://reform.debian.net/debian/\?
 	echo "I: If this is incorrect, you can set the mirror to its default by" >&2
 	echo "I: re-running this script with --mirror=mntre.com"
 	MIRROR="reform.debian.net"
-else
+fi
+
+if [ -z "$MIRROR" ]; then
 	MIRROR="mntre.com"
 fi
 
