@@ -49,12 +49,14 @@ Recommends:
  thunar,
  x11-xserver-utils,
 Protected: yes
-Description: MNT Reform System Tools
- A number of scripts for managing boot media, displays, standby, plus a few
- help texts and gadgets for the customized sway desktop. Also contains
- /sbin/reform-init, a boot manager script that gets loaded by u-boot and which
- in turn launches the real /sbin/init after mounting an (encrypted) boot
- medium.
+Description: MNT System Tools for MNT Reform and MNT Pocket Reform
+ Utilities, scripts and configurations for the MNT Reform and MNT Pocket Reform
+ open hardware laptops with either i.MX8MQ, i.MX8MPlus, Banana PI CM4, LS1028A
+ or RK3588.
+ .
+ Contains system utilities to manage your installation as well as configuration
+ files for initramfs, flash-kernel, pulseaudio, alsa, u-boot-menu, udev and
+ NetworkManager.
 
 Package: reform2-lpc-dkms
 Architecture: all
