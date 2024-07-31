@@ -3,7 +3,13 @@
 set -eu
 
 usage() {
-	echo "usage: $0 [--desktop,--root]" >&2
+	echo "Prints help text for how to use the MNT Reform." >&2
+	echo >&2
+	echo "Usage: $0 [--desktop,--root]" >&2
+	echo >&2
+	echo "Options:" >&2
+	echo "  --desktop Print the MNT Reform desktop help text." >&2
+	echo "  --root    Print the MNT Reform root shell help text." >&2
 }
 
 reform_help () {

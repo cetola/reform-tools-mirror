@@ -10,6 +10,8 @@ Build-Depends:
  debhelper-compat (= 13),
  dh-sequence-dkms,
  fontforge,
+ help2man,
+ python3-psutil,
 Rules-Requires-Root: no
 Testsuite: autopkgtest-pkg-dkms
 

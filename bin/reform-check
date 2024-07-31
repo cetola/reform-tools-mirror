@@ -17,6 +17,47 @@
 
 set -eu
 
+usage() {
+	echo "This script checks the integrity of your MNT reform setup. It is meant for" >&2
+	echo "two main use-cases:" >&2
+	echo >&2
+	echo " 1. somebody has a problem with their reform and to debug the problem it" >&2
+	echo "    would be useful to know how their system differs from the default" >&2
+	echo " 2. somebody installed their system several months ago and now wants to find" >&2
+	echo "    out which things have since been added or changed in the defaults that" >&2
+	echo "    they might want to apply to their running setup as well" >&2
+	echo >&2
+	echo "Running this script as non-root will give you a diff between the files in" >&2
+	echo "/etc/skel and those in your \$HOME. Running this script as root performs the" >&2
+	echo "system-wide checks." >&2
+	echo >&2
+	echo "Usage: $0 [--help] [--mirror={mntre.com,reform.debian.net}]" >&2;
+	echo >&2
+	echo "Options:" >&2
+	echo "  --help           Display this help and exit." >&2
+	echo "  --mirror=MIRROR  Force MIRROR, either mntre.com or reform.debian.net" >&2
+}
+
+MIRROR=
+
+if [ "$#" -gt 0 ]; then case "$1" in
+	--help) usage; exit 0 ;;
+	--mirror=mntre.com)
+		if [ "$#" -gt 1 ]; then echo "E: too many arguments" >&2; usage; exit 1; fi
+		MIRROR="mntre.com";;
+	--mirror=reform.debian.net)
+		if [ "$#" -gt 1 ]; then echo "E: too many arguments" >&2; usage; exit 1; fi
+		MIRROR="reform.debian.net";;
+	--mirror=*) echo "E: invalid argument for --mirror" >&2; usage; exit 1;;
+	--mirror)
+		if [ "$#" -eq 1 ]; then   echo "E: missing argument" >&2;   usage; exit 1
+		elif [ "$#" -gt 2 ]; then echo "E: too many arguments" >&2; usage; exit 1; fi
+		case "$2" in
+			mntre.com)         MIRROR="mntre.com" ;;
+			reform.debian.net) MIRROR="reform.debian.net" ;;
+		esac
+esac; fi
+
 if [ "$(id -u)" -ne 0 ]; then
 	for path in $(cd /etc/skel && find . -type f); do
 		if [ ! -e "$HOME/$path" ]; then
@@ -31,25 +72,6 @@ if [ "$(id -u)" -ne 0 ]; then
 	echo "I: To run a system-wide check, run this script as the root user."
 	exit 0
 fi
-
-MIRROR=
-
-if [ "$#" -gt 0 ]; then case "$1" in
-	--mirror=mntre.com)
-		if [ "$#" -gt 1 ]; then echo "too many arguments" >&2; exit 1; fi
-		MIRROR="mntre.com";;
-	--mirror=reform.debian.net)
-		if [ "$#" -gt 1 ]; then echo "too many arguments" >&2; exit 1; fi
-		MIRROR="reform.debian.net";;
-	--mirror=*) echo "invalid argument for --mirror" >&2; exit 1;;
-	--mirror)
-		if [ "$#" -eq 1 ]; then            echo "missing argument" >&2; exit 1
-		elif [ "$#" -gt 2 ]; then          echo "too many arguments" >&2; exit 1; fi
-		case "$2" in
-			mntre.com)         MIRROR="mntre.com" ;;
-			reform.debian.net) MIRROR="reform.debian.net" ;;
-		esac
-esac; fi
 
 if [ -z "$MIRROR" ] && grep --silent '^URIs: https://reform.debian.net/debian/\?$' /etc/apt/sources.list.d/reform*.sources 2>/dev/null; then
 	echo "I: reform.debian.net is configured as a mirror in /etc/apt/sources.list.d" >&2

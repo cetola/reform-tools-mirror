@@ -23,20 +23,42 @@ def history_insert(lst, item, depth):
     return lst
 
 
+def usage():
+    print(
+        "Visualize CPU usage and disk read/writes as text using box-drawing characters.",
+        file=sys.stderr,
+    )
+    print(file=sys.stderr)
+    print(
+        "Usage: compstat -d <number of bars> -i <interval in seconds, float>",
+        file=sys.stderr,
+    )
+    print(file=sys.stderr)
+    print("Options:", file=sys.stderr)
+    print("  --help   Display this help text and exit.", file=sys.stderr)
+    print("  -d NUM   Set number of bars to NUM.", file=sys.stderr)
+    print("  -i SECS  Set the update interval to SEC seconds.", file=sys.stderr)
+
+
 def main(argv):
     depth = 5
     interval = 0.3
 
     try:
-        opts, args = getopt.getopt(argv, "hd:i:")
-    except getopt.GetoptError:
-        print("compstat -d <number of bars> -i <interval in seconds, float>")
+        opts, args = getopt.getopt(argv, "hd:i:", longopts=["help"])
+    except getopt.GetoptError as e:
+        print(f"E: {e.msg}", file=sys.stderr)
+        print(file=sys.stderr)
+        usage()
         sys.exit(2)
     for opt, arg in opts:
         if opt == "-d":
             depth = int(arg)
         elif opt == "-i":
             interval = float(arg)
+        elif opt in ["-h", "--help"]:
+            usage()
+            exit()
 
     cpu_history = []
     read_history = []

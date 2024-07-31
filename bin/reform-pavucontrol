@@ -1,4 +1,25 @@
 #!/bin/sh
 
+set -eu
+
+usage () {
+	echo "Kill any pavucontrol process and re-exec it." >&2
+	echo >&2
+	echo "Usage: $0 [--help]" >&2
+	echo >&2
+	echo "Options:" >&2
+	echo "  --help           Display this help and exit." >&2
+}
+
+if [ "$#" -gt 0 ]; then
+	if [ "$1" != "--help" ]; then
+		echo "E: too many arguments" >&2
+		usage
+		exit 1
+	fi
+	usage
+	exit 0
+fi
+
 pkill 'pavucontrol$'
 exec pavucontrol

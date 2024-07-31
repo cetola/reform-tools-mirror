@@ -2,6 +2,23 @@
 
 set -eu
 
+usage () {
+	echo "Download latest u-boot for the current platform and update /boot/flash.bin">&2
+	echo "Then flash u-boot to DEVICE which can be one of the short-hands sd or emmc.">&2
+	echo >&2
+	echo "Usage: $0 [--help] [--offline] DEVICE" >&2
+	echo >&2
+	echo "Options:" >&2
+	echo "  DEVICE           Either a device path in /dev or shorthands sd and emmc" >&2
+	echo "  --help           Display this help and exit." >&2
+	echo "  --offline        Instead of download u-boot use /boot/flash.bin." >&2
+}
+
+if [ "$#" -gt 0 ] && [ "$1" = "--help" ]; then
+	usage
+	exit 0
+fi
+
 # shellcheck source=/dev/null
 if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
 	. "./machines/$(cat /proc/device-tree/model).conf"

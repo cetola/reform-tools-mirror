@@ -2,6 +2,23 @@
 
 set -eu
 
+usage () {
+	echo "Download and flash the latest sysimage-v4 to eMMC." >&2
+	echo "Calls reform-flash-uboot to install u-boot on eMMC, grows the root" >&2
+	echo "filesystem and adjusts filesystem labels." >&2
+	echo "Calls reform-boot-config to set up /boot on eMMC to load the rootfs from eMMC." >&2
+	echo >&2
+	echo "Usage: $0 [--help]" >&2
+	echo >&2
+	echo "Options:" >&2
+	echo "  --help           Display this help and exit." >&2
+}
+
+if [ "$#" -gt 0 ] && [ "$1" = "--help" ]; then
+	usage
+	exit 0
+fi
+
 # shellcheck source=/dev/null
 if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
 	. "./machines/$(cat /proc/device-tree/model).conf"

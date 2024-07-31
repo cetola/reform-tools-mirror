@@ -1,6 +1,26 @@
 #!/bin/sh
 
-set -e
+set -eu
+
+usage () {
+	echo "Run dpkg-reconfigure for keyboard-configuration and tzdata under sudo" >&2
+	echo "to configure the keyboard layout and timezone." >&2
+	echo >&2
+	echo "Usage: $0 [--help]" >&2
+	echo >&2
+	echo "Options:" >&2
+	echo "  --help           Display this help and exit." >&2
+}
+
+if [ "$#" -gt 0 ]; then
+	if [ "$1" != "--help" ]; then
+		echo "E: too many arguments" >&2
+		usage
+		exit 1
+	fi
+	usage
+	exit 0
+fi
 
 sudo dpkg-reconfigure keyboard-configuration
 sudo systemctl restart console-setup

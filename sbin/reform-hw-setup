@@ -2,6 +2,26 @@
 
 set -u
 
+usage () {
+	echo "Hardware setup specific to your MNT Reform platform." >&2
+	echo "Usually run by /lib/systemd/system/reform-hw-setup.service" >&2
+	echo >&2
+	echo "Usage: $0 [--help]" >&2
+	echo >&2
+	echo "Options:" >&2
+	echo "  --help           Display this help and exit." >&2
+}
+
+if [ "$#" -gt 0 ]; then
+	if [ "$1" != "--help" ]; then
+		echo "E: too many arguments" >&2
+		usage
+		exit 1
+	fi
+	usage
+	exit 0
+fi
+
 init_a311d() {
     # A311D sound controls
     # without setting these, there is no UCM profile and messages like this are produced:

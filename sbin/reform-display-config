@@ -2,6 +2,23 @@
 
 set -e
 
+usage () {
+	echo "On the i.MX8MQ, choose whether to use the single or dual display device tree" >&2
+	echo "by writing the correct value into /etc/flash-kernel/machine and re-generating" >&2
+	echo "the initramfs and running flash-kernel." >&2
+	echo >&2
+	echo "Usage: $0 [--help] [--emmc] dual|single" >&2
+	echo >&2
+	echo "Options:" >&2
+	echo "  --help           Display this help and exit." >&2
+	echo "  --emmc           Record choice on /boot on eMMC." >&2
+}
+
+if [ "$#" -gt 0 ] && [ "$1" = "--help" ]; then
+	usage
+	exit 0
+fi
+
 if [ "$(id -u)" -ne 0 ]
   then echo "reform-display-config has to be run as root / using sudo."
   exit

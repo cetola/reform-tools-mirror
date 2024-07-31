@@ -7,6 +7,25 @@
 # License: GPLv2.0+
 #
 
+set -eu
+
+usage () {
+	echo "i.MX8MQ specific setup before suspend and after wakeup." >&2
+	echo "This script is called by the reform-sleep.service systemd service." >&2
+	echo "Do not call this script manually from the terminal but use" >&2
+	echo "systemctl suspend instead." >&2
+	echo >&2
+	echo "Usage: $0 [--help] suspend|resume" >&2
+	echo >&2
+	echo "Options:" >&2
+	echo "  --help           Display this help and exit." >&2
+}
+
+if [ "$#" -gt 0 ] && [ "$1" = "--help" ]; then
+	usage
+	exit 0
+fi
+
 if [ "$(id -u)" -ne 0 ]; then
 	echo "reform-standby has to be run as root / using sudo."
 	exit
@@ -79,13 +98,6 @@ case $1 in
 		hid_bind
 		;;
 	*)
-		echo "i.MX8MQ specific setup before suspend and after wakeup" >&2
-		echo "" >&2
-		echo "usage:" >&2
-		echo "    $0 [suspend|resume]" >&2
-		echo "" >&2
-		echo "This script is called by the reform-sleep.service systemd service." >&2
-		echo "Do not call this script manually from the terminal but use" >&2
-		echo "systemctl suspend instead." >&2
+		usage
 		exit 1
 esac

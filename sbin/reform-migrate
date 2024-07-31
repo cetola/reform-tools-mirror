@@ -2,22 +2,6 @@
 
 set -eu
 
-echo ""
-echo "This script can copy your current OS and files to a different disk, such as an SSD installed in MNT Reform."
-echo ""
-echo "Warning: This will overwrite files on the target partition. Make sure you know what you're doing!"
-echo ""
-echo "Before using this script, your target partition has to be formatted. You can use the gnome-disks program for that."
-echo "gnome-disks can also help you set up an encrypted disk. You can also run the following commands for one single"
-echo "partition on NVMe:"
-echo ""
-echo "    parted /dev/nvme0n1 \"mklabel msdos\""
-echo "    parted /dev/nvme0n1 \"mkpart primary ext4 4MiB -1\""
-echo "    mkfs.ext4 /dev/nvme0n1p1"
-echo ""
-echo "You can also setup an encrypted NVMe SSD by running reform-setup-encrypted-nvme"
-echo ""
-
 # shellcheck source=/dev/null
 if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
 	. "./machines/$(cat /proc/device-tree/model).conf"
@@ -27,6 +11,21 @@ else
 	echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
 	exit 1
 fi
+
+usage_minimal() {
+	echo "Copies the currently running system onto TARGET and run reform-boot-config" >&2
+	echo "to set up /boot on SD-card or eMMC (selected by the --emmc option) to boot" >&2
+	echo "into the newly copied system. TARGET is a partition block device and will" >&2
+	echo "temporarily get mounted by this script." >&2
+	echo >&2
+	echo "Usage: $0 [--help] [--help-full] [--emmc] DEVICE" >&2
+	echo >&2
+	echo "Options:" >&2
+	echo "  DEVICE           Rootfs partition in /dev.">&2
+	echo "  --help           Display this help and exit." >&2
+	echo "  --help-full      Extended device-specific help output." >&2
+	echo "  --emmc           Choose /boot partition on eMMC instead of SD-card." >&2
+}
 
 usage() {
 	echo "Usage:"
@@ -71,6 +70,15 @@ if [ $# -ne 1 ] && [ $# -ne 2 ]; then
 	exit 1
 fi
 
+if [ "$1" = "--help" ]; then
+	# minimal device-agnostic help output for use with help2man
+	usage_minimal
+	exit 0
+elif [ "$1" = "--help-full" ]; then
+	usage
+	exit 0
+fi
+
 EMMC=""
 TARGET="$1"
 BOOTPART="${DEV_SD}p1"
@@ -108,10 +116,26 @@ if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART")" ]; then
 	exit 1
 fi
 
-if [ "$(id -u)" -ne 0 ]
-  then echo "reform-migrate has to be run as root / using sudo."
-  exit
+if [ "$(id -u)" -ne 0 ]; then
+	echo "reform-boot-config has to be run as root / using sudo." >&2
+	exit 1
 fi
+
+echo ""
+echo "This script can copy your current OS and files to a different disk, such as an SSD installed in MNT Reform."
+echo ""
+echo "Warning: This will overwrite files on the target partition. Make sure you know what you're doing!"
+echo ""
+echo "Before using this script, your target partition has to be formatted. You can use the gnome-disks program for that."
+echo "gnome-disks can also help you set up an encrypted disk. You can also run the following commands for one single"
+echo "partition on NVMe:"
+echo ""
+echo "    parted /dev/nvme0n1 \"mklabel msdos\""
+echo "    parted /dev/nvme0n1 \"mkpart primary ext4 4MiB -1\""
+echo "    mkfs.ext4 /dev/nvme0n1p1"
+echo ""
+echo "You can also setup an encrypted NVMe SSD by running reform-setup-encrypted-nvme"
+echo ""
 
 # FIXME: mkimage.sh in reform-system-image could write out the exact values into a known location
 echo "Running rsync to copy approximately 3G of data in about 210k files..." >&2
