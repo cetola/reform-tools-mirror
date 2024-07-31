@@ -1,25 +1,46 @@
-reform-tools (1.46) UNRELEASED; urgency=medium
+reform-tools (1.46) reform; urgency=medium
 
   [ Johannes Schauer Marin Rodrigues ]
+  * add --help output and man pages for all tools
+  * replace Iosevka Term font with JetBrains Mono Regular
+  * Stop shipping the following files:
+     - /etc/reform-help
+     - /etc/reform-desktop-help
+     - /etc/reform-root-help
+     - /sbin/reform-init
+     - /usr/bin/reform-desktop-help
   * machines/MNT Reform 2.conf: update to u-boot 2024-07-19
+  * machines/MNT * with BPI-CM4 Module.conf: u-boot 2024-08-01 (nvme support)
   * instead of explicitly running foot, run x-terminal-emulator which defaults
     to foot in the system images. Change the default terminal by running
         $ sudo update-alternatives --config x-terminal-emulator
   * bin/reform-check:
      - download uboot with dtbpath prefix
      - do not fail script if u-boot cannot be downloaded
+     - allow --mirror=reform.debian.net
+     - fix FLASHBIN_OFFSET computation
+     - update package list
+  * bin/reform-compstat: format with black
+  * bin/reform-help: point out that reform-display-config is only for imx8mq
   * sbin/reform-flash-rescue
      - use bmaptool if available
      - resize root partition to fill remaining space on emmc
   * sbin/reform-boot-config: do not offer unmounting /boot twice
-  * etc/reform-help: point out that reform-display-config is only for imx8mq
   * flash-kernel: put markers around preboot.d and ubootenv.d snippets
   * only inform about the dip-switch position on imx8mq
+  * systemd/*.service: add Documentation field
+  * debian/control: make reform2-lpc-dkms section kernel
+  * debian/reform-tools.triggers: update-initramfs trigger gets added by
+    dh_installinitramfs
+  * debian/control: update description
 
   [ Esther Weidauer ]
   * add "sudo" to root commands in reform-help
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Thu, 25 Jul 2024 12:12:45 +0200
+  [ Matt ]
+  * Rename battery under /sys from 8xlifepo4 to BAT0
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Thu, 01 Aug 2024 03:27:49 +0200
 
 reform-tools (1.45) reform; urgency=medium
 
