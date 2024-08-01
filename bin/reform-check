@@ -399,6 +399,9 @@ if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-mnt-refor
 fi
 
 for file in /boot/initrd.img-*-reform2-arm64 /boot/vmlinuz-*-reform2-arm64; do
+	if [ ! -e "$file" ]; then
+		continue
+	fi
 	echo "I: file from deprecated kernel flavour found: $file" >&2
 done
 
