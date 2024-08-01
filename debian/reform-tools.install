@@ -4,7 +4,6 @@ audio/analog-input-reform.conf  /usr/share/pulseaudio/alsa-mixer/paths
 audio/asound.state              /var/lib/alsa
 audio/reform.conf               /usr/share/pulseaudio/alsa-mixer/profile-sets
 bin/*                           /usr/bin
-etc/*                           /etc
 flash-kernel/*                  /usr/share/flash-kernel
 initramfs-tools/hooks/reform    /usr/share/initramfs-tools/hooks
 initramfs-tools/reform.conf     /usr/share/initramfs-tools/modules.d/

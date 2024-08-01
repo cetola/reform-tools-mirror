@@ -1,5 +1,0 @@
-# change to de if you have a QWERTZ keyboard, for example
-input * {
-        xkb_layout us
-        xkb_options compose:menu,lv3:ralt_switch
-}

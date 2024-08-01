@@ -8,8 +8,6 @@ export DEB_VERSION_UPSTREAM
 	dh $@
 
 execute_after_dh_auto_build:
-	for d in Desktop Documents Downloads Music Pictures Videos; do mkdir -p etc/skel/$$d; done
-	for m in full rescue; do sed "s/{DATE}/$(shell date --date=@$(SOURCE_DATE_EPOCH) --iso-8601=date)/" etc.in/motd-$$m > etc/motd-$$m; done
 	fontforge -lang=ff -c 'Open($$1); Generate($$2)' mnt-icon-font/MNTIcons.sfd mnt-icon-font/MNTIcons.ttf
 	set -e;                                                               \
 	tool2whatis () { case $$1 in                                          \
@@ -48,4 +46,4 @@ override_dh_dkms:
 	dh_dkms -V $(DEB_VERSION_UPSTREAM)
 
 execute_after_dh_clean:
-	rm -f etc/motd-full etc/motd-rescue mnt-icon-font/MNTIcons.ttf
+	rm -f mnt-icon-font/MNTIcons.ttf
