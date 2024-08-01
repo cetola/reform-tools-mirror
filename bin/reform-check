@@ -121,15 +121,16 @@ if [ -e "/etc/flash-kernel/machine" ] && [ -e "/proc/device-tree/model" ] && [ "
 	echo "E: your currently loaded dtb is not the one referenced by flash-kernel" >&2
 fi
 
-PKGSGUI="xwayland xterm foot sway fonts-inter fonts-noto-color-emoji waybar swayidle swaylock mesa-utils lxpolkit wayland-protocols wofi wireplumber papirus-icon-theme libglib2.0-bin gsettings-desktop-schemas gnome-disk-utility gnome-themes-extra-data gnome-icon-theme gnome-settings-daemon gnome-system-monitor grim slurp gedit evince mpv sxiv thunar pavucontrol unicode-data engrampa neverball minetest qt5ct kde-style-breeze python3-gi gir1.2-ayatanaappindicator3-0.1 gir1.2-notify-0.7 x11-xserver-utils dunst pkexec synaptic pasystray"
+PKGSGUI="xwayland xterm sway fonts-inter fonts-noto-color-emoji waybar swayidle swaylock mesa-utils lxpolkit wayland-protocols wofi wireplumber papirus-icon-theme libglib2.0-bin gsettings-desktop-schemas gnome-disk-utility gnome-themes-extra-data gnome-icon-theme gnome-settings-daemon gnome-system-monitor grim slurp gedit evince mpv sxiv gvfs-backends unicode-data engrampa neverball minetest qt5ct kde-style-breeze dunst pasystray wev wf-recorder wayvnc network-manager-gnome blueman pavucontrol synaptic thunar"
 case "$MIRROR" in
-	mntre.com)         PKGSGUI="$PKGSGUI wayfire reform-firedecor firefox";;
+	mntre.com)         PKGSGUI="$PKGSGUI wayfire reform-firedecor firefox tuigreet";;
 	reform.debian.net) PKGSGUI="$PKGSGUI firefox-esr";;
 esac
-PKGSNET="iproute2 iptables inetutils-ping ircii elinks isc-dhcp-client netcat-traditional net-tools network-manager network-manager-gnome nfacct ntp ntpdate rsync telnet traceroute wpasupplicant curl wget w3m rfkill ifupdown netbase openssh-client blueman firmware-realtek"
-PKGSADMIN="apt apt-utils apt-listbugs apt-file cron cryptsetup lvm2 dbus-bin e2fsprogs fbset init-system-helpers ncdu parted pciutils policykit-1 procps sudo systemd systemd-sysv tmux u-boot-tools screen"
-PKGSUTILS="busybox console-data console-setup cpio file flash-kernel gnupg gpgv htop kbd lm-sensors readline-common usbutils xdg-utils bsdmainutils less nano micro vim alsa-utils dosfstools python3-psutil reform-handbook"
-PKGSMISC="brightnessctl brightness-udev ca-certificates debian-archive-keyring dialog gpm ncurses-term locales bash-completion man-db cryptsetup-initramfs linux-image-mnt-reform-arm64 linux-headers-mnt-reform-arm64 reform-tools gpiod"
+PKGSTOOLS="brightnessctl fonts-font-awesome fonts-jetbrains-mono foot gir1.2-ayatanaappindicator3-0.1 gir1.2-notify-0.7 gnome-system-monitor ircii pavucontrol pkexec pulseaudio-utils python3 python3-gi synaptic thunar x11-xserver-utils"
+PKGSNET="iproute2 iptables inetutils-ping elinks isc-dhcp-client netcat-traditional net-tools network-manager nfacct ntp ntpdate rsync telnet traceroute wpasupplicant curl wget w3m rfkill ifupdown netbase openssh-client firmware-realtek"
+PKGSADMIN="apt apt-utils apt-listbugs apt-file cron cryptsetup lvm2 dbus-bin e2fsprogs fbset init-system-helpers ncdu parted pciutils policykit-1 procps sudo systemd systemd-sysv tmux u-boot-tools screen greetd"
+PKGSUTILS="busybox console-data console-setup cpio file flash-kernel gnupg gpgv htop kbd lm-sensors readline-common usbutils xdg-utils bsdmainutils less nano micro vim alsa-utils dosfstools python3-psutil reform-handbook pocket-reform-handbook"
+PKGSMISC="brightnessctl brightness-udev ca-certificates debian-archive-keyring dialog gpm ncurses-term locales bash-completion man-db cryptsetup-initramfs gpiod linux-image-mnt-reform-arm64 linux-headers-mnt-reform-arm64"
 
 case "$MIRROR" in
 	mntre.com) aptprefcontent="Package: *\nPin: release n=reform, l=reform\nPin-Priority: 990\n";;
@@ -149,7 +150,7 @@ else
 fi
 
 notinstalled=
-for package in $PKGSGUI $PKGSNET $PKGSADMIN $PKGSUTILS $PKGSMISC; do
+for package in $PKGSGUI $PKGSTOOLS $PKGSNET $PKGSADMIN $PKGSUTILS $PKGSMISC; do
 	if ! dpkg-query --showformat '${db:Status-Status}\n' --show "$package" 2>/dev/null | grep -q '^installed$'; then
 		notinstalled="$notinstalled $package"
 	fi
