@@ -202,13 +202,13 @@ else
 	fi
 	ubootsize=$(stat --format=%s "$ubootbin")
 
-	if [ "$EMMC_BOOT" = true ] && ! cmp --quiet --bytes="$ubootsize" "--ignore-initial=$FLASHBIN_OFFSET:$UBOOT_OFFSET" "$ubootbin" "/dev/${DEV_MMC}boot0" 2>/dev/null; then
+	if [ "$EMMC_BOOT" = true ] && ! cmp --quiet --bytes="$((ubootsize-FLASHBIN_OFFSET))" "--ignore-initial=$FLASHBIN_OFFSET:$UBOOT_OFFSET" "$ubootbin" "/dev/${DEV_MMC}boot0" 2>/dev/null; then
 		echo "W: eMMC does not contain latest uboot" >&2
 		echo "W: You can update it to the latest version by running as root:" >&2
 		echo "reform-flash-uboot emmc" >&2
 	fi
 
-	if [ "$SD_BOOT" = true ] && [ -e "/dev/$DEV_SD" ] && ! cmp --quiet --bytes="$ubootsize" --ignore-initial="0:$UBOOT_OFFSET" "$ubootbin" "/dev/$DEV_SD" 2>/dev/null; then
+	if [ "$SD_BOOT" = true ] && [ -e "/dev/$DEV_SD" ] && ! cmp --quiet --bytes="$((ubootsize-FLASHBIN_OFFSET))" --ignore-initial="$FLASHBIN_OFFSET:$UBOOT_OFFSET" "$ubootbin" "/dev/$DEV_SD" 2>/dev/null; then
 		echo "W: SD-Card does not contain latest uboot" >&2
 		echo "W: You can update it to the latest version by running as root:" >&2
 		echo "reform-flash-uboot sd" >&2
