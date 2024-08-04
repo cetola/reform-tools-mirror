@@ -1,3 +1,9 @@
+reform-tools (1.48) UNRELEASED; urgency=medium
+
+  * 
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sun, 04 Aug 2024 16:31:50 +0200
+
 reform-tools (1.47) reform; urgency=medium
 
   * stop shipping files in /etc
