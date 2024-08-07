@@ -128,9 +128,9 @@ case "$MIRROR" in
 esac
 PKGSTOOLS="brightnessctl fonts-font-awesome fonts-jetbrains-mono foot gir1.2-ayatanaappindicator3-0.1 gir1.2-notify-0.7 gnome-system-monitor ircii pavucontrol pulseaudio-utils python3 python3-gi thunar x11-xserver-utils"
 PKGSNET="iproute2 iptables inetutils-ping elinks isc-dhcp-client netcat-traditional net-tools network-manager nfacct ntp ntpdate rsync telnet traceroute wpasupplicant curl wget w3m rfkill ifupdown netbase openssh-client firmware-realtek"
-PKGSADMIN="apt apt-utils apt-listbugs apt-file cron cryptsetup lvm2 dbus-bin e2fsprogs fbset init-system-helpers ncdu parted pciutils policykit-1 procps sudo systemd systemd-sysv tmux u-boot-tools screen greetd"
+PKGSADMIN="apt apt-utils apt-listbugs apt-file cron cryptsetup lvm2 dbus-bin e2fsprogs fbset init-system-helpers ncdu parted pciutils procps sudo systemd systemd-sysv tmux u-boot-tools screen greetd"
 PKGSUTILS="busybox console-data console-setup cpio file flash-kernel gnupg gpgv htop kbd lm-sensors readline-common usbutils xdg-utils bsdmainutils less nano micro vim alsa-utils dosfstools python3-psutil reform-handbook pocket-reform-handbook"
-PKGSMISC="brightnessctl brightness-udev ca-certificates debian-archive-keyring dialog gpm ncurses-term locales bash-completion man-db cryptsetup-initramfs gpiod linux-image-mnt-reform-arm64 linux-headers-mnt-reform-arm64"
+PKGSMISC="brightnessctl brightness-udev ca-certificates debian-archive-keyring dialog gpm ncurses-term locales bash-completion man-db cryptsetup-initramfs reform-tools gpiod firmware-misc-nonfree linux-image-mnt-reform-arm64 linux-headers-mnt-reform-arm64"
 
 case "$MIRROR" in
 	mntre.com) aptprefcontent="Package: *\nPin: release n=reform, l=reform\nPin-Priority: 990\n";;
