@@ -1,8 +1,14 @@
-reform-tools (1.48) UNRELEASED; urgency=medium
+reform-tools (1.48) reform; urgency=medium
 
-  * 
+  * sbin/reform-flash-uboot: allow flashing to emmc on platforms with
+    SD_BOOT set to false
+  * disallow flashing u-boot to emmc on i.MX8MP to avoid accidentally
+    soft-bricking it
+  * The u-boot offset for i.MX8MP is zero bytes
+  * remove reform-synaptic
+  * add .gitlab-ci.yml
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sun, 04 Aug 2024 16:31:50 +0200
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Wed, 07 Aug 2024 11:47:52 +0200
 
 reform-tools (1.47) reform; urgency=medium
 
