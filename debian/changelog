@@ -1,3 +1,9 @@
+reform-tools (1.49) UNRELEASED; urgency=medium
+
+  * 
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Wed, 07 Aug 2024 23:29:49 +0200
+
 reform-tools (1.48) reform; urgency=medium
 
   * sbin/reform-flash-uboot: allow flashing to emmc on platforms with
