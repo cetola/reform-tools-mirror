@@ -86,12 +86,6 @@ menuitems = [
         None,
     ),
     MenuItem(
-        "Install Software",
-        "system-software-install-symbolic",
-        ["reform-synaptic"],
-        None,
-    ),
-    MenuItem(
         "Logout",
         "system-log-out-symbolic",
         ["pkill", "(wayfire|sway)"],

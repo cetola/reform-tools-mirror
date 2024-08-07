@@ -25,7 +25,6 @@ execute_after_dh_auto_build:
 		reform-pavucontrol)  echo "kill and restart pavucontrol" ;;   \
 		reform-setup-encrypted-nvme) echo "setup encrypted SSD" ;;    \
 		reform-standby)      echo "suspend/wakeup tweaks" ;;          \
-		reform-synaptic)     echo "start synaptic package manager" ;; \
 		*) echo "unknown tool: $$1" 2>&1; exit 1 ;;                   \
 	esac; };                                                              \
 	for tool in bin/* sbin/*; do                                          \

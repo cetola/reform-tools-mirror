@@ -12,4 +12,3 @@ debian/reform-migrate.8
 debian/reform-pavucontrol.1
 debian/reform-setup-encrypted-nvme.8
 debian/reform-standby.8
-debian/reform-synaptic.1
