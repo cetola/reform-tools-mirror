@@ -1,3 +1,9 @@
+reform-tools (1.50) UNRELEASED; urgency=medium
+
+  * 
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Mon, 12 Aug 2024 16:23:15 +0200
+
 reform-tools (1.49) reform; urgency=medium
 
   * initramfs-tools/hooks/reform: add rk3588 for next and pocket
