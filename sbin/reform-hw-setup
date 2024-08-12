@@ -142,4 +142,9 @@ case "$(cat /proc/device-tree/model)" in
 "MNT Reform 2 with RCORE RK3588 Module")
     init_wm8960
     ;;
+"MNT Pocket Reform with RCORE RK3588 Module")
+    init_pocket_display
+    ;;
+"MNT Reform Next with RCORE RK3588 Module")
+    ;;
 esac
