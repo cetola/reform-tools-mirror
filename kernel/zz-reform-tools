@@ -1,0 +1,49 @@
+#!/bin/sh
+#
+# Populate /boot with all known dtbs.
+# The flash-kernel package is still needed to provide the /boot/dtb-$(uname -r)
+# symlink. That symlink is needed on platforms that do not set the `${fdtfile}`
+# u-boot environment variable.
+
+set -e
+
+self="$0"
+version="$1"
+image_path="$2"
+
+set -- $DEB_MAINT_PARAMS
+
+# strip single quotes from beginning and end
+action="${1#\'}"
+action="${mode%\'}"
+
+set -u
+
+install_dtbs() {
+	for CONF in /usr/share/reform-tools/machines/*.conf; do
+		. "$CONF"
+		dtb=$(find "/usr/lib/linux-image-$version" -wholename "*/$DTBPATH" 2>/dev/null | head -n 1)
+		if ! test -f "$dtb"; then
+			echo "E: $dtb does not exist" >&2
+			continue
+		fi
+		mkdir -p "/boot/dtbs/$version/$(dirname "$DTBPATH")"
+		cp "$dtb" "/boot/dtbs/$version/$DTBPATH"
+	done
+}
+
+remove_dtbs() {
+	for CONF in /usr/share/reform-tools/machines/*.conf; do
+		. "$CONF"
+		rm -f "/boot/dtbs/$version/$DTBPATH" || :
+	done
+	rmdir --ignore-fail-on-non-empty "/boot/dtbs/$version"
+}
+
+case "$self:$action" in
+	# Only run on postinst configure and postrm remove, to avoid wasting
+	# time by calling this script multiple times on upgrade and removal.
+	*/postinst.d/*:configure) install_dtbs ;;
+	*/postrm.d/*:remove) remove_dtbs ;;
+	*) exit 0 ;;
+esac

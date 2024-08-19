@@ -8,6 +8,7 @@ flash-kernel/*                  /usr/share/flash-kernel
 initramfs-tools/hooks/reform    /usr/share/initramfs-tools/hooks
 initramfs-tools/reform.conf     /usr/share/initramfs-tools/modules.d/
 initramfs-tools/scripts/reform  /usr/share/initramfs-tools/scripts/init-top
+kernel/zz-reform-tools          /usr/share/kernel/postinst.d/zz-reform-tools
 libexec/*                       /usr/libexec
 machines/*                      /usr/share/reform-tools/machines
 mnt-icon-font/MNTIcons.ttf      /usr/share/fonts/truetype/
