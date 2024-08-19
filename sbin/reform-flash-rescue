@@ -135,7 +135,7 @@ fi
 partprobe "/dev/$DEV_MMC"
 
 # resize the second partition to fill the emmc
-parted "/dev/$DEV_MMC" resizepart 2 100%
+parted --script --machine "/dev/$DEV_MMC" resizepart 2 100%
 partprobe "/dev/$DEV_MMC"
 sync
 
