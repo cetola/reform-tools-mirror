@@ -56,7 +56,7 @@ usage() {
 		echo "Download and write recent uboot to eMMC or SD-Card." >&2
 	elif [ "$SD_BOOT" = true ]; then
 		echo "Download and write recent uboot to SD-Card." >&2
-	elif [ "$MMC_BOOT" = true ]; then
+	elif [ "$EMMC_BOOT" = true ]; then
 		echo "Download and write recent uboot to eMMC." >&2
 	else
 		echo "Download and write recent uboot to chosen device." >&2
@@ -74,7 +74,7 @@ usage() {
 		echo "" >&2
 		echo "   sd -> /dev/${DEV_SD}" >&2
 		echo "" >&2
-	elif [ "$MMC_BOOT" = true ]; then
+	elif [ "$EMMC_BOOT" = true ]; then
 		echo "A device shortcut is provided:" >&2
 		echo "" >&2
 		echo "   emmc -> /dev/${DEV_MMC}boot0" >&2
