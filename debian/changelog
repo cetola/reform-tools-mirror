@@ -1,8 +1,23 @@
-reform-tools (1.50) UNRELEASED; urgency=medium
+reform-tools (1.50) reform; urgency=medium
 
-  * 
+  [ Johannes Schauer Marin Rodrigues ]
+  * Add Recommends on bmap-tools
+  * machines/MNT * with RCORE RK3588 Module.conf: bump u-boot version
+  * add /usr/share/kernel/postinst.d/zz-reform-tools
+  * sbin/reform-flash-uboot (Thanks to deianara)
+     - fix typo MMC_BOOT -> EMMC_BOOT.
+     - run parted with --script.
+  * sbin/reform-display-config: support for u-boot-menu
+  * sbin/reform-hw-setup:
+     - run with set -e
+     - prefix messages with type indicator
+     - add support for pocket reform and reform next with rk3588
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Mon, 12 Aug 2024 16:23:15 +0200
+  [ markste-in ]
+  * sbin/reform-hw-setup: Change how the qcacld2 driver is loaded. Try to load
+    exact match otherwise try every other available option
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Thu, 22 Aug 2024 11:40:41 +0200
 
 reform-tools (1.49) reform; urgency=medium
 
