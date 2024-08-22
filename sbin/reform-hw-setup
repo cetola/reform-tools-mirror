@@ -163,7 +163,7 @@ case "$(cat /proc/device-tree/model)" in
     ;;
 "MNT Pocket Reform with i.MX8MP Module")
     init_pocket_display
-    init_qca9377_wifi
+    init_qca9377_wifi || echo "W: init_qca9377_wifi failed" >&2
     init_tlv320aic3100
     ;;
 "MNT Pocket Reform with BPI-CM4 Module")
@@ -173,7 +173,7 @@ case "$(cat /proc/device-tree/model)" in
     ;;
 "MNT Reform 2 with i.MX8MP Module")
     init_wm8960
-    init_qca9377_wifi
+    init_qca9377_wifi || echo "W: init_qca9377_wifi failed" >&2
     ;;
 "MNT Reform 2 with RCORE RK3588 Module")
     init_wm8960
