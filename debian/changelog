@@ -1,3 +1,12 @@
+reform-tools (1.52) reform; urgency=medium
+
+  * sbin/reform-hw-setup: do not run init_qca9377_wifi if qcacld2 is already
+    loaded
+  * sbin/reform-hw-setup: run insmod with -f or otherwise it will fail with
+    'Invalid module format' even if the version is correct
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Thu, 22 Aug 2024 18:23:35 +0200
+
 reform-tools (1.51) reform; urgency=medium
 
   * debian/reform-tools.install: do not install zz-reform-tools into a
