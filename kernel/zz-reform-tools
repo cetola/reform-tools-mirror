@@ -15,7 +15,7 @@ set -- $DEB_MAINT_PARAMS
 
 # strip single quotes from beginning and end
 action="${1#\'}"
-action="${mode%\'}"
+action="${action%\'}"
 
 set -u
 
