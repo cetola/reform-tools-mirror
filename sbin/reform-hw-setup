@@ -84,11 +84,13 @@ init_qca9377_wifi() {
     # load out-of-tree Wi-Fi driver
     KERNVER_EXACT=$(dpkg-query --show --showformat '${Version}' "linux-image-$(uname -r)")
     modprobe cfg80211
-    
+
+    # without "-f", insmod will fail with "Invalid module format" even though
+    # the kernel version matches
     echo "I: Try to load exact match wifi driver: ${KERNVER_EXACT}" >&2
     if [ -f "/opt/reform-qcacld2/qcacld2-${KERNVER_EXACT}.ko" ]; then
         echo "I: Found exact match for kernel ${KERNVER_EXACT}" >&2
-        if insmod "/opt/reform-qcacld2/qcacld2-${KERNVER_EXACT}.ko"; then
+        if insmod -f "/opt/reform-qcacld2/qcacld2-${KERNVER_EXACT}.ko"; then
             echo "I: Successfully loaded exact match driver" >&2
             return 0
         else
