@@ -76,6 +76,11 @@ init_pocket_display() {
 }
 
 init_qca9377_wifi() {
+    if test -e /proc/modules && grep --quiet '^qcacld2 ' /proc/modules; then
+        echo "I: Module qcacld2 is already loaded" >&2
+        return 0
+    fi
+
     # load out-of-tree Wi-Fi driver
     KERNVER_EXACT=$(dpkg-query --show --showformat '${Version}' "linux-image-$(uname -r)")
     modprobe cfg80211
