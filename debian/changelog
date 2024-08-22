@@ -1,8 +1,11 @@
-reform-tools (1.51) UNRELEASED; urgency=medium
+reform-tools (1.51) reform; urgency=medium
 
-  * 
+  * debian/reform-tools.install: do not install zz-reform-tools into a
+    subdirectory of /usr/share/kernel/postinst.d
+  * kernel/zz-reform-tools: fix variable name mode -> action
+  * sbin/reform-hw-setup: make init_qca9377_wifi failing non-fatal
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Thu, 22 Aug 2024 15:11:49 +0200
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Thu, 22 Aug 2024 15:40:57 +0200
 
 reform-tools (1.50) reform; urgency=medium
 
