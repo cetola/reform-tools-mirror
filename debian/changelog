@@ -1,3 +1,9 @@
+reform-tools (1.53) UNRELEASED; urgency=medium
+
+  * 
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 03 Sep 2024 12:30:46 +0200
+
 reform-tools (1.52) reform; urgency=medium
 
   * sbin/reform-hw-setup: do not run init_qca9377_wifi if qcacld2 is already
