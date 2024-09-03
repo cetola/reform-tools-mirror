@@ -1,0 +1,23 @@
+# This file is named 20_reform.gschema.override so that it has a higher
+# priority than 10_gsettings-desktop-schemas.gschema.override which also
+# sets monospace-font-name.
+#
+# These defaults avoid having to call gsettings in sway config which would
+# override user choices every time sway starts unless the user changes the
+# sway config itself.
+[org.gnome.desktop.interface]
+icon-theme = 'Papirus-Dark'
+font-name = 'Inter Medium 11'
+monospace-font-name = 'JetBrains Mono 11'
+gtk-theme = 'Adwaita-dark'
+cursor-theme = 'Adwaita'
+color-scheme = 'prefer-dark'
+
+[org.gnome.gedit.preferences.editor]
+scheme = 'cobalt'
+
+[org.gnome.desktop.background]
+picture-options = 'zoom'
+picture-uri = 'file:///usr/share/backgrounds/reform-mountains.jpg'
+primary-color = '#000000'
+picture-opacity = 100
