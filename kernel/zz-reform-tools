@@ -34,6 +34,9 @@ install_dtbs() {
 			echo "E: $dtb does not exist" >&2
 			continue
 		fi
+		if [ ! -e "/usr/lib/linux-image-$version/$DTBPATH" ]; then
+			echo "W: irregular dtb path: $dtb" >&2
+		fi
 		mkdir -p "/boot/dtbs/$version/$(dirname "$DTBPATH")"
 		cp "$dtb" "/boot/dtbs/$version/$DTBPATH"
 	done
