@@ -1,8 +1,16 @@
-reform-tools (1.53) UNRELEASED; urgency=medium
+reform-tools (1.53) reform; urgency=medium
 
-  * 
+  * sbin/reform-flash-uboot: fix functionality that running without arguments
+    just updates /boot/flash.bin
+  * kernel/zz-reform-tools:
+     - make sure /usr/lib/linux-image-* exists
+     - print error if there was no dtb found
+     - print warning for irregular dtb paths
+  * install /usr/share/glib-2.0/schemas/20_reform.gschema.override setting the
+    default theme and font
+  * add libexec/reform-tools/reform-wallpaper.py
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 03 Sep 2024 12:30:46 +0200
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Fri, 06 Sep 2024 00:42:01 +0200
 
 reform-tools (1.52) reform; urgency=medium
 
