@@ -1,0 +1,60 @@
+SectionVerb {
+	EnableSequence [
+		disdevall ""
+	]
+
+	DisableSequence [
+	]
+
+	Value.TQ "HiFi"
+}
+
+SectionDevice."Speaker" {
+	Comment "Speaker"
+
+	ConflictingDevice [
+		"Headphones"
+	]
+
+	EnableSequence [
+		cset "name='Speaker Switch' on"
+	]
+
+	DisableSequence [
+		cset "name='Speaker Switch' off"
+	]
+
+	Value {
+		PlaybackPriority "500"
+		PlaybackVolume "name='Speaker Analog Volume'"
+		PlaybackSwitch "name='Speaker Switch'"
+		PlaybackMixerElem "Speaker"
+		PlaybackPCM "hw:${CardId}"
+	}
+}
+
+SectionDevice."Headphones" {
+	Comment "Headphones"
+
+	ConflictingDevice [
+		"Speaker"
+	]
+
+	EnableSequence [
+		cset "name='HP Left Switch' on"
+		cset "name='HP Right Switch' on"
+	]
+
+	DisableSequence [
+		cset "name='HP Left Switch' off"
+		cset "name='HP Right Switch' off"
+	]
+
+	Value {
+		PlaybackPriority "1000"
+		PlaybackVolume "name='HP Analog Volume'"
+		PlaybackMixerElem "Headphone"
+		PlaybackPCM "hw:${CardId}"
+	}
+}
+
