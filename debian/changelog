@@ -1,3 +1,9 @@
+reform-tools (1.54) UNRELEASED; urgency=medium
+
+  * 
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Thu, 19 Sep 2024 09:54:33 +0200
+
 reform-tools (1.53) reform; urgency=medium
 
   * sbin/reform-flash-uboot: fix functionality that running without arguments
