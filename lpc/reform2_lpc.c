@@ -1,5 +1,6 @@
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/math.h>
 #include <linux/mutex.h>
 #include <linux/spi/spi.h>
 #include <linux/delay.h>
@@ -24,10 +25,17 @@ static int getBatProperty(struct power_supply *psy,
 			  enum power_supply_property psp,
 			  union power_supply_propval *val);
 
+#define VOL_JUMP 1000000
+#define CAP_JUMP 1000000
+#define CUR_JUMP 1000000
+
 typedef struct lpc_driver_data {
 	struct spi_device *spi;
 	struct power_supply *bat;
 	struct mutex lock;
+	int last_batt_cap;
+	int last_batt_vol;
+	int last_batt_cur;
 } lpc_driver_data;
 
 static DEVICE_ATTR(status, 0444, showStatus, NULL);
@@ -347,6 +355,18 @@ static int getBatProperty(struct power_supply *psy,
 			ret = -EINVAL;
 		}
 		val->intval = (buffer[0] | buffer[1] << 8) * 1000;
+		if (data->last_batt_vol &&
+		    (abs_diff(val->intval, data->last_batt_vol) > VOL_JUMP)) {
+			printk(KERN_INFO "%s: Voltage jump from %i to %i\n",
+			       __func__, data->last_batt_vol, val->intval);
+			val->intval = data->last_batt_vol +
+				      (val->intval > data->last_batt_vol ?
+					       VOL_JUMP :
+					       -VOL_JUMP);
+			printk(KERN_INFO "%s: Clamping to %i\n", __func__,
+			       val->intval);
+		}
+		data->last_batt_vol = val->intval;
 		break;
 
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
@@ -362,6 +382,18 @@ static int getBatProperty(struct power_supply *psy,
 			amp = 0;
 		}
 		val->intval = amp * 1000;
+		if (data->last_batt_cur &&
+		    (abs_diff(val->intval, data->last_batt_cur) > CUR_JUMP)) {
+			printk(KERN_INFO "%s: Current jump from %i to %i\n",
+			       __func__, data->last_batt_cur, val->intval);
+			val->intval = data->last_batt_cur +
+				      (val->intval > data->last_batt_cur ?
+					       CUR_JUMP :
+					       -CUR_JUMP);
+			printk(KERN_INFO "%s: Clamping to %i\n", __func__,
+			       val->intval);
+		}
+		data->last_batt_cur = val->intval;
 		break;
 
 	case POWER_SUPPLY_PROP_CAPACITY:
@@ -390,6 +422,18 @@ static int getBatProperty(struct power_supply *psy,
 			ret = -EINVAL;
 		}
 		val->intval = (buffer[0] | buffer[1] << 8) * 1000;
+		if (data->last_batt_cap &&
+		    (abs_diff(val->intval, data->last_batt_cap) > CAP_JUMP)) {
+			printk(KERN_INFO "%s: Charge jump from %i to %i\n",
+			       __func__, data->last_batt_cap, val->intval);
+			val->intval = data->last_batt_cap +
+				      (val->intval > data->last_batt_cap ?
+					       CAP_JUMP :
+					       -CAP_JUMP);
+			printk(KERN_INFO "%s: Clamping to %i\n", __func__,
+			       val->intval);
+		}
+		data->last_batt_cap = val->intval;
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_EMPTY:
