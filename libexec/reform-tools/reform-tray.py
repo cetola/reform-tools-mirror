@@ -9,6 +9,8 @@ gi.require_version('Gio', '2.0')
 gi.require_version('Gtk4LayerShell', '1.0')
 from gi.repository import Gdk, Gtk, Gio, GLib, Gtk4LayerShell
 
+SLIDER_CHANGE_INTERVAL_MS = 250
+
 ICON_NAME = 'view-more-symbolic'
 SNI_PATH = '/org/mntre/sni'
 SNI_WATCHER = 'org.kde.StatusNotifierWatcher'
@@ -101,6 +103,10 @@ class Tray(Gtk.Application):
         vol = get_volume_percent()
         scale2.set_value(vol)
 
+        # only apply slider changes at interval
+        self.new_brightness = self.new_volume = None
+        GLib.timeout_add(SLIDER_CHANGE_INTERVAL_MS, self.apply_last_settings)
+
         box.append(vbox1)
         box.append(vbox2)
         self.gtk_window.props.child = box
@@ -150,6 +156,14 @@ class Tray(Gtk.Application):
 
         self.hold()
 
+    def apply_last_settings(self):
+        if self.new_brightness:
+            set_brightness_percent(self.new_brightness)
+        if self.new_volume:
+            set_volume_percent(self.new_volume)
+        self.new_brightness = self.new_volume = None
+        return True
+
     def on_signal_received(self, _connection, _sender_name, _object_path, _interface_name, _signal_name, _parameters):
         self.toggle_window()
 
@@ -171,11 +185,11 @@ class Tray(Gtk.Application):
 
     def on_brightness_change(self, scale):
         value = scale.get_value()
-        set_brightness_percent(value)
+        self.new_brightness = value
 
     def on_volume_change(self, scale):
         value = scale.get_value()
-        set_volume_percent(value)
+        self.new_volume = value
 
     def event_key_pressed_cb(self, keyval, keycode, state, controller):
         if keycode == Gdk.KEY_Escape:
