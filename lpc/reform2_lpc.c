@@ -337,7 +337,7 @@ static int getBatProperty(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_TECHNOLOGY:
-		val->intval = POWER_SUPPLY_TECHNOLOGY_LiFe;
+		val->intval = POWER_SUPPLY_TECHNOLOGY_UNKNOWN;
 		break;
 
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
