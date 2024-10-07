@@ -33,7 +33,7 @@ init_a311d() {
     amixer -c 0 sset 'TODDR_A SRC SEL' 'IN 1'
 
     # Workaround for ethernet PHY reset problem
-    for m in dwmac_meson8b dwmac_generic stmmac_platform stmmac mdio_mux_meson_g12a mdio_mux of_mdio; do
+    for m in dwmac_meson8b dwmac_generic stmmac_platform stmmac mdio_mux_meson_g12a mdio_mux pcs_xpcs mdio_devres of_mdio; do
       grep --quiet "^$m " /proc/modules || continue;
       rmmod "$m"
     done
