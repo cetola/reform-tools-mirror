@@ -1,8 +1,16 @@
-reform-tools (1.54) UNRELEASED; urgency=medium
+reform-tools (1.54) reform; urgency=medium
 
-  * 
+  [ Johannes Schauer Marin Rodrigues ]
+  * bump rk3588 u-boot to 2024-10-08
+  * add missing dependency of reform-wallpaper as Recommends
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Thu, 19 Sep 2024 09:54:33 +0200
+  [ Michal Suchánek ]
+  * initramfs: Load font early on Pocket Reform
+
+  [ Lukas F. Hartmann ]
+  * reform-hw-setup: fixup a311d ethernet re-probing
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 08 Oct 2024 21:38:04 +0200
 
 reform-tools (1.53) reform; urgency=medium
 
