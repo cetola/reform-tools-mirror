@@ -24,6 +24,11 @@ copy_reform_font() {
   copy_file Uni2-TerminusBold32x16 /usr/share/consolefonts/Uni2-TerminusBold32x16.psf.gz
 }
 
+# The switch below creates device-specific initramfs depending on the platform
+# that update-initramfs is run on. For the system images, we would like to
+# create identical images that work on all boards. Thus, if you change anything
+# below, make sure to also adjust the respective initramfs hook in the
+# reform-system-image repository.
 case $MACHINE in
   "MNT Reform 2") : ;;
   "MNT Reform 2 HDMI") : ;;
