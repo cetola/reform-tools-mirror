@@ -19,11 +19,6 @@ elif [ -e /proc/device-tree/model ]; then
   MACHINE=$(cat /proc/device-tree/model)
 fi
 
-copy_reform_font() {
-  copy_exec /usr/bin/setfont
-  copy_file Uni2-TerminusBold32x16 /usr/share/consolefonts/Uni2-TerminusBold32x16.psf.gz
-}
-
 # The switch below creates device-specific initramfs depending on the platform
 # that update-initramfs is run on. For the system images, we would like to
 # create identical images that work on all boards. Thus, if you change anything
@@ -40,15 +35,9 @@ case $MACHINE in
     copy_exec /usr/bin/dmesg
     ;;
   "MNT Reform 2 with RCORE RK3588 Module") : ;;
-  "MNT Pocket Reform with i.MX8MP Module")
-    copy_reform_font
-    ;;
-  "MNT Pocket Reform with BPI-CM4 Module")
-    copy_reform_font
-    ;;
-  "MNT Pocket Reform with RCORE RK3588 Module")
-    copy_reform_font
-    ;;
+  "MNT Pocket Reform with i.MX8MP Module") : ;;
+  "MNT Pocket Reform with BPI-CM4 Module") : ;;
+  "MNT Pocket Reform with RCORE RK3588 Module") : ;;
   "MNT Reform Next with RCORE RK3588 Module") : ;;
   "")
     echo "W: unable to deduce target machine for reform initramfs-hook" >&2
