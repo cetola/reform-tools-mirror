@@ -2,125 +2,125 @@
 
 set -eu
 
-usage () {
-	echo "Hardware setup specific to your MNT Reform platform." >&2
-	echo "Usually run by /lib/systemd/system/reform-hw-setup.service" >&2
-	echo >&2
-	echo "Usage: $0 [--help]" >&2
-	echo >&2
-	echo "Options:" >&2
-	echo "  --help           Display this help and exit." >&2
+usage() {
+  echo "Hardware setup specific to your MNT Reform platform." >&2
+  echo "Usually run by /lib/systemd/system/reform-hw-setup.service" >&2
+  echo >&2
+  echo "Usage: $0 [--help]" >&2
+  echo >&2
+  echo "Options:" >&2
+  echo "  --help           Display this help and exit." >&2
 }
 
 if [ "$#" -gt 0 ]; then
-	if [ "$1" != "--help" ]; then
-		echo "E: too many arguments" >&2
-		usage
-		exit 1
-	fi
-	usage
-	exit 0
+  if [ "$1" != "--help" ]; then
+    echo "E: too many arguments" >&2
+    usage
+    exit 1
+  fi
+  usage
+  exit 0
 fi
 
 init_a311d() {
-    # A311D sound controls
-    # without setting these, there is no UCM profile and messages like this are produced:
-    # no backend DAIs enabled for fe.dai-link-0, possibly missing ALSA mixer-based routing or UCM profile
-    amixer -c 0 sset 'FRDDR_A SINK 1 SEL' 'OUT 1'
-    amixer -c 0 sset 'FRDDR_A SRC 1 EN' 'on'
-    amixer -c 0 sset 'TDMOUT_B SRC SEL' 'IN 0'
-    amixer -c 0 sset 'TDMIN_B SRC SEL' 'IN 1'
-    amixer -c 0 sset 'TODDR_A SRC SEL' 'IN 1'
+  # A311D sound controls
+  # without setting these, there is no UCM profile and messages like this are produced:
+  # no backend DAIs enabled for fe.dai-link-0, possibly missing ALSA mixer-based routing or UCM profile
+  amixer -c 0 sset 'FRDDR_A SINK 1 SEL' 'OUT 1'
+  amixer -c 0 sset 'FRDDR_A SRC 1 EN' 'on'
+  amixer -c 0 sset 'TDMOUT_B SRC SEL' 'IN 0'
+  amixer -c 0 sset 'TDMIN_B SRC SEL' 'IN 1'
+  amixer -c 0 sset 'TODDR_A SRC SEL' 'IN 1'
 
-    # Workaround for ethernet PHY reset problem
-    for m in dwmac_meson8b dwmac_generic stmmac_platform stmmac mdio_mux_meson_g12a mdio_mux pcs_xpcs mdio_devres of_mdio; do
-      grep --quiet "^$m " /proc/modules || continue;
-      rmmod "$m"
-    done
-    sleep 0.5
-    modprobe mdio_mux_meson_g12a
-    modprobe dwmac_meson8b
+  # Workaround for ethernet PHY reset problem
+  for m in dwmac_meson8b dwmac_generic stmmac_platform stmmac mdio_mux_meson_g12a mdio_mux pcs_xpcs mdio_devres of_mdio; do
+    grep --quiet "^$m " /proc/modules || continue
+    rmmod "$m"
+  done
+  sleep 0.5
+  modprobe mdio_mux_meson_g12a
+  modprobe dwmac_meson8b
 
-    # Workaround for SDIO wifi not loading
-    echo ffe03000.mmc > /sys/class/mmc_host/mmc2/device/driver/unbind
-    echo ffe03000.mmc > /sys/bus/platform/drivers/meson-gx-mmc/bind
+  # Workaround for SDIO wifi not loading
+  echo ffe03000.mmc >/sys/class/mmc_host/mmc2/device/driver/unbind
+  echo ffe03000.mmc >/sys/bus/platform/drivers/meson-gx-mmc/bind
 }
 
 init_wm8960() {
-    # Fix WM8960 being too quiet
-    amixer -c 0 sset Playback 255
-    amixer -c 0 sset 'Left Output Mixer PCM' on
-    amixer -c 0 sset 'Right Output Mixer PCM' on
-    # This switch in WM8960 needs to be on for the headset mic input to work
-    amixer -c 0 sset 'Left Input Mixer Boost' on
+  # Fix WM8960 being too quiet
+  amixer -c 0 sset Playback 255
+  amixer -c 0 sset 'Left Output Mixer PCM' on
+  amixer -c 0 sset 'Right Output Mixer PCM' on
+  # This switch in WM8960 needs to be on for the headset mic input to work
+  amixer -c 0 sset 'Left Input Mixer Boost' on
 }
 
 init_tlv320aic3100() {
-    # Set up speaker on MNT Pocket Reform
-    amixer -c 0 sset 'Speaker Driver' on
-    amixer -c 0 sset 'Output Left From Left DAC' on
-    amixer -c 0 sset 'Output Right From Right DAC' on
-    amixer -c 0 sset 'Speaker Analog' 127
-    amixer -c 0 sset 'DAC' 127
-    amixer -c 0 sset 'HP Analog' 127
-    amixer -c 0 sset 'HP Driver' on
-    amixer -c 0 sset 'HP Left' on
-    amixer -c 0 sset 'HP Right' on
+  # Set up speaker on MNT Pocket Reform
+  amixer -c 0 sset 'Speaker Driver' on
+  amixer -c 0 sset 'Output Left From Left DAC' on
+  amixer -c 0 sset 'Output Right From Right DAC' on
+  amixer -c 0 sset 'Speaker Analog' 127
+  amixer -c 0 sset 'DAC' 127
+  amixer -c 0 sset 'HP Analog' 127
+  amixer -c 0 sset 'HP Driver' on
+  amixer -c 0 sset 'HP Left' on
+  amixer -c 0 sset 'HP Right' on
 }
 
 init_pocket_display() {
-    # Increase console font size (MNT Pocket Reform has a Hi-DPI display)
-    for c in 1 2 3 4 5 6 7
-        do setfont -C /dev/tty$c /usr/share/consolefonts/Uni2-TerminusBold32x16.psf.gz
-    done
+  # Increase console font size (MNT Pocket Reform has a Hi-DPI display)
+  for c in 1 2 3 4 5 6 7; do
+    setfont -C /dev/tty$c /usr/share/consolefonts/Uni2-TerminusBold32x16.psf.gz
+  done
 }
 
 init_qca9377_wifi() {
-    if test -e /proc/modules && grep --quiet '^qcacld2 ' /proc/modules; then
-        echo "I: Module qcacld2 is already loaded" >&2
-        return 0
+  if test -e /proc/modules && grep --quiet '^qcacld2 ' /proc/modules; then
+    echo "I: Module qcacld2 is already loaded" >&2
+    return 0
+  fi
+
+  # load out-of-tree Wi-Fi driver
+  KERNVER_EXACT=$(dpkg-query --show --showformat '${Version}' "linux-image-$(uname -r)")
+  modprobe cfg80211
+
+  # without "-f", insmod will fail with "Invalid module format" even though
+  # the kernel version matches
+  echo "I: Try to load exact match wifi driver: ${KERNVER_EXACT}" >&2
+  if [ -f "/opt/reform-qcacld2/qcacld2-${KERNVER_EXACT}.ko" ]; then
+    echo "I: Found exact match for kernel ${KERNVER_EXACT}" >&2
+    if insmod -f "/opt/reform-qcacld2/qcacld2-${KERNVER_EXACT}.ko"; then
+      echo "I: Successfully loaded exact match driver" >&2
+      return 0
+    else
+      echo "W: Failed to load exact match driver. Try other available driver" >&2
     fi
+  fi
 
-    # load out-of-tree Wi-Fi driver
-    KERNVER_EXACT=$(dpkg-query --show --showformat '${Version}' "linux-image-$(uname -r)")
-    modprobe cfg80211
+  # Find other potential qcacld2 drivers
+  potential_drivers=$(find /opt/reform-qcacld2/qcacld2-*.ko -maxdepth 1 -type f -print0 | sort -Vzr)
 
-    # without "-f", insmod will fail with "Invalid module format" even though
-    # the kernel version matches
-    echo "I: Try to load exact match wifi driver: ${KERNVER_EXACT}" >&2
-    if [ -f "/opt/reform-qcacld2/qcacld2-${KERNVER_EXACT}.ko" ]; then
-        echo "I: Found exact match for kernel ${KERNVER_EXACT}" >&2
-        if insmod -f "/opt/reform-qcacld2/qcacld2-${KERNVER_EXACT}.ko"; then
-            echo "I: Successfully loaded exact match driver" >&2
-            return 0
-        else
-            echo "W: Failed to load exact match driver. Try other available driver" >&2
-        fi
+  # Try to load available drivers, starting with the highest version number, until one works
+  for driver in $potential_drivers; do
+    echo "I: Attempting to load wifi driver: $driver" >&2
+    if insmod -f "$driver"; then
+      echo "I: Successfully loaded driver: $driver" >&2
+      return 0
+    else
+      echo "W: Failed to load driver: $driver, trying next" >&2
     fi
+  done
 
-    # Find other potential qcacld2 drivers
-    potential_drivers=$(find /opt/reform-qcacld2/qcacld2-*.ko -maxdepth 1 -type f -print0 | sort -Vzr)
-
-    # Try to load available drivers, starting with the highest version number, until one works
-    for driver in $potential_drivers; do
-        echo "I: Attempting to load wifi driver: $driver" >&2
-        if insmod -f "$driver"; then
-            echo "I: Successfully loaded driver: $driver" >&2
-            return 0
-        else
-            echo "W: Failed to load driver: $driver, trying next" >&2
-        fi
-    done
-
-    echo "E: Failed to load any compatible qcacld2 driver" >&2
-    return 1
+  echo "E: Failed to load any compatible qcacld2 driver" >&2
+  return 1
 
 }
 case "$(cat /proc/device-tree/model)" in
-"MNT Reform 2"|"MNT Reform 2 HDMI")
+  "MNT Reform 2" | "MNT Reform 2 HDMI")
     # Workaround for WM8960 sometimes not coming out of reset
     if [ ! -e /sys/bus/i2c/drivers/wm8960/2-001a ]; then
-      echo 2-001a > /sys/bus/i2c/drivers/wm8960/bind
+      echo 2-001a >/sys/bus/i2c/drivers/wm8960/bind
     fi
     test -e /sys/bus/i2c/drivers/wm8960/2-001a
 
@@ -133,22 +133,22 @@ case "$(cat /proc/device-tree/model)" in
     # /sys/devices/platform/soc@0/30800000.bus/308?0000.serial/308?0000.serial:0/308?0000.serial:0.0/tty/ttymxc?/power/wakeup
     # use `find` to acquire either path
     find /sys/devices/platform/soc@0/30800000.bus/308?0000.serial/ -wholename '*/tty/ttymxc?/power/wakeup' \
-	| while read -r f; do
-		[ -e "$f" ] || continue
-		echo enabled > "$f"
-	done
+      | while read -r f; do
+        [ -e "$f" ] || continue
+        echo enabled >"$f"
+      done
     ;;
-"MNT Reform 2 with BPI-CM4 Module")
+  "MNT Reform 2 with BPI-CM4 Module")
     # Workaround for WM8960 sometimes not coming out of reset
     if [ ! -e /sys/bus/i2c/drivers/wm8960/1-001a ]; then
-      echo 1-001a > /sys/bus/i2c/drivers/wm8960/bind
+      echo 1-001a >/sys/bus/i2c/drivers/wm8960/bind
     fi
     test -e /sys/bus/i2c/drivers/wm8960/1-001a
 
     init_a311d
     init_wm8960
     ;;
-"MNT Reform 2 with LS1028A Module")
+  "MNT Reform 2 with LS1028A Module")
     # Workaround for a DWC3 USB Controller regression
 
     # Assert USB hub reset
@@ -160,7 +160,7 @@ case "$(cat /proc/device-tree/model)" in
     gpioset 2 13=1
 
     # Select "ondemand" CPU frequency scaling governor
-    echo ondemand > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
+    echo ondemand >/sys/devices/system/cpu/cpufreq/policy0/scaling_governor
 
     # the functionality of the dwc3 module depends on the loglevel
     # loglevel=3 makes usb not work
@@ -168,29 +168,29 @@ case "$(cat /proc/device-tree/model)" in
     # https://community.mnt.re/t/no-keyboard-input-with-ls1028-board-and-latest-image/1994/13
     dmesg -n 7
     ;;
-"MNT Pocket Reform with i.MX8MP Module")
+  "MNT Pocket Reform with i.MX8MP Module")
     init_pocket_display
     init_qca9377_wifi || echo "W: init_qca9377_wifi failed" >&2
     init_tlv320aic3100
     ;;
-"MNT Pocket Reform with BPI-CM4 Module")
+  "MNT Pocket Reform with BPI-CM4 Module")
     init_pocket_display
     init_a311d
     init_tlv320aic3100
     ;;
-"MNT Reform 2 with i.MX8MP Module")
+  "MNT Reform 2 with i.MX8MP Module")
     init_wm8960
     init_qca9377_wifi || echo "W: init_qca9377_wifi failed" >&2
     ;;
-"MNT Reform 2 with RCORE RK3588 Module")
+  "MNT Reform 2 with RCORE RK3588 Module")
     init_wm8960
     ;;
-"MNT Pocket Reform with RCORE RK3588 Module")
+  "MNT Pocket Reform with RCORE RK3588 Module")
     init_pocket_display
     ;;
-"MNT Reform Next with RCORE RK3588 Module")
-    ;;
-*)
+  "MNT Reform Next with RCORE RK3588 Module") ;;
+  *)
     echo "E: Your platform $(cat /proc/device-tree/model) is not supported by reform-tools" >&2
     exit 1
+    ;;
 esac

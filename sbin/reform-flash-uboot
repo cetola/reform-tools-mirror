@@ -2,201 +2,203 @@
 
 set -eu
 
-usage () {
-	echo "Download latest u-boot for the current platform and update /boot/flash.bin">&2
-	echo "Then flash u-boot to DEVICE which can be one of the short-hands sd or emmc.">&2
-	echo >&2
-	echo "Usage: $0 [--help] [--offline] DEVICE" >&2
-	echo >&2
-	echo "Options:" >&2
-	echo "  DEVICE           Either a device path in /dev or shorthands sd and emmc" >&2
-	echo "  --help           Display this help and exit." >&2
-	echo "  --offline        Instead of download u-boot use /boot/flash.bin." >&2
+usage() {
+  echo "Download latest u-boot for the current platform and update /boot/flash.bin" >&2
+  echo "Then flash u-boot to DEVICE which can be one of the short-hands sd or emmc." >&2
+  echo >&2
+  echo "Usage: $0 [--help] [--offline] DEVICE" >&2
+  echo >&2
+  echo "Options:" >&2
+  echo "  DEVICE           Either a device path in /dev or shorthands sd and emmc" >&2
+  echo "  --help           Display this help and exit." >&2
+  echo "  --offline        Instead of download u-boot use /boot/flash.bin." >&2
 }
 
 if [ "$#" -gt 0 ] && [ "$1" = "--help" ]; then
-	usage
-	exit 0
+  usage
+  exit 0
 fi
 
 # shellcheck source=/dev/null
 if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
-	. "./machines/$(cat /proc/device-tree/model).conf"
+  . "./machines/$(cat /proc/device-tree/model).conf"
 elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf" ]; then
-	. "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
+  . "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
 else
-	echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
-	exit 1
+  echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
+  exit 1
 fi
 
 if [ "$EMMC_BOOT" = false ]; then
-	for dev in "$@"; do
-		case $dev in emmc|"/dev/${DEV_MMC}"*)
-			echo "E: writing uboot to eMMC not supported on $(cat /proc/device-tree/model)" >&2
-			exit 1
-			;;
-		esac
-	done
+  for dev in "$@"; do
+    case $dev in emmc | "/dev/${DEV_MMC}"*)
+      echo "E: writing uboot to eMMC not supported on $(cat /proc/device-tree/model)" >&2
+      exit 1
+      ;;
+    esac
+  done
 fi
 if [ "$SD_BOOT" = false ]; then
-	for dev in "$@"; do
-		case $dev in sd|"/dev/${DEV_SD}"*)
-			echo "E: writing uboot to SD-Card not supported on $(cat /proc/device-tree/model)" >&2
-			exit 1
-			;;
-		esac
-	done
+  for dev in "$@"; do
+    case $dev in sd | "/dev/${DEV_SD}"*)
+      echo "E: writing uboot to SD-Card not supported on $(cat /proc/device-tree/model)" >&2
+      exit 1
+      ;;
+    esac
+  done
 fi
 
 usage() {
-	echo "Usage: " >&2
-	echo "  reform-flash-uboot [--offline] [device...]" >&2
-	echo "" >&2
-	if [ "$EMMC_BOOT" = true ] && [ "$SD_BOOT" = true ]; then
-		echo "Download and write recent uboot to eMMC or SD-Card." >&2
-	elif [ "$SD_BOOT" = true ]; then
-		echo "Download and write recent uboot to SD-Card." >&2
-	elif [ "$EMMC_BOOT" = true ]; then
-		echo "Download and write recent uboot to eMMC." >&2
-	else
-		echo "Download and write recent uboot to chosen device." >&2
-	fi
-	echo "Without arguments only /boot/flash.bin will be updated unless --offline is given." >&2
-	echo "Otherwise, the arguments are the devices onto which to install uboot." >&2
-	if [ "$EMMC_BOOT" = true ] && [ "$SD_BOOT" = true ]; then
-		echo "Two device shortcuts are provided:" >&2
-		echo "" >&2
-		echo "   emmc -> /dev/${DEV_MMC}boot0" >&2
-		echo "   sd -> /dev/${DEV_SD}" >&2
-		echo "" >&2
-	elif [ "$SD_BOOT" = true ]; then
-		echo "A device shortcut is provided:" >&2
-		echo "" >&2
-		echo "   sd -> /dev/${DEV_SD}" >&2
-		echo "" >&2
-	elif [ "$EMMC_BOOT" = true ]; then
-		echo "A device shortcut is provided:" >&2
-		echo "" >&2
-		echo "   emmc -> /dev/${DEV_MMC}boot0" >&2
-		echo "" >&2
-	fi
+  echo "Usage: " >&2
+  echo "  reform-flash-uboot [--offline] [device...]" >&2
+  echo "" >&2
+  if [ "$EMMC_BOOT" = true ] && [ "$SD_BOOT" = true ]; then
+    echo "Download and write recent uboot to eMMC or SD-Card." >&2
+  elif [ "$SD_BOOT" = true ]; then
+    echo "Download and write recent uboot to SD-Card." >&2
+  elif [ "$EMMC_BOOT" = true ]; then
+    echo "Download and write recent uboot to eMMC." >&2
+  else
+    echo "Download and write recent uboot to chosen device." >&2
+  fi
+  echo "Without arguments only /boot/flash.bin will be updated unless --offline is given." >&2
+  echo "Otherwise, the arguments are the devices onto which to install uboot." >&2
+  if [ "$EMMC_BOOT" = true ] && [ "$SD_BOOT" = true ]; then
+    echo "Two device shortcuts are provided:" >&2
+    echo "" >&2
+    echo "   emmc -> /dev/${DEV_MMC}boot0" >&2
+    echo "   sd -> /dev/${DEV_SD}" >&2
+    echo "" >&2
+  elif [ "$SD_BOOT" = true ]; then
+    echo "A device shortcut is provided:" >&2
+    echo "" >&2
+    echo "   sd -> /dev/${DEV_SD}" >&2
+    echo "" >&2
+  elif [ "$EMMC_BOOT" = true ]; then
+    echo "A device shortcut is provided:" >&2
+    echo "" >&2
+    echo "   emmc -> /dev/${DEV_MMC}boot0" >&2
+    echo "" >&2
+  fi
 }
 
 if [ "$#" -gt 0 ] && [ "$1" = "--help" ] || [ "$#" -gt 0 ] && [ "$1" = "-h" ]; then
-	usage
-	exit 0
+  usage
+  exit 0
 fi
 
 if [ "$(id -u)" -ne 0 ]; then
-	echo "reform-flash-uboot has to be run as root / using sudo."
-	exit 1
+  echo "reform-flash-uboot has to be run as root / using sudo."
+  exit 1
 fi
 
 if [ "$#" -eq 0 ] || [ "$1" != "--offline" ]; then
-	echo "Downloading uboot to /boot/flash.bin and comparing checksum" >&2
+  echo "Downloading uboot to /boot/flash.bin and comparing checksum" >&2
 
-	ubooturl="https://source.mnt.re/reform/${UBOOT_PROJECT}/-/jobs/artifacts/${UBOOT_TAG}/raw/$(basename "$DTBPATH" .dtb)-flash.bin?job=build"
-	/usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file "$ubooturl" "/boot/flash.bin" "SHA1:$UBOOT_SHA1"
-	# download mhdpfw.bin on ls1028a
-	case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with LS1028A Module")
-		/usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file \
-			"https://source.mnt.re/reform/reform-ls1028a-uboot/-/raw/main/ls1028a-mhdpfw.bin" \
-			"/boot/ls1028a-mhdpfw.bin" \
-			"SHA1:fa96b9aa59d7c1e9e6ee1c0375d0bcc8f8e5b78c"
-		;;
-	esac
+  ubooturl="https://source.mnt.re/reform/${UBOOT_PROJECT}/-/jobs/artifacts/${UBOOT_TAG}/raw/$(basename "$DTBPATH" .dtb)-flash.bin?job=build"
+  /usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file "$ubooturl" "/boot/flash.bin" "SHA1:$UBOOT_SHA1"
+  # download mhdpfw.bin on ls1028a
+  case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with LS1028A Module")
+    /usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file \
+      "https://source.mnt.re/reform/reform-ls1028a-uboot/-/raw/main/ls1028a-mhdpfw.bin" \
+      "/boot/ls1028a-mhdpfw.bin" \
+      "SHA1:fa96b9aa59d7c1e9e6ee1c0375d0bcc8f8e5b78c"
+    ;;
+  esac
 elif [ "$#" -gt 0 ] && [ "$1" = "--offline" ]; then
-	echo "Not downloading uboot but using /boot/flash.bin without updating it." >&2
-	shift
-	if ! echo "$UBOOT_SHA1  /boot/flash.bin" | sha1sum --strict --check >/dev/null 2>&1; then
-		echo "Incorrect checksum for /boot/flash.bin" >&2
-		echo "Either flash manually, or run without --offline to download the latest uboot version" >&2
-		exit 1
-	fi
+  echo "Not downloading uboot but using /boot/flash.bin without updating it." >&2
+  shift
+  if ! echo "$UBOOT_SHA1  /boot/flash.bin" | sha1sum --strict --check >/dev/null 2>&1; then
+    echo "Incorrect checksum for /boot/flash.bin" >&2
+    echo "Either flash manually, or run without --offline to download the latest uboot version" >&2
+    exit 1
+  fi
 fi
 
 if [ "$#" -eq 0 ]; then
-	echo "No device unto which to flash uboot provided. Exiting." >&2
-	exit 0
+  echo "No device unto which to flash uboot provided. Exiting." >&2
+  exit 0
 fi
 
 ubootsize=$(stat --format=%s "/boot/flash.bin")
 
 # check if there is enough free space at the beginning of the disk
 for dev in "$@"; do
-	case $dev in
-		emmc) dev=/dev/${DEV_MMC}boot0;;
-		sd)   dev=/dev/${DEV_SD};;
-	esac
+  case $dev in
+    emmc) dev=/dev/${DEV_MMC}boot0 ;;
+    sd) dev=/dev/${DEV_SD} ;;
+  esac
 
-	if [ "$dev" = "/dev/${DEV_MMC}boot0" ]; then
-		continue
-	fi
+  if [ "$dev" = "/dev/${DEV_MMC}boot0" ]; then
+    continue
+  fi
 
-	# no further tests for disks without a partition table
-	if [ "$(parted --script --machine "$dev" unit B print 2>/dev/null | grep "^$dev:" | cut -d: -f 6)" = unknown ]; then
-		continue
-	fi
+  # no further tests for disks without a partition table
+  if [ "$(parted --script --machine "$dev" unit B print 2>/dev/null | grep "^$dev:" | cut -d: -f 6)" = unknown ]; then
+    continue
+  fi
 
-	freeuntil=$(parted --script --machine "$dev" unit B print free | grep --max-count=1 '^1:1024B:.*:free;')
-	freeuntil=${freeuntil##1:1024B:}
-	freeuntil=${freeuntil%B:*:free;}
-	# The following checks whether the parsed output is a valid integer.
-	# We cannot use [0-9] because that matches on any character (or
-	# possibly multi-character collation element) that sorts in between 0
-	# and 9.
-	# https://lists.gnu.org/archive/html/bug-bash/2021-02/msg00054.html
-	case "$freeuntil" in *[!0123456789]*|0?*|"")
-		echo "Unexpected parted output";
-		exit 1
-	esac
+  freeuntil=$(parted --script --machine "$dev" unit B print free | grep --max-count=1 '^1:1024B:.*:free;')
+  freeuntil=${freeuntil##1:1024B:}
+  freeuntil=${freeuntil%B:*:free;}
+  # The following checks whether the parsed output is a valid integer.
+  # We cannot use [0-9] because that matches on any character (or
+  # possibly multi-character collation element) that sorts in between 0
+  # and 9.
+  # https://lists.gnu.org/archive/html/bug-bash/2021-02/msg00054.html
+  case "$freeuntil" in *[!0123456789]* | 0?* | "")
+    echo "Unexpected parted output"
+    exit 1
+    ;;
+  esac
 
-	if [ "$((UBOOT_OFFSET-FLASHBIN_OFFSET+ubootsize))" -ge "$freeuntil" ]; then
-		echo "the first partition on $dev starts at $freeuntil and would be overwritten by uboot" >&2
-		echo "make sure that the first $((UBOOT_OFFSET-FLASHBIN_OFFSET+ubootsize)) bytes are free on $dev" >&2
-		exit 1
-	fi
+  if [ "$((UBOOT_OFFSET - FLASHBIN_OFFSET + ubootsize))" -ge "$freeuntil" ]; then
+    echo "the first partition on $dev starts at $freeuntil and would be overwritten by uboot" >&2
+    echo "make sure that the first $((UBOOT_OFFSET - FLASHBIN_OFFSET + ubootsize)) bytes are free on $dev" >&2
+    exit 1
+  fi
 done
 
 # do the flashing
 for dev in "$@"; do
-	case $dev in
-		emmc) dev=/dev/${DEV_MMC}boot0;;
-		sd)   dev=/dev/${DEV_SD};;
-	esac
+  case $dev in
+    emmc) dev=/dev/${DEV_MMC}boot0 ;;
+    sd) dev=/dev/${DEV_SD} ;;
+  esac
 
-	echo "Writing /boot/flash.bin to $dev" >&2
+  echo "Writing /boot/flash.bin to $dev" >&2
 
-	if [ "$dev" = "/dev/${DEV_MMC}boot0" ]; then
-		echo 0 > "/sys/class/block/${DEV_MMC}boot0/force_ro"
-		dd if=/boot/flash.bin of="/dev/${DEV_MMC}boot0" bs=512 seek="$((UBOOT_OFFSET/512))" skip="$((FLASHBIN_OFFSET/512))"
-		echo 1 > "/sys/class/block/${DEV_MMC}boot0/force_ro"
-		continue
-	fi
+  if [ "$dev" = "/dev/${DEV_MMC}boot0" ]; then
+    echo 0 >"/sys/class/block/${DEV_MMC}boot0/force_ro"
+    dd if=/boot/flash.bin of="/dev/${DEV_MMC}boot0" bs=512 seek="$((UBOOT_OFFSET / 512))" skip="$((FLASHBIN_OFFSET / 512))"
+    echo 1 >"/sys/class/block/${DEV_MMC}boot0/force_ro"
+    continue
+  fi
 
-	dd if=/boot/flash.bin of="$dev" bs=512 seek="$((UBOOT_OFFSET/512))" skip="$((FLASHBIN_OFFSET/512))"
+  dd if=/boot/flash.bin of="$dev" bs=512 seek="$((UBOOT_OFFSET / 512))" skip="$((FLASHBIN_OFFSET / 512))"
 done
 
 # inform about the DIP switch position only on imx8mq
-case "$(cat /proc/device-tree/model)" in "MNT Reform 2"|"MNT Reform 2 HDMI")
-	DOMMC=0
-	DOSD=0
-	for dev in "$@"; do
-		case $dev in
-			emmc) dev=/dev/${DEV_MMC}boot0;;
-			sd)   dev=/dev/${DEV_SD};;
-		esac
-		case $dev in
-			"/dev/${DEV_MMC}"*) DOMMC=1;;
-			"/dev/${DEV_SD}"*)  DOSD=1;;
-		esac
-	done
-	if [ "$DOMMC" != "0" ]; then
-		echo "For the i.MX8MQ to load u-boot from MMC, make sure" >&2
-		echo "that your DIP switch is set to OFF." >&2
-	fi
-	if [ "$DOSD" != "0" ]; then
-		echo "For the i.MX8MQ to load u-boot from SD-Card, make sure" >&2
-		echo "that your DIP switch is set to ON." >&2
-	fi
+case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
+  DOMMC=0
+  DOSD=0
+  for dev in "$@"; do
+    case $dev in
+      emmc) dev=/dev/${DEV_MMC}boot0 ;;
+      sd) dev=/dev/${DEV_SD} ;;
+    esac
+    case $dev in
+      "/dev/${DEV_MMC}"*) DOMMC=1 ;;
+      "/dev/${DEV_SD}"*) DOSD=1 ;;
+    esac
+  done
+  if [ "$DOMMC" != "0" ]; then
+    echo "For the i.MX8MQ to load u-boot from MMC, make sure" >&2
+    echo "that your DIP switch is set to OFF." >&2
+  fi
+  if [ "$DOSD" != "0" ]; then
+    echo "For the i.MX8MQ to load u-boot from SD-Card, make sure" >&2
+    echo "that your DIP switch is set to ON." >&2
+  fi
+  ;;
 esac

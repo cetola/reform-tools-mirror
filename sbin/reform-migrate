@@ -4,79 +4,80 @@ set -eu
 
 # shellcheck source=/dev/null
 if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
-	. "./machines/$(cat /proc/device-tree/model).conf"
+  . "./machines/$(cat /proc/device-tree/model).conf"
 elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf" ]; then
-	. "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
+  . "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
 else
-	echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
-	exit 1
+  echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
+  exit 1
 fi
 
 usage_minimal() {
-	echo "Copies the currently running system onto TARGET and run reform-boot-config" >&2
-	echo "to set up /boot on SD-card or eMMC (selected by the --emmc option) to boot" >&2
-	echo "into the newly copied system. TARGET is a partition block device and will" >&2
-	echo "temporarily get mounted by this script." >&2
-	echo >&2
-	echo "Usage: $0 [--help] [--help-full] [--emmc] DEVICE" >&2
-	echo >&2
-	echo "Options:" >&2
-	echo "  DEVICE           Rootfs partition in /dev.">&2
-	echo "  --help           Display this help and exit." >&2
-	echo "  --help-full      Extended device-specific help output." >&2
-	echo "  --emmc           Choose /boot partition on eMMC instead of SD-card." >&2
+  echo "Copies the currently running system onto TARGET and run reform-boot-config" >&2
+  echo "to set up /boot on SD-card or eMMC (selected by the --emmc option) to boot" >&2
+  echo "into the newly copied system. TARGET is a partition block device and will" >&2
+  echo "temporarily get mounted by this script." >&2
+  echo >&2
+  echo "Usage: $0 [--help] [--help-full] [--emmc] DEVICE" >&2
+  echo >&2
+  echo "Options:" >&2
+  echo "  DEVICE           Rootfs partition in /dev." >&2
+  echo "  --help           Display this help and exit." >&2
+  echo "  --help-full      Extended device-specific help output." >&2
+  echo "  --emmc           Choose /boot partition on eMMC instead of SD-card." >&2
 }
 
 usage() {
-	echo "Usage:"
-	if [ "$EMMC_USE" = true ]; then
-		echo "  reform-migrate [--emmc] TARGET"
-	else
-		echo "  reform-migrate TARGET"
-	fi
-	echo ""
-	echo "Mounts TARGET and copies the currently running system to it using rsync. This will"
-	echo "overwrite all existing files in TARGET. At the end, reform-boot-config is run and"
-	if [ "$EMMC_USE" = true ]; then
-		echo "will set up the first partition of the SD-card or eMMC (depending on the --emmc"
-		echo "option) to load your newly copied rootfs and adjust /etc/fstab of TARGET accordingly."
-		echo ""
-		echo "Options:"
-		echo ""
-		echo "      --emmc Record boot preference on eMMC instead of SD card."
-		case "$(cat /proc/device-tree/model)" in "MNT Reform 2"|"MNT Reform 2 HDMI")
-			echo "             This is only useful with SoM dip switch turned off." ;;
-		esac
-	else
-		echo "will set up the first partition of the SD-card to load your newly copied rootfs"
-		echo "and adjust /etc/fstab of TARGET accordingly."
-	fi
-	echo ""
-	echo "Examples:"
-	echo ""
-	if [ "$EMMC_USE" = true ]; then
-		echo "  reform-migrate --emmc /dev/nvme0n1p1"
-		echo "          Mounts the first partition of an NVMe disk and mirrors your system to it."
-		echo "          Configures booting from the first partition on eMMC."
-	fi
-	echo "  reform-migrate /dev/mapper/crypt"
-	echo "          Mounts encrypted disk 'crypt' and mirrors your system to it."
-	echo "          The disk has to be unlocked first with: cryptsetup luksOpen /dev/nvme0n1p1 crypt"
-	echo "          Configures booting from the first partition on the SD-card as --emmc option is missing."
+  echo "Usage:"
+  if [ "$EMMC_USE" = true ]; then
+    echo "  reform-migrate [--emmc] TARGET"
+  else
+    echo "  reform-migrate TARGET"
+  fi
+  echo ""
+  echo "Mounts TARGET and copies the currently running system to it using rsync. This will"
+  echo "overwrite all existing files in TARGET. At the end, reform-boot-config is run and"
+  if [ "$EMMC_USE" = true ]; then
+    echo "will set up the first partition of the SD-card or eMMC (depending on the --emmc"
+    echo "option) to load your newly copied rootfs and adjust /etc/fstab of TARGET accordingly."
+    echo ""
+    echo "Options:"
+    echo ""
+    echo "      --emmc Record boot preference on eMMC instead of SD card."
+    case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
+      echo "             This is only useful with SoM dip switch turned off."
+      ;;
+    esac
+  else
+    echo "will set up the first partition of the SD-card to load your newly copied rootfs"
+    echo "and adjust /etc/fstab of TARGET accordingly."
+  fi
+  echo ""
+  echo "Examples:"
+  echo ""
+  if [ "$EMMC_USE" = true ]; then
+    echo "  reform-migrate --emmc /dev/nvme0n1p1"
+    echo "          Mounts the first partition of an NVMe disk and mirrors your system to it."
+    echo "          Configures booting from the first partition on eMMC."
+  fi
+  echo "  reform-migrate /dev/mapper/crypt"
+  echo "          Mounts encrypted disk 'crypt' and mirrors your system to it."
+  echo "          The disk has to be unlocked first with: cryptsetup luksOpen /dev/nvme0n1p1 crypt"
+  echo "          Configures booting from the first partition on the SD-card as --emmc option is missing."
 }
 
 if [ $# -ne 1 ] && [ $# -ne 2 ]; then
-	usage
-	exit 1
+  usage
+  exit 1
 fi
 
 if [ "$1" = "--help" ]; then
-	# minimal device-agnostic help output for use with help2man
-	usage_minimal
-	exit 0
+  # minimal device-agnostic help output for use with help2man
+  usage_minimal
+  exit 0
 elif [ "$1" = "--help-full" ]; then
-	usage
-	exit 0
+  usage
+  exit 0
 fi
 
 EMMC=""
@@ -84,41 +85,40 @@ TARGET="$1"
 BOOTPART="${DEV_SD}p1"
 
 if [ "--emmc" = "$1" ]; then
-	if [ "$EMMC_USE" = false ]; then
-		echo "E: writing to eMMC not supported on $(cat /proc/device-tree/model)" >&2
-		exit 1
-	fi
-	EMMC="--emmc"
-	TARGET="$2"
-	BOOTPART="${DEV_MMC}p1"
+  if [ "$EMMC_USE" = false ]; then
+    echo "E: writing to eMMC not supported on $(cat /proc/device-tree/model)" >&2
+    exit 1
+  fi
+  EMMC="--emmc"
+  TARGET="$2"
+  BOOTPART="${DEV_MMC}p1"
 fi
 
 if [ -z "$TARGET" ]; then
-	usage
-	exit 1
+  usage
+  exit 1
 fi
 
-if [ ! -e "$TARGET" ]
-then
-	echo "Error: The partition $TARGET does not exist."
-	exit
+if [ ! -e "$TARGET" ]; then
+  echo "Error: The partition $TARGET does not exist."
+  exit
 fi
 
 if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "$TARGET")" ]; then
-	echo "$TARGET is still in use" >&2
-	exit 1
+  echo "$TARGET is still in use" >&2
+  exit 1
 fi
 
 # check if the new boot is still mounted somewhere
 if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART")" ]; then
-	echo "/dev/$BOOTPART is still mounted somewhere." >&2
-	echo "Please unmount before running this script" >&2
-	exit 1
+  echo "/dev/$BOOTPART is still mounted somewhere." >&2
+  echo "Please unmount before running this script" >&2
+  exit 1
 fi
 
 if [ "$(id -u)" -ne 0 ]; then
-	echo "reform-boot-config has to be run as root / using sudo." >&2
-	exit 1
+  echo "reform-boot-config has to be run as root / using sudo." >&2
+  exit 1
 fi
 
 echo ""
@@ -130,8 +130,8 @@ echo "Before using this script, your target partition has to be formatted. You c
 echo "gnome-disks can also help you set up an encrypted disk. You can also run the following commands for one single"
 echo "partition on NVMe:"
 echo ""
-echo "    parted /dev/nvme0n1 \"mklabel msdos\""
-echo "    parted /dev/nvme0n1 \"mkpart primary ext4 4MiB -1\""
+echo '    parted /dev/nvme0n1 "mklabel msdos"'
+echo '    parted /dev/nvme0n1 "mkpart primary ext4 4MiB -1"'
 echo "    mkfs.ext4 /dev/nvme0n1p1"
 echo ""
 echo "You can also setup an encrypted NVMe SSD by running reform-setup-encrypted-nvme"
@@ -139,7 +139,10 @@ echo ""
 
 # FIXME: mkimage.sh in reform-system-image could write out the exact values into a known location
 echo "Running rsync to copy approximately 3G of data in about 210k files..." >&2
-command -v "rsync" >/dev/null 2>&1 || { echo >&2 "Please install \"rsync\" using: apt install rsync"; exit 1; }
+command -v "rsync" >/dev/null 2>&1 || {
+  echo >&2 'Please install "rsync" using: apt install rsync'
+  exit 1
+}
 
 echo "Trying to mount $TARGET... (if this fails, format the disk/partition as explained above)"
 
@@ -156,10 +159,10 @@ printf "Are you sure you want to proceed? [y/N] "
 read -r response
 
 if [ "$response" != "y" ]; then
-	echo "Exiting."
-	umount "$MOUNTPOINT"
-	trap - EXIT INT TERM
-	exit
+  echo "Exiting."
+  umount "$MOUNTPOINT"
+  trap - EXIT INT TERM
+  exit
 fi
 
 echo "Starting the copy. This can take a while."

@@ -13,6 +13,7 @@ Build-Depends:
  fontforge,
  help2man,
  python3-psutil,
+ shfmt <!nocheck>,
 Rules-Requires-Root: no
 Testsuite: autopkgtest-pkg-dkms
 

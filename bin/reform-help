@@ -3,17 +3,17 @@
 set -eu
 
 usage() {
-	echo "Prints help text for how to use the MNT Reform." >&2
-	echo >&2
-	echo "Usage: $0 [--desktop,--root]" >&2
-	echo >&2
-	echo "Options:" >&2
-	echo "  --desktop Print the MNT Reform desktop help text." >&2
-	echo "  --root    Print the MNT Reform root shell help text." >&2
+  echo "Prints help text for how to use the MNT Reform." >&2
+  echo >&2
+  echo "Usage: $0 [--desktop,--root]" >&2
+  echo >&2
+  echo "Options:" >&2
+  echo "  --desktop Print the MNT Reform desktop help text." >&2
+  echo "  --root    Print the MNT Reform root shell help text." >&2
 }
 
-reform_help () {
-	cat << 'END'
+reform_help() {
+  cat <<'END'
 Some useful commands to explore the system:
 
 Learn more about a command:        [1mman[0m [1;4mname-of-command[0m
@@ -31,27 +31,30 @@ List hardware/peripherals:         [1mlsblk[0m
                                    [1mip a[0m
 View this message again:           [1mreform-help[0m
 END
-	case "$(cat /proc/device-tree/model)" in
-		"MNT Pocket Reform with "*)
-			cat << 'END' ;;
+  case "$(cat /proc/device-tree/model)" in
+    "MNT Pocket Reform with "*)
+      cat <<'END'
 Read the Operator Handbook:        [1mpocket-reform-handbook[0m (press % to fix contrast, Q to quit)
 END
-		*)
-			cat << 'END' ;;
+      ;;
+    *)
+      cat <<'END'
 Read the Operator Handbook:        [1mreform-handbook[0m (press % to fix contrast, Q to quit)
 END
-	esac
-	cat << 'END'
+      ;;
+  esac
+  cat <<'END'
 Set keyboard layout and timezone:  [1msudo reform-config[0m
 Chat in Reform community:          [1mreform-chat[0m
 Select boot device:                [1msudo reform-boot-config[0m
 END
-	case "$(cat /proc/device-tree/model)" in "MNT Reform 2"|"MNT Reform 2 HDMI")
-		cat << 'END' ;;
+  case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
+    cat <<'END'
 Select display configuration:      [1msudo reform-display-config[0m # imx8mq only
 END
-	esac
-	cat << 'END'
+    ;;
+  esac
+  cat <<'END'
 Set up encrypted NVMe:             [1msudo reform-setup-encrypted-nvme[0m
 Update / install software:         [1msudo apt update[0m
                                    [1mapt search [1;4mkeyword[0m
@@ -65,8 +68,8 @@ Exit the chat with /quit.
 END
 }
 
-reform_root_help () {
-	cat << 'END'
+reform_root_help() {
+  cat <<'END'
 You are logged in as [1mroot[0m. This account
 can change anything in the system.
 To use the graphical environment [1msway[0m,
@@ -83,23 +86,25 @@ Then, log out using [1mexit[0m and log in as [1;4myour-name[0m.
 To read the MNT Reform Operator Handbook, enter:
 
 END
-	case "$(cat /proc/device-tree/model)" in
-		"MNT Pocket Reform with "*)
-			cat << 'END' ;;
+  case "$(cat /proc/device-tree/model)" in
+    "MNT Pocket Reform with "*)
+      cat <<'END'
   [1mpocket-reform-handbook[0m   # (in the browser, press %
                            # to fix contrast, Q to quit)
 END
-		*)
-			cat << 'END' ;;
+      ;;
+    *)
+      cat <<'END'
   [1mreform-handbook[0m   # (in the browser, press %
                     # to fix contrast, Q to quit)
 END
-	esac
+      ;;
+  esac
 }
 
-reform_desktop_help () {
-	cat /etc/motd
-	cat << 'END'
+reform_desktop_help() {
+  cat /etc/motd
+  cat <<'END'
 Welcome to the MNT Reform desktop.
 
 Useful keyboard shortcuts ([1mSUPER[0m is the MNT logo key):
@@ -131,36 +136,38 @@ Customize the sway or wayfire configuration:
 
 To learn more about the command line, enter: [1mreform-help[0m
 END
-	case "$(cat /proc/device-tree/model)" in
-		"MNT Pocket Reform with "*)
-			cat << 'END' ;;
+  case "$(cat /proc/device-tree/model)" in
+    "MNT Pocket Reform with "*)
+      cat <<'END'
 Read the MNT Pocket Reform handbook in a browser: [1mpocket-reform-handbook[0m
 END
-		*)
-			cat << 'END' ;;
+      ;;
+    *)
+      cat <<'END'
 Read the MNT Reform handbook in a browser: [1mreform-handbook[0m
 END
-	esac
-	echo
-	reform_help
+      ;;
+  esac
+  echo
+  reform_help
 }
 
 if [ "$#" -eq "0" ]; then
-	reform_help
-	exit
+  reform_help
+  exit
 elif [ "$#" -gt "1" ]; then
-	echo "too many arguments" >&2
-	usage
-	exit 1
+  echo "too many arguments" >&2
+  usage
+  exit 1
 fi
 
 case "$1" in
-	--help) usage;;
-	--desktop) reform_desktop_help;;
-	--root) reform_root_help;;
-	*)	
-		echo "unknown option: $1" >&2
-		usage
-		exit 1
-		;;
+  --help) usage ;;
+  --desktop) reform_desktop_help ;;
+  --root) reform_root_help ;;
+  *)
+    echo "unknown option: $1" >&2
+    usage
+    exit 1
+    ;;
 esac

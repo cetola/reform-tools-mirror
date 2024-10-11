@@ -1,24 +1,24 @@
 #!/bin/sh
 
-case $1 in prereqs) exit 0;; esac
+case $1 in prereqs) exit 0 ;; esac
 
 . /scripts/functions
 
 MACHINE=
 if [ -e /etc/flash-kernel/machine ]; then
-	MACHINE=$(cat /etc/flash-kernel/machine)
+  MACHINE=$(cat /etc/flash-kernel/machine)
 elif [ -e /proc/device-tree/model ]; then
-	MACHINE=$(cat /proc/device-tree/model)
+  MACHINE=$(cat /proc/device-tree/model)
 fi
 
 case $MACHINE in
-	"MNT Reform 2 with LS1028A Module")
-		# https://source.mnt.re/reform/reform-debian-packages/-/issues/5
-		dmesg -n 7 || echo "E: failed to set kernel loglevel" >&2
-		;;
-	"MNT Pocket Reform"*)
-		for c in 1 2 3 4 5 6 7
-			do setfont -C /dev/tty$c Uni2-TerminusBold32x16
-		done
-		;;
+  "MNT Reform 2 with LS1028A Module")
+    # https://source.mnt.re/reform/reform-debian-packages/-/issues/5
+    dmesg -n 7 || echo "E: failed to set kernel loglevel" >&2
+    ;;
+  "MNT Pocket Reform"*)
+    for c in 1 2 3 4 5 6 7; do
+      setfont -C /dev/tty$c Uni2-TerminusBold32x16
+    done
+    ;;
 esac

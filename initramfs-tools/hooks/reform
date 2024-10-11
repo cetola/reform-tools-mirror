@@ -4,47 +4,51 @@ set -e
 
 PREREQ=""
 prereqs() { echo "$PREREQ"; }
-case $1 in prereqs) prereqs; exit 0 ;; esac
+case $1 in prereqs)
+  prereqs
+  exit 0
+  ;;
+esac
 
 . /usr/share/initramfs-tools/hook-functions
 
 MACHINE=
 if [ -e /etc/flash-kernel/machine ]; then
-	MACHINE=$(cat /etc/flash-kernel/machine)
+  MACHINE=$(cat /etc/flash-kernel/machine)
 elif [ -e /proc/device-tree/model ]; then
-	MACHINE=$(cat /proc/device-tree/model)
+  MACHINE=$(cat /proc/device-tree/model)
 fi
 
 copy_reform_font() {
-		copy_exec /usr/bin/setfont
-		copy_file Uni2-TerminusBold32x16 /usr/share/consolefonts/Uni2-TerminusBold32x16.psf.gz
-	}
+  copy_exec /usr/bin/setfont
+  copy_file Uni2-TerminusBold32x16 /usr/share/consolefonts/Uni2-TerminusBold32x16.psf.gz
+}
 
 case $MACHINE in
-	"MNT Reform 2") : ;;
-	"MNT Reform 2 HDMI") : ;;
-	"MNT Reform 2 with BPI-CM4 Module") : ;;
-	"MNT Reform 2 with LS1028A Module")
-		[ "${verbose}" = "y" ] && echo "Adding firmware ls1028a-mhdpfw.bin"
-		copy_file firmware /boot/ls1028a-mhdpfw.bin /lib/firmware
-		[ "${verbose}" = "y" ] && echo "Adding /usr/bin/dmesg"
-		copy_exec /usr/bin/dmesg
-		;;
-	"MNT Reform 2 with RCORE RK3588 Module") : ;;
-	"MNT Pocket Reform with i.MX8MP Module")
-		copy_reform_font
-		;;
-	"MNT Pocket Reform with BPI-CM4 Module")
-		copy_reform_font
-		;;
-	"MNT Pocket Reform with RCORE RK3588 Module")
-		copy_reform_font
-		;;
-	"MNT Reform Next with RCORE RK3588 Module") : ;;
-	"")
-		echo "W: unable to deduce target machine for reform initramfs-hook" >&2
-		;;
-	*)
-		echo "W: unsupported machine: $MACHINE" >&2
-		;;
+  "MNT Reform 2") : ;;
+  "MNT Reform 2 HDMI") : ;;
+  "MNT Reform 2 with BPI-CM4 Module") : ;;
+  "MNT Reform 2 with LS1028A Module")
+    [ "${verbose}" = "y" ] && echo "Adding firmware ls1028a-mhdpfw.bin"
+    copy_file firmware /boot/ls1028a-mhdpfw.bin /lib/firmware
+    [ "${verbose}" = "y" ] && echo "Adding /usr/bin/dmesg"
+    copy_exec /usr/bin/dmesg
+    ;;
+  "MNT Reform 2 with RCORE RK3588 Module") : ;;
+  "MNT Pocket Reform with i.MX8MP Module")
+    copy_reform_font
+    ;;
+  "MNT Pocket Reform with BPI-CM4 Module")
+    copy_reform_font
+    ;;
+  "MNT Pocket Reform with RCORE RK3588 Module")
+    copy_reform_font
+    ;;
+  "MNT Reform Next with RCORE RK3588 Module") : ;;
+  "")
+    echo "W: unable to deduce target machine for reform initramfs-hook" >&2
+    ;;
+  *)
+    echo "W: unsupported machine: $MACHINE" >&2
+    ;;
 esac
