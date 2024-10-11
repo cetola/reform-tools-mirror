@@ -1,8 +1,17 @@
-reform-tools (1.55) UNRELEASED; urgency=medium
+reform-tools (1.55) reform; urgency=medium
 
-  * 
+  [ Michal Suchánek ]
+  * reform2_lpc: Run through clang-format using the Linux config
+  * reform2_lpc: Set battery technology to Unknown
+  * reform2_lpc: Detect battery reading glitches
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Fri, 11 Oct 2024 07:46:15 +0200
+  [ Johannes Schauer Marin Rodrigues ]
+  * debian/rules: run clang-format, black and shfmt in dh_auto_test
+  * reformat shell scripts with shfmt
+  * machines/*RK3588 Module.conf: update to 2024-10-11b
+  * debian/copyright: add more content
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Fri, 11 Oct 2024 17:56:36 +0200
 
 reform-tools (1.54) reform; urgency=medium
 
