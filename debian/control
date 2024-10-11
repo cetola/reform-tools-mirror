@@ -7,6 +7,7 @@ Uploaders:
 Homepage: https://source.mnt.re/reform/reform-tools/
 Standards-Version: 4.6.0.1
 Build-Depends:
+ clang-format <!nocheck>,
  debhelper-compat (= 13),
  dh-sequence-dkms,
  fontforge,
