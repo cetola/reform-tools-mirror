@@ -79,13 +79,6 @@ init_tlv320aic3100() {
   amixer -c 0 sset 'HP Right' on
 }
 
-init_pocket_display() {
-  # Increase console font size (MNT Pocket Reform has a Hi-DPI display)
-  for c in 1 2 3 4 5 6 7; do
-    setfont -C /dev/tty$c /usr/share/consolefonts/Uni2-TerminusBold32x16.psf.gz
-  done
-}
-
 init_qca9377_wifi() {
   if test -e /proc/modules && grep --quiet '^qcacld2 ' /proc/modules; then
     echo "I: Module qcacld2 is already loaded" >&2
@@ -180,12 +173,10 @@ case "$(cat /proc/device-tree/model)" in
     dmesg -n 7
     ;;
   "MNT Pocket Reform with i.MX8MP Module")
-    init_pocket_display
     init_qca9377_wifi || echo "W: init_qca9377_wifi failed" >&2
     init_tlv320aic3100
     ;;
   "MNT Pocket Reform with BPI-CM4 Module")
-    init_pocket_display
     init_a311d
     init_tlv320aic3100
     ;;
@@ -198,7 +189,6 @@ case "$(cat /proc/device-tree/model)" in
     init_wm8960
     ;;
   "MNT Pocket Reform with RCORE RK3588 Module")
-    init_pocket_display
     init_rk3588
     init_tlv320aic3100
     ;;
