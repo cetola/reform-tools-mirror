@@ -1,3 +1,10 @@
+reform-tools (1.56) reform; urgency=medium
+
+  [ Lukas F. Hartmann ]
+  * reform-hw-setup: add eth reset workaround and audio setup for rk3588
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Thu, 24 Oct 2024 22:58:43 +0200
+
 reform-tools (1.55) reform; urgency=medium
 
   [ Michal Suchánek ]
