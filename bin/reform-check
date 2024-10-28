@@ -517,3 +517,12 @@ fi
 if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-headers-$(uname -r)" 2>/dev/null | grep -q '^installed$'; then
   echo "E: the linux header package linux-headers-$(uname -r) for the currently running kernel is not installed" >&2
 fi
+
+for f in mntre reform_bookworm reform_bookworm-backports; do
+  file="/etc/apt/sources.list.d/${f}.sources"
+  if [ "$(stat -c %a "$file")" != 666 ]; then
+    # nothing to do
+    continue
+  fi
+  echo "E: $file has insecure permissions 0666, consider a chmod 644" >&2
+done
