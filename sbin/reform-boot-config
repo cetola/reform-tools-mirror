@@ -122,11 +122,16 @@ if [ "--emmc" = "$1" ]; then
 
   BOOTPREF="$2"
   BOOTPART="${DEV_MMC}p1"
+fi
 
-  if [ ! -b "/dev/$BOOTPART" ]; then
-    echo "/dev/$BOOTPART doesn't exist -- run reform-flash-rescue" >&2
-    exit 1
-  fi
+if [ ! -e "/dev/$BOOTPART" ]; then
+  echo "/dev/$BOOTPART doesn't exist" >&2
+  exit 1
+fi
+
+if [ ! -b "/dev/$BOOTPART" ]; then
+  echo "/dev/$BOOTPART is not a block device" >&2
+  exit 1
 fi
 
 case $BOOTPREF in

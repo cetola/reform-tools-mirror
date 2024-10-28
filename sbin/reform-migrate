@@ -109,6 +109,16 @@ if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "$TARGET")" ]; then
   exit 1
 fi
 
+if [ ! -e "/dev/$BOOTPART" ]; then
+  echo "/dev/$BOOTPART does not exist" >&2
+  exit 1
+fi
+
+if [ ! -b "/dev/$BOOTPART" ]; then
+  echo "/dev/$BOOTPART is not a block device" >&2
+  exit 1
+fi
+
 # check if the new boot is still mounted somewhere
 if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART")" ]; then
   echo "/dev/$BOOTPART is still mounted somewhere." >&2
