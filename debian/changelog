@@ -1,8 +1,13 @@
-reform-tools (1.57) UNRELEASED; urgency=medium
+reform-tools (1.57) reform; urgency=medium
 
   * fix permission 666 -> 644 for reform apt sources.list files
+  * machines/* with RCORE RK3588 Module.conf: set EMMC_USE=true because even
+    when u-boot was borked, rk3588 will prefer u-boot from sd-card if present
+  * bin/reform-check: check for wrong permissions of apt sources.list
+  * sbin/reform-{boot-config,migrate}: check if $BOOTPART exists before
+    starting to operate
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Mon, 28 Oct 2024 15:32:37 +0100
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 29 Oct 2024 00:40:16 +0100
 
 reform-tools (1.56) reform; urgency=medium
 
