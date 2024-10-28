@@ -1,3 +1,9 @@
+reform-tools (1.57) UNRELEASED; urgency=medium
+
+  * fix permission 666 -> 644 for reform apt sources.list files
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Mon, 28 Oct 2024 15:32:37 +0100
+
 reform-tools (1.56) reform; urgency=medium
 
   [ Lukas F. Hartmann ]

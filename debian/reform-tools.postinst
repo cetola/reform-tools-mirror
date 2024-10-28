@@ -1,0 +1,15 @@
+#!/bin/sh
+
+set -e
+
+for f in mntre reform_bookworm reform_bookworm-backports; do
+  file="/etc/apt/sources.list.d/${f}.sources"
+  if [ "$(stat -c %a "$file")" != 666 ]; then
+    # nothing to do
+    continue
+  fi
+  echo "E: $file has insecure permissions 0666 -- setting it to 644..." >&2
+  chmod 644 "$file"
+done
+
+#DEBHELPER#
