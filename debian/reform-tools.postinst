@@ -4,12 +4,32 @@ set -e
 
 for f in mntre reform_bookworm reform_bookworm-backports; do
   file="/etc/apt/sources.list.d/${f}.sources"
-  if [ "$(stat -c %a "$file")" != 666 ]; then
+  if [ ! -e "$file" ]; then
+    continue
+  fi
+  if [ "$(stat -c %a "$file")" != "666" ]; then
     # nothing to do
     continue
   fi
   echo "E: $file has insecure permissions 0666 -- setting it to 644..." >&2
   chmod 644 "$file"
 done
+for f in . firefox firefox/syspref.js motd-full motd-rescue profile.d profile.d/reform.sh profile.d/reform-setup.sh; do
+  file="/etc/$f"
+  if [ ! -e "$file" ]; then
+    continue
+  fi
+  # only process world-writable files
+  if [ -z "$(find "$file" -maxdepth 0 \( \! -type l \) -perm /o+w)" ]; then
+    continue
+  fi
+  echo "E: fixing insecure write permissions of $file" >&2
+  chmod go-w "$file"
+done
+
+if [ -e /etc/skel ] && [ "$(stat -c %a /etc/skel)" = "777" ]; then
+  echo "E: fixing insecure read/write permisions of /etc/skel" >&2
+  chmod -R g-w,o-rw /etc/skel
+fi
 
 #DEBHELPER#
