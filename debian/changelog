@@ -1,8 +1,17 @@
-reform-tools (1.58) UNRELEASED; urgency=medium
+reform-tools (1.58) reform; urgency=medium
 
-  * 
+  [ Johannes Schauer Marin Rodrigues ]
+  * debian/reform-tools.postinst: fixup more files with insecure permissions
+    in /etc
+  * bin/reform-check: add more checks for wrong permissions in /etc
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 29 Oct 2024 23:10:29 +0100
+  [ Michal Suchanek ]
+  * Revert "initramfs: Load font early on Pocket Reform"
+
+  [ Chris Hofstaedtler ]
+  * Clean up old /etc/modprobe.d/reform.conf conffile
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Wed, 30 Oct 2024 00:56:41 +0100
 
 reform-tools (1.57) reform; urgency=medium
 
