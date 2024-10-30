@@ -29,7 +29,7 @@ done
 
 if [ -e /etc/skel ] && [ "$(stat -c %a /etc/skel)" = "777" ]; then
   echo "E: fixing insecure read/write permisions of /etc/skel" >&2
-  chmod -R g-w,o-rw /etc/skel
+  chmod -R go-w /etc/skel
 fi
 
 #DEBHELPER#
