@@ -1,8 +1,10 @@
-reform-tools (1.59) UNRELEASED; urgency=medium
+reform-tools (1.59) reform; urgency=medium
 
-  * 
+  * debian/reform-tools.postinst: do not remove the world-readable bit from
+    files in /etc/skel. The bash package also installs files into /etc/skel
+    with mode 644
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Wed, 30 Oct 2024 10:52:38 +0100
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Wed, 30 Oct 2024 10:53:36 +0100
 
 reform-tools (1.58) reform; urgency=medium
 
