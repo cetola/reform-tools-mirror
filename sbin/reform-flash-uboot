@@ -52,18 +52,18 @@ usage() {
   echo "Usage: " >&2
   echo "  reform-flash-uboot [--offline] [device...]" >&2
   echo "" >&2
-  if [ "$EMMC_BOOT" = true ] && [ "$SD_BOOT" = true ]; then
+  if [ "$EMMC_BOOT" != false ] && [ "$SD_BOOT" = true ]; then
     echo "Download and write recent uboot to eMMC or SD-Card." >&2
   elif [ "$SD_BOOT" = true ]; then
     echo "Download and write recent uboot to SD-Card." >&2
-  elif [ "$EMMC_BOOT" = true ]; then
+  elif [ "$EMMC_BOOT" != false ]; then
     echo "Download and write recent uboot to eMMC." >&2
   else
     echo "Download and write recent uboot to chosen device." >&2
   fi
   echo "Without arguments only /boot/flash.bin will be updated unless --offline is given." >&2
   echo "Otherwise, the arguments are the devices onto which to install uboot." >&2
-  if [ "$EMMC_BOOT" = true ] && [ "$SD_BOOT" = true ]; then
+  if [ "$EMMC_BOOT" != false ] && [ "$SD_BOOT" = true ]; then
     echo "Two device shortcuts are provided:" >&2
     echo "" >&2
     echo "   emmc -> /dev/${DEV_MMC}boot0" >&2
@@ -74,7 +74,7 @@ usage() {
     echo "" >&2
     echo "   sd -> /dev/${DEV_SD}" >&2
     echo "" >&2
-  elif [ "$EMMC_BOOT" = true ]; then
+  elif [ "$EMMC_BOOT" != false ]; then
     echo "A device shortcut is provided:" >&2
     echo "" >&2
     echo "   emmc -> /dev/${DEV_MMC}boot0" >&2
@@ -158,6 +158,31 @@ for dev in "$@"; do
     exit 1
   fi
 done
+
+if [ "$EMMC_BOOT" = warn ]; then
+  DOMMC=0
+  for dev in "$@"; do
+    case $dev in
+      emmc) dev=/dev/${DEV_MMC}boot0 ;;
+    esac
+    case $dev in
+      "/dev/${DEV_MMC}"*) DOMMC=1 ;;
+    esac
+  done
+  if [ "$DOMMC" != "0" ]; then
+    echo "W: Flashing u-boot to eMMC on $(cat /proc/device-tree/model) is not without risk." >&2
+    echo "W: If you flash the wrong u-boot or if the flashing process goes wrong, it is" >&2
+    echo "W: possible to soft-brick your board. Restoring it might need some extra hardware." >&2
+    echo "W: Please only proceed if you are sure that the benefits outweigh the risks for you." >&2
+    printf "Are you sure you want to proceed? [y/N] "
+    read -r response
+
+    if [ "$response" != "y" ]; then
+      echo "Exiting."
+      exit
+    fi
+  fi
+fi
 
 # do the flashing
 for dev in "$@"; do
