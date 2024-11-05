@@ -1,3 +1,9 @@
+reform-tools (1.60) UNRELEASED; urgency=medium
+
+  * 
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 05 Nov 2024 10:27:15 +0100
+
 reform-tools (1.59) reform; urgency=medium
 
   * debian/reform-tools.postinst: do not remove the world-readable bit from
