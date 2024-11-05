@@ -8,7 +8,6 @@ export DEB_VERSION_UPSTREAM
 	dh $@
 
 execute_after_dh_auto_build:
-	fontforge -lang=ff -c 'Open($$1); Generate($$2)' mnt-icon-font/MNTIcons.sfd mnt-icon-font/MNTIcons.ttf
 	set -e;                                                               \
 	tool2whatis () { case $$1 in                                          \
 		reform-boot-config)  echo "choose rootfs to boot from" ;;     \
@@ -48,6 +47,3 @@ override_dh_installsystemd:
 
 override_dh_dkms:
 	dh_dkms -V $(DEB_VERSION_UPSTREAM)
-
-execute_after_dh_clean:
-	rm -f mnt-icon-font/MNTIcons.ttf

@@ -12,10 +12,6 @@ Files: share/backgrounds/reform-mountains.jpg
 Copyright: 2023 MNT Research GmbH / Philipp Broemme
 License: CC-BY-SA-4.0
 
-Files: mnt-icon-font/MNTIcons.sfd
-Copyright: 2024 MNT Research GmbH
-License: CC-BY-NC-4.0
-
 Files: audio/analog-input-reform.conf
 Copyright: 1999 Tom Tromey
            2000 Red Hat, Inc.
@@ -52,9 +48,6 @@ Files: .clang-format
 Copyright: 1991-2012 Linus Torvalds and many others
 License: GPL-2
 Comment: mirror d/copyright stanza from src:linux
-
-License: CC-BY-NC-4.0
-Comment: Add the corresponding license text here
 
 License: CC-BY-SA-4.0
  Attribution-ShareAlike 4.0 International

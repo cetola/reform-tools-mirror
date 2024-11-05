@@ -11,7 +11,6 @@ initramfs-tools/scripts/reform     /usr/share/initramfs-tools/scripts/init-top
 kernel/zz-reform-tools             /usr/share/kernel/postinst.d
 libexec/*                          /usr/libexec
 machines/*                         /usr/share/reform-tools/machines
-mnt-icon-font/MNTIcons.ttf         /usr/share/fonts/truetype/
 modprobe.d/*                       /usr/lib/modprobe.d
 sbin/*                             /usr/sbin
 schemas/20_reform.gschema.override /usr/share/glib-2.0/schemas
