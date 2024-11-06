@@ -1,8 +1,14 @@
-reform-tools (1.60) UNRELEASED; urgency=medium
+reform-tools (1.60) reform; urgency=medium
 
-  * 
+  [ Johannes Schauer Marin Rodrigues ]
+  * machines: make EMMC_BOOT a tri-state option
+  * move MNT icon font to reform-branding package
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 05 Nov 2024 10:27:15 +0100
+  [ Michal Suchanek ]
+  * Add postinst script to set font on upgrade
+  * Do not set hardcoded terminal font
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Wed, 06 Nov 2024 10:59:55 +0100
 
 reform-tools (1.59) reform; urgency=medium
 
