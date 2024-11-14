@@ -1,8 +1,16 @@
-reform-tools (1.61) UNRELEASED; urgency=medium
+reform-tools (1.61) reform; urgency=medium
 
-  * 
+  * debian/control: add Depends on gpiod
+  * sbin/reform-hw-setup: print error if gpiod is too old
+  * debian/reform-tools.links: install symlink
+    {/etc => /usr/share}/kernel/postinst.d/zz-reform-tools
+  * new script: reform-handbook
+  * machines/* with RCORE RK3588 Module.conf: update u-boot to 2024-11-13b
+  * machines/* with i.MX8MP Module.conf: update u-boot to 2024-11-14
+  * lpc/reform2_lpc.c: add abs_diff implementation for linux (<< 6.6)
+  * debian/rules: print the clang-format diff that fixes the problem
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Thu, 14 Nov 2024 10:47:40 +0100
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Thu, 14 Nov 2024 10:55:34 +0100
 
 reform-tools (1.60) reform; urgency=medium
 
