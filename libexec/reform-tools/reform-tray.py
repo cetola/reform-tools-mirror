@@ -10,6 +10,7 @@ gi.require_version('Gtk4LayerShell', '1.0')
 from gi.repository import Gdk, Gtk, Gio, GLib, Gtk4LayerShell
 
 SLIDER_CHANGE_INTERVAL_MS = 250
+SLIDER_WIDTH = 100
 
 ICON_NAME = 'view-more-symbolic'
 SNI_PATH = '/org/mntre/sni'
@@ -77,31 +78,35 @@ class Tray(Gtk.Application):
         for i in range(Gtk4LayerShell.Edge.ENTRY_NUMBER):
             Gtk4LayerShell.set_anchor(self.gtk_window, i, anchors[i])
 
-        box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
 
         # brightness controller
-        vbox1 = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        scale1 = Gtk.Scale.new_with_range(Gtk.Orientation.VERTICAL, 0, 100, 1)
-        scale1.set_inverted(True)
-        scale1.set_size_request(-1, 200)
-        scale1.connect('value-changed', self.on_brightness_change)
+        vbox1 = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
+        scale.set_inverted(True)
+        scale.set_size_request(SLIDER_WIDTH, -1)
+        scale.connect('value-changed', self.on_brightness_change)
         icon1 = Gtk.Image.new_from_icon_name('display-brightness-symbolic')
-        vbox1.append(scale1)
+        icon2 = Gtk.Image.new_from_icon_name('display-brightness-symbolic')
         vbox1.append(icon1)
+        vbox1.append(scale)
+        vbox1.append(icon2)
         brite = get_brightness_percent()
-        scale1.set_value(brite)
+        scale.set_value(brite)
 
         # volume controller
-        vbox2 = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        scale2 = Gtk.Scale.new_with_range(Gtk.Orientation.VERTICAL, 0, 100, 1)
-        scale2.set_inverted(True)
-        scale2.set_size_request(-1, 200)
-        scale2.connect('value-changed', self.on_volume_change)
+        vbox2 = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
+        scale.set_inverted(True)
+        scale.set_size_request(SLIDER_WIDTH, -1)
+        scale.connect('value-changed', self.on_volume_change)
+        icon1 = Gtk.Image.new_from_icon_name('audio-volume-medium-symbolic')
         icon2 = Gtk.Image.new_from_icon_name('audio-volume-medium-symbolic')
-        vbox2.append(scale2)
+        vbox2.append(icon1)
+        vbox2.append(scale)
         vbox2.append(icon2)
         vol = get_volume_percent()
-        scale2.set_value(vol)
+        scale.set_value(vol)
 
         # only apply slider changes at interval
         self.new_brightness = self.new_volume = None
