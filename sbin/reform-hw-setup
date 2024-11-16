@@ -52,7 +52,8 @@ init_rk3588() {
     rmmod "$m"
   done
   # manual ethernet phy reset
-  gpioset -c 3 -t 100ms,100ms,0ms 23=1
+  gpioset -c 3 -t 100ms,100ms,0ms 23=1 \
+    || echo "E: gpioset for phy reset failed (requires gpiod >= 2.0)" >&2
   sleep 0.5
   modprobe dwmac_rk
 }

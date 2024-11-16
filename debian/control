@@ -24,7 +24,7 @@ Depends:
  console-setup,
  debconf,
  fonts-reform-iosevka-term (= 2.3.0-1),
- gpiod (>= 2.0),
+ gpiod,
  keyboard-configuration,
  mount,
  parted,
