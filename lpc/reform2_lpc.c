@@ -7,6 +7,16 @@
 #include <linux/power_supply.h>
 #include <linux/of.h>
 
+/* abs_diff was only added to math.h in linux 6.6 */
+#define abs_diff(a, b)                                 \
+	({                                             \
+		typeof(a) __a = (a);                   \
+		typeof(b) __b = (b);                   \
+		(void)(&__a == &__b);                  \
+		__a > __b ? (__a - __b) : (__b - __a); \
+	})
+#endif
+
 static int lpcProbe(struct spi_device *spi);
 static void lpcRemove(struct spi_device *spi);
 static void lpcPowerOff(void);
