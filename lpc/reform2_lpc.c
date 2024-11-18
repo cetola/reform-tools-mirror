@@ -8,6 +8,7 @@
 #include <linux/of.h>
 
 /* abs_diff was only added to math.h in linux 6.6 */
+#ifndef abs_diff
 #define abs_diff(a, b)                                 \
 	({                                             \
 		typeof(a) __a = (a);                   \
