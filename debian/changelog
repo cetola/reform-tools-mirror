@@ -1,8 +1,8 @@
-reform-tools (1.62) UNRELEASED; urgency=medium
+reform-tools (1.62) reform; urgency=medium
 
   * lpc/reform2_lpc.c: fixup ifdef
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Mon, 18 Nov 2024 16:29:56 +0100
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Mon, 18 Nov 2024 16:30:49 +0100
 
 reform-tools (1.61) reform; urgency=medium
 
