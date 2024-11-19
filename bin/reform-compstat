@@ -41,14 +41,16 @@ def usage():
     print("  --help   Display this help text and exit.", file=sys.stderr)
     print("  -d NUM   Set number of bars to NUM.", file=sys.stderr)
     print("  -i SECS  Set the update interval to SEC seconds.", file=sys.stderr)
+    print("  --percpu Display the CPU utilization per CPU core.", file=sys.stderr)
 
 
 def main(argv):
     depth = 5
     interval = 0.3
+    percpu = False
 
     try:
-        opts, args = getopt.getopt(argv, "hd:i:", longopts=["help"])
+        opts, args = getopt.getopt(argv, "hd:i:", longopts=["percpu", "help"])
     except getopt.GetoptError as e:
         print(f"E: {e.msg}", file=sys.stderr)
         print(file=sys.stderr)
@@ -59,20 +61,29 @@ def main(argv):
             depth = int(arg)
         elif opt == "-i":
             interval = float(arg)
+        elif opt == "--percpu":
+            percpu = True
         elif opt in ["-h", "--help"]:
             usage()
             exit()
 
-    cpu_history = []
+    if percpu:
+        cpu_history = {i: [] for i in range(psutil.cpu_count())}
+    else:
+        cpu_history = []
     read_history = []
     write_history = []
     ldisk_activity = psutil.disk_io_counters()
 
     while True:
-        cpu_usage = psutil.cpu_percent()
+        cpu_usage = psutil.cpu_percent(percpu=percpu)
         disk_activity = psutil.disk_io_counters()
 
-        history_insert(cpu_history, cpu_usage, depth)
+        if percpu:
+            for i, cpu in enumerate(cpu_usage):
+                history_insert(cpu_history[i], cpu, depth)
+        else:
+            history_insert(cpu_history, cpu_usage, depth)
         history_insert(
             read_history, disk_activity.read_bytes - ldisk_activity.read_bytes, depth
         )
@@ -82,7 +93,16 @@ def main(argv):
 
         print(
             "CPU "
-            + draw_chart(cpu_history, 100.0)
+            + (
+                (
+                    "".join(
+                        draw_chart(cpu_history[i], 100.0)
+                        for i in range(psutil.cpu_count())
+                    )
+                )
+                if percpu
+                else draw_chart(cpu_history, 100.0)
+            )
             + " R/W "
             + draw_chart(read_history, 1.0 * 1024 * 1024)
             + " "
