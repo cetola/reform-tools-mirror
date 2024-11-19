@@ -23,15 +23,15 @@ install_dtbs() {
   for CONF in /usr/share/reform-tools/machines/*.conf; do
     . "$CONF"
     if [ ! -d "/usr/lib/linux-image-$version" ]; then
-      echo "E: /usr/lib/linux-image-$version does not exist" >&2
+      echo "W: /usr/lib/linux-image-$version does not exist -- skipping..." >&2
       continue
     fi
     dtb=$(find "/usr/lib/linux-image-$version" -wholename "*/$DTBPATH" 2>/dev/null | head -n 1)
     if [ -z "$dtb" ]; then
-      echo "E: no dtb for $DTBPATH in /usr/lib/linux-image-$version" >&2
+      echo "W: no dtb for $DTBPATH in /usr/lib/linux-image-$version -- skipping..." >&2
       continue
     elif [ ! -f "$dtb" ]; then
-      echo "E: $dtb does not exist" >&2
+      echo "W: $dtb does not exist -- skipping..." >&2
       continue
     fi
     if [ ! -e "/usr/lib/linux-image-$version/$DTBPATH" ]; then
