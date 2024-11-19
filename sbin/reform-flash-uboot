@@ -66,7 +66,11 @@ usage() {
   if [ "$EMMC_BOOT" != false ] && [ "$SD_BOOT" = true ]; then
     echo "Two device shortcuts are provided:" >&2
     echo "" >&2
-    echo "   emmc -> /dev/${DEV_MMC}boot0" >&2
+    if [ "$DEV_MMC_BOOT0" = true ]; then
+      echo "   emmc -> /dev/${DEV_MMC}boot0" >&2
+    else
+      echo "   emmc -> /dev/${DEV_MMC}" >&2
+    fi
     echo "   sd -> /dev/${DEV_SD}" >&2
     echo "" >&2
   elif [ "$SD_BOOT" = true ]; then
@@ -77,7 +81,11 @@ usage() {
   elif [ "$EMMC_BOOT" != false ]; then
     echo "A device shortcut is provided:" >&2
     echo "" >&2
-    echo "   emmc -> /dev/${DEV_MMC}boot0" >&2
+    if [ "$DEV_MMC_BOOT0" = true ]; then
+      echo "   emmc -> /dev/${DEV_MMC}boot0" >&2
+    else
+      echo "   emmc -> /dev/${DEV_MMC}" >&2
+    fi
     echo "" >&2
   fi
 }
@@ -125,13 +133,16 @@ ubootsize=$(stat --format=%s "/boot/flash.bin")
 # check if there is enough free space at the beginning of the disk
 for dev in "$@"; do
   case $dev in
-    emmc) dev=/dev/${DEV_MMC}boot0 ;;
+    emmc)
+      if [ "$DEV_MMC_BOOT0" = true ]; then
+        # there are no partitions on boot0, so no need to check here
+        continue
+      else
+        dev=/dev/${DEV_MMC}
+      fi
+      ;;
     sd) dev=/dev/${DEV_SD} ;;
   esac
-
-  if [ "$dev" = "/dev/${DEV_MMC}boot0" ]; then
-    continue
-  fi
 
   # no further tests for disks without a partition table
   if [ "$(parted --script --machine "$dev" unit B print 2>/dev/null | grep "^$dev:" | cut -d: -f 6)" = unknown ]; then
@@ -162,9 +173,10 @@ done
 if [ "$EMMC_BOOT" = warn ]; then
   DOMMC=0
   for dev in "$@"; do
-    case $dev in
-      emmc) dev=/dev/${DEV_MMC}boot0 ;;
-    esac
+    if [ "$dev" = "emmc" ]; then
+      DOMMC=1
+      break
+    fi
     case $dev in
       "/dev/${DEV_MMC}"*) DOMMC=1 ;;
     esac
@@ -187,20 +199,26 @@ fi
 # do the flashing
 for dev in "$@"; do
   case $dev in
-    emmc) dev=/dev/${DEV_MMC}boot0 ;;
+    emmc)
+      if [ "$DEV_MMC_BOOT0" = true ]; then
+        dev=/dev/${DEV_MMC}boot0
+      else
+        dev=/dev/${DEV_MMC}
+      fi
+      ;;
     sd) dev=/dev/${DEV_SD} ;;
   esac
 
   echo "Writing /boot/flash.bin to $dev" >&2
 
-  if [ "$dev" = "/dev/${DEV_MMC}boot0" ]; then
+  if [ "$DEV_MMC_BOOT0" = true ] && [ "$dev" = "/dev/${DEV_MMC}boot0" ]; then
     echo 0 >"/sys/class/block/${DEV_MMC}boot0/force_ro"
-    dd if=/boot/flash.bin of="/dev/${DEV_MMC}boot0" bs=512 seek="$((UBOOT_OFFSET / 512))" skip="$((FLASHBIN_OFFSET / 512))"
+  fi
+  dd if=/boot/flash.bin of="$dev" bs=512 seek="$((UBOOT_OFFSET / 512))" skip="$((FLASHBIN_OFFSET / 512))"
+  if [ "$DEV_MMC_BOOT0" = true ] && [ "$dev" = "/dev/${DEV_MMC}boot0" ]; then
     echo 1 >"/sys/class/block/${DEV_MMC}boot0/force_ro"
-    continue
   fi
 
-  dd if=/boot/flash.bin of="$dev" bs=512 seek="$((UBOOT_OFFSET / 512))" skip="$((FLASHBIN_OFFSET / 512))"
 done
 
 # inform about the DIP switch position only on imx8mq
@@ -209,8 +227,14 @@ case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
   DOSD=0
   for dev in "$@"; do
     case $dev in
-      emmc) dev=/dev/${DEV_MMC}boot0 ;;
-      sd) dev=/dev/${DEV_SD} ;;
+      emmc)
+        DOMMC=1
+        continue
+        ;;
+      sd)
+        DOSD=1
+        continue
+        ;;
     esac
     case $dev in
       "/dev/${DEV_MMC}"*) DOMMC=1 ;;
