@@ -1,4 +1,7 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2022-2024 Lukas F. Hartmann <lukas@mntre.com>
+
 import time, psutil, sys, getopt
 
 
