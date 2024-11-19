@@ -13,6 +13,7 @@ Build-Depends:
  dh-sequence-dkms,
  help2man,
  python3-psutil,
+ python3-usb1,
  shfmt <!nocheck>,
 Rules-Requires-Root: no
 Testsuite: autopkgtest-pkg-dkms
@@ -54,6 +55,7 @@ Recommends:
  pulseaudio-utils,
  python3,
  python3-gi,
+ python3-usb1,
  thunar,
  x11-xserver-utils,
 Protected: yes

@@ -35,6 +35,10 @@ Files: sbin/reform-standby
 Copyright: 2022, MNT Research GmbH (https://mntre.com)
 License: GPL-2+
 
+Files: sbin/reform-mcu-tool
+Copyright: 2024 Chris Hofstaedtler <chris@hofstaedtler.name>
+License: GPL-3+
+
 Files: libexec/reform-tools/reform-tray.py
 Copyright: 2023 - 2024 Lukas F. Hartmann <lukas@mntre.com>
            2024 Johannes Schauer Marin Rodrigues <josch@debian.org>

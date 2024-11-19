@@ -9,6 +9,7 @@ debian/reform-flash-uboot.8
 debian/reform-handbook.1
 debian/reform-help.1
 debian/reform-hw-setup.8
+debian/reform-mcu-tool.8
 debian/reform-migrate.8
 debian/reform-pavucontrol.1
 debian/reform-setup-encrypted-nvme.8
