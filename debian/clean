@@ -6,6 +6,7 @@ debian/reform-config.8
 debian/reform-display-config.8
 debian/reform-flash-rescue.8
 debian/reform-flash-uboot.8
+debian/reform-handbook.1
 debian/reform-help.1
 debian/reform-hw-setup.8
 debian/reform-migrate.8
