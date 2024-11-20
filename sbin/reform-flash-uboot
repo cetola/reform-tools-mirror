@@ -101,16 +101,24 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 if [ "$#" -eq 0 ] || [ "$1" != "--offline" ]; then
-  echo "Downloading uboot to /boot/flash.bin and comparing checksum" >&2
-
-  ubooturl="https://source.mnt.re/reform/${UBOOT_PROJECT}/-/jobs/artifacts/${UBOOT_TAG}/raw/$(basename "$DTBPATH" .dtb)-flash.bin?job=build"
-  /usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file "$ubooturl" "/boot/flash.bin" "SHA1:$UBOOT_SHA1"
+  if echo "$UBOOT_SHA1  /boot/flash.bin" | sha1sum --strict --check >/dev/null 2>&1; then
+    echo "/boot/flash.bin is up-to-date -- not downloading it again" >&2
+  else
+    echo "Downloading uboot to /boot/flash.bin and comparing checksum" >&2
+    ubooturl="https://source.mnt.re/reform/${UBOOT_PROJECT}/-/jobs/artifacts/${UBOOT_TAG}/raw/$(basename "$DTBPATH" .dtb)-flash.bin?job=build"
+    /usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file "$ubooturl" "/boot/flash.bin" "SHA1:$UBOOT_SHA1"
+  fi
   # download mhdpfw.bin on ls1028a
   case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with LS1028A Module")
-    /usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file \
-      "https://source.mnt.re/reform/reform-ls1028a-uboot/-/raw/main/ls1028a-mhdpfw.bin" \
-      "/boot/ls1028a-mhdpfw.bin" \
-      "SHA1:fa96b9aa59d7c1e9e6ee1c0375d0bcc8f8e5b78c"
+    if echo "fa96b9aa59d7c1e9e6ee1c0375d0bcc8f8e5b78c  /boot/ls1028a-mhdpfw.bin"; then
+      echo "/boot/ls1028a-mhdpfw.bin is up-to-date -- not downloading it again" >&2
+    else
+      echo "Downloading LS1028A MHDP firmware to /boot/ls1028a-mhdpfw.bin and comparing checksum" >&2
+      /usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file \
+        "https://source.mnt.re/reform/reform-ls1028a-uboot/-/raw/main/ls1028a-mhdpfw.bin" \
+        "/boot/ls1028a-mhdpfw.bin" \
+        "SHA1:fa96b9aa59d7c1e9e6ee1c0375d0bcc8f8e5b78c"
+    fi
     ;;
   esac
 elif [ "$#" -gt 0 ] && [ "$1" = "--offline" ]; then
