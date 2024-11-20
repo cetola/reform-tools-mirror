@@ -7,8 +7,7 @@ import time, psutil, sys, getopt
 
 def draw_bar(val, maxval):
     bars = ["    ", "▁", "▁", "▂", "▂", "▃", "▄", "▅", "▆", "▆", "▇", "█"]
-    val = max(0, min(val / maxval, 0.99))
-    return bars[int(val * 10)]
+    return bars[int((len(bars) - 1) * min(val / maxval, 1))]
 
 
 def draw_chart(lst, maxval):
