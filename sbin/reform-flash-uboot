@@ -9,7 +9,7 @@ usage() {
   echo "Usage: $0 [--help] [--offline] DEVICE" >&2
   echo >&2
   echo "Options:" >&2
-  echo "  DEVICE           Either a device path in /dev or shorthands sd and emmc" >&2
+  echo '  DEVICE           Target device to flash: either "sd" or "emmc"' >&2
   echo "  --help           Display this help and exit." >&2
   echo "  --offline        Instead of download u-boot use /boot/flash.bin." >&2
 }
@@ -29,24 +29,26 @@ else
   exit 1
 fi
 
-if [ "$EMMC_BOOT" = false ]; then
-  for dev in "$@"; do
-    case $dev in emmc | "/dev/${DEV_MMC}"*)
-      echo "E: writing uboot to eMMC not supported on $(cat /proc/device-tree/model)" >&2
+for dev in "$@"; do
+  case $dev in
+    emmc)
+      if [ "$EMMC_BOOT" = false ]; then
+        echo "E: writing uboot to eMMC not supported on $(cat /proc/device-tree/model)" >&2
+        exit 1
+      fi
+      ;;
+    sd)
+      if [ "$SD_BOOT" = false ]; then
+        echo "E: writing uboot to SD-Card not supported on $(cat /proc/device-tree/model)" >&2
+        exit 1
+      fi
+      ;;
+    *)
+      echo "E: unknown device target \"$dev\" given." >&2
       exit 1
       ;;
-    esac
-  done
-fi
-if [ "$SD_BOOT" = false ]; then
-  for dev in "$@"; do
-    case $dev in sd | "/dev/${DEV_SD}"*)
-      echo "E: writing uboot to SD-Card not supported on $(cat /proc/device-tree/model)" >&2
-      exit 1
-      ;;
-    esac
-  done
-fi
+  esac
+done
 
 usage() {
   echo "Usage: " >&2
@@ -59,35 +61,23 @@ usage() {
   elif [ "$EMMC_BOOT" != false ]; then
     echo "Download and write recent uboot to eMMC." >&2
   else
-    echo "Download and write recent uboot to chosen device." >&2
+    echo "Download recent uboot, but update no devices." >&2
   fi
   echo "Without arguments only /boot/flash.bin will be updated unless --offline is given." >&2
   echo "Otherwise, the arguments are the devices onto which to install uboot." >&2
-  if [ "$EMMC_BOOT" != false ] && [ "$SD_BOOT" = true ]; then
-    echo "Two device shortcuts are provided:" >&2
-    echo "" >&2
+  echo "These device names are supported:" >&2
+  echo "" >&2
+  if [ "$EMMC_BOOT" != false ]; then
     if [ "$DEV_MMC_BOOT0" = true ]; then
-      echo "   emmc -> /dev/${DEV_MMC}boot0" >&2
+      echo "   emmc (${DEV_MMC}boot0)" >&2
     else
-      echo "   emmc -> /dev/${DEV_MMC}" >&2
+      echo "   emmc (${DEV_MMC})" >&2
     fi
-    echo "   sd -> /dev/${DEV_SD}" >&2
-    echo "" >&2
-  elif [ "$SD_BOOT" = true ]; then
-    echo "A device shortcut is provided:" >&2
-    echo "" >&2
-    echo "   sd -> /dev/${DEV_SD}" >&2
-    echo "" >&2
-  elif [ "$EMMC_BOOT" != false ]; then
-    echo "A device shortcut is provided:" >&2
-    echo "" >&2
-    if [ "$DEV_MMC_BOOT0" = true ]; then
-      echo "   emmc -> /dev/${DEV_MMC}boot0" >&2
-    else
-      echo "   emmc -> /dev/${DEV_MMC}" >&2
-    fi
-    echo "" >&2
   fi
+  if [ "$SD_BOOT" = true ]; then
+    echo "   sd (${DEV_SD})" >&2
+  fi
+  echo "" >&2
 }
 
 if [ "$#" -gt 0 ] && [ "$1" = "--help" ] || [ "$#" -gt 0 ] && [ "$1" = "-h" ]; then
@@ -146,18 +136,20 @@ for dev in "$@"; do
         # there are no partitions on boot0, so no need to check here
         continue
       else
-        dev=/dev/${DEV_MMC}
+        realdev=/dev/${DEV_MMC}
       fi
       ;;
-    sd) dev=/dev/${DEV_SD} ;;
+    sd)
+      realdev=/dev/${DEV_SD}
+      ;;
   esac
 
   # no further tests for disks without a partition table
-  if [ "$(parted --script --machine "$dev" unit B print 2>/dev/null | grep "^$dev:" | cut -d: -f 6)" = unknown ]; then
+  if [ "$(parted --script --machine "$realdev" unit B print 2>/dev/null | grep "^$realdev:" | cut -d: -f 6)" = unknown ]; then
     continue
   fi
 
-  freeuntil=$(parted --script --machine "$dev" unit B print free | grep --max-count=1 '^1:1024B:.*:free;')
+  freeuntil=$(parted --script --machine "$realdev" unit B print free | grep --max-count=1 '^1:1024B:.*:free;')
   freeuntil=${freeuntil##1:1024B:}
   freeuntil=${freeuntil%B:*:free;}
   # The following checks whether the parsed output is a valid integer.
@@ -172,36 +164,30 @@ for dev in "$@"; do
   esac
 
   if [ "$((UBOOT_OFFSET - FLASHBIN_OFFSET + ubootsize))" -ge "$freeuntil" ]; then
-    echo "the first partition on $dev starts at $freeuntil and would be overwritten by uboot" >&2
-    echo "make sure that the first $((UBOOT_OFFSET - FLASHBIN_OFFSET + ubootsize)) bytes are free on $dev" >&2
+    echo "the first partition on $dev $realdev starts at $freeuntil and would be overwritten by uboot" >&2
+    echo "make sure that the first $((UBOOT_OFFSET - FLASHBIN_OFFSET + ubootsize)) bytes are free on $realdev" >&2
     exit 1
   fi
 done
 
 if [ "$EMMC_BOOT" = warn ]; then
-  DOMMC=0
   for dev in "$@"; do
     if [ "$dev" = "emmc" ]; then
-      DOMMC=1
+      echo "W: Flashing u-boot to eMMC on $(cat /proc/device-tree/model) is not without risk." >&2
+      echo "W: If you flash the wrong u-boot or if the flashing process goes wrong, it is" >&2
+      echo "W: possible to soft-brick your board. Restoring it might need some extra hardware." >&2
+      echo "W: Please only proceed if you are sure that the benefits outweigh the risks for you." >&2
+      printf "Are you sure you want to proceed? [y/N] "
+      read -r response
+
+      if [ "$response" != "y" ]; then
+        echo "Exiting."
+        exit
+      fi
+
       break
     fi
-    case $dev in
-      "/dev/${DEV_MMC}"*) DOMMC=1 ;;
-    esac
   done
-  if [ "$DOMMC" != "0" ]; then
-    echo "W: Flashing u-boot to eMMC on $(cat /proc/device-tree/model) is not without risk." >&2
-    echo "W: If you flash the wrong u-boot or if the flashing process goes wrong, it is" >&2
-    echo "W: possible to soft-brick your board. Restoring it might need some extra hardware." >&2
-    echo "W: Please only proceed if you are sure that the benefits outweigh the risks for you." >&2
-    printf "Are you sure you want to proceed? [y/N] "
-    read -r response
-
-    if [ "$response" != "y" ]; then
-      echo "Exiting."
-      exit
-    fi
-  fi
 fi
 
 # do the flashing
@@ -209,21 +195,23 @@ for dev in "$@"; do
   case $dev in
     emmc)
       if [ "$DEV_MMC_BOOT0" = true ]; then
-        dev=/dev/${DEV_MMC}boot0
+        realdev=/dev/${DEV_MMC}boot0
       else
-        dev=/dev/${DEV_MMC}
+        realdev=/dev/${DEV_MMC}
       fi
       ;;
-    sd) dev=/dev/${DEV_SD} ;;
+    sd)
+      realdev=/dev/${DEV_SD}
+      ;;
   esac
 
-  echo "Writing /boot/flash.bin to $dev" >&2
+  echo "Writing /boot/flash.bin to $dev ($realdev)" >&2
 
-  if [ "$DEV_MMC_BOOT0" = true ] && [ "$dev" = "/dev/${DEV_MMC}boot0" ]; then
+  if [ "$DEV_MMC_BOOT0" = true ] && [ "$dev" = "emmc" ]; then
     echo 0 >"/sys/class/block/${DEV_MMC}boot0/force_ro"
   fi
-  dd if=/boot/flash.bin of="$dev" bs=512 seek="$((UBOOT_OFFSET / 512))" skip="$((FLASHBIN_OFFSET / 512))"
-  if [ "$DEV_MMC_BOOT0" = true ] && [ "$dev" = "/dev/${DEV_MMC}boot0" ]; then
+  dd if=/boot/flash.bin of="$realdev" bs=512 seek="$((UBOOT_OFFSET / 512))" skip="$((FLASHBIN_OFFSET / 512))"
+  if [ "$DEV_MMC_BOOT0" = true ] && [ "$dev" = "emmc" ]; then
     echo 1 >"/sys/class/block/${DEV_MMC}boot0/force_ro"
   fi
 
@@ -231,31 +219,19 @@ done
 
 # inform about the DIP switch position only on imx8mq
 case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
-  DOMMC=0
-  DOSD=0
   for dev in "$@"; do
     case $dev in
       emmc)
-        DOMMC=1
+        echo "For the i.MX8MQ to load u-boot from MMC, make sure" >&2
+        echo "that your DIP switch is set to OFF." >&2
         continue
         ;;
       sd)
-        DOSD=1
+        echo "For the i.MX8MQ to load u-boot from SD-Card, make sure" >&2
+        echo "that your DIP switch is set to ON." >&2
         continue
         ;;
     esac
-    case $dev in
-      "/dev/${DEV_MMC}"*) DOMMC=1 ;;
-      "/dev/${DEV_SD}"*) DOSD=1 ;;
-    esac
   done
-  if [ "$DOMMC" != "0" ]; then
-    echo "For the i.MX8MQ to load u-boot from MMC, make sure" >&2
-    echo "that your DIP switch is set to OFF." >&2
-  fi
-  if [ "$DOSD" != "0" ]; then
-    echo "For the i.MX8MQ to load u-boot from SD-Card, make sure" >&2
-    echo "that your DIP switch is set to ON." >&2
-  fi
   ;;
 esac
