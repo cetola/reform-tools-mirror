@@ -95,12 +95,12 @@ def main(argv):
             + (
                 (
                     "".join(
-                        draw_chart(cpu_history[i], 100.0)
+                        draw_chart(cpu_history[i], 98.0)
                         for i in range(psutil.cpu_count())
                     )
                 )
                 if percpu
-                else draw_chart(cpu_history, 100.0)
+                else draw_chart(cpu_history, 98.0)
             )
             + " R/W "
             + draw_chart(read_history, 1.0 * 1024 * 1024)
