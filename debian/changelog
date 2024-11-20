@@ -1,8 +1,23 @@
-reform-tools (1.63) UNRELEASED; urgency=medium
+reform-tools (1.63) reform; urgency=medium
 
-  * 
+  [ Johannes Schauer Marin Rodrigues ]
+  * debian/clean: clean up debian/reform-handbook.1
+  * debian/reform-tools.manpages: add reform-handbook.1
+  * kernel/zz-reform-tools: turn error messages into warnings, they are not
+    fatal
+  * machines/* with RCORE RK3588 Module.conf: set EMMC_BOOT=warn
+  * sbin/reform-flash-uboot: add support for rk3588 eMMC which is not using the
+    boot0 partition for u-boot
+  * bin/reform-compstat:
+     - add copyright header
+     - add --percpu
+     - use four six-per-em space U+2006 characters to create an empty box
+     - let 98% CPU utilization already print the full bar
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Tue, 19 Nov 2024 16:06:17 +0100
+  [ Chris Hofstaedtler ]
+  * Add reform-mcu-tool
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Wed, 20 Nov 2024 12:21:50 +0100
 
 reform-tools (1.62) reform; urgency=medium
 
