@@ -8,9 +8,23 @@ build:
     make lint
     apt-get --no-install-recommends -y install sbuild build-essential fakeroot mmdebstrap uidmap debhelper dh-dkms
     adduser --comment build --disabled-password build
+    export SBUILD_CONFIG=$PWD/.sbuildrc
+    cat >$SBUILD_CONFIG <<EOT
+    $chroot_mode = 'unshare';
+    $unshare_mmdebstrap_keep_tarball = 1;
+    EOT
+    mkdir -p .cache/sbuild
+    chown -R build: .cache/sbuild
+    export XDG_CACHE_DIR=$PWD/.cache/sbuild
     runuser -u build -- sh -c 'sbuild -d unstable --chroot-mode=unshare --verbose'
     debversion="$(dpkg-parsechangelog -SVersion)"
     mv ../reform-tools_${debversion}_amd64.changes ../reform-tools_${debversion}_amd64.buildinfo ../reform-tools_${debversion}_all.deb ../reform2-lpc-dkms_${debversion}_all.deb ../reform-tools_${debversion}.tar.xz ../reform-tools_${debversion}.dsc .
+  cache:
+    key: cache-$CI_COMMIT_REF_SLUG
+    fallback_keys:
+      - cache-$CI_DEFAULT_BRANCH
+    paths:
+      - .cache
   artifacts:
     paths:
       - reform-tools_*_amd64.changes
