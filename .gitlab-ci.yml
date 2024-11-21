@@ -1,4 +1,4 @@
-image: debian:bookworm-slim
+image: debian:trixie-slim
 
 build:
   script: |
@@ -8,10 +8,7 @@ build:
     make lint
     apt-get --no-install-recommends -y install sbuild build-essential fakeroot mmdebstrap uidmap debhelper dh-dkms
     adduser --comment build --disabled-password build
-    runuser -u build -- sh -c 'echo "\$chroot_mode = \"unshare\";1;" > ~/.sbuildrc'
-    runuser -u build -- sh -c 'mkdir -p ~/.cache/sbuild'
-    runuser -u build -- sh -c 'mmdebstrap --variant=buildd --mode=unshare unstable ~/.cache/sbuild/unstable-$(dpkg --print-architecture).tar'
-    runuser -u build -- sh -c 'sbuild -d unstable --verbose'
+    runuser -u build -- sh -c 'sbuild -d unstable --chroot-mode=unshare --verbose'
     debversion="$(dpkg-parsechangelog -SVersion)"
     mv ../reform-tools_${debversion}_amd64.changes ../reform-tools_${debversion}_amd64.buildinfo ../reform-tools_${debversion}_all.deb ../reform2-lpc-dkms_${debversion}_all.deb ../reform-tools_${debversion}.tar.xz ../reform-tools_${debversion}.dsc .
   artifacts:
