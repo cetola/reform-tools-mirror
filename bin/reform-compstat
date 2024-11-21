@@ -1,6 +1,9 @@
 #!/usr/bin/python3
 # SPDX-License-Identifier: GPL-3.0+
 # Copyright 2022-2024 Lukas F. Hartmann <lukas@mntre.com>
+#
+# Do not run shellcheck on this file
+# shellcheck disable=SC1071
 
 import time, psutil, sys, getopt
 

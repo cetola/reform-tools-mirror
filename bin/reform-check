@@ -28,6 +28,7 @@ usage() {
   echo "    they might want to apply to their running setup as well" >&2
   echo >&2
   echo "Running this script as non-root will give you a diff between the files in" >&2
+  # shellcheck disable=SC2016
   echo '/etc/skel and those in your $HOME. Running this script as root performs the' >&2
   echo "system-wide checks." >&2
   echo >&2
@@ -93,6 +94,7 @@ if [ "$(id -u)" -ne 0 ]; then
     fi
   done
   echo "I: Running reform-check as the normal user only diffs your current"
+  # shellcheck disable=SC2016
   echo 'I: configuration in your $HOME against the contents in /etc/skel.'
   echo "I: To run a system-wide check, run this script as the root user."
   exit 0

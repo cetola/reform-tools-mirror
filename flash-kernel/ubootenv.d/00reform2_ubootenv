@@ -1,7 +1,10 @@
+# shellcheck shell=sh
+
 ######### BEGIN /usr/share/flash-kernel/ubootenv.d/00reform2_ubootenv #########
 # Default bootargs for Linux are set here and can be overwritten using
 # LINUX_KERNEL_CMDLINE in /etc/default/flash-kernel or by setting ${bootargs}
 # in u-boot itself via the setenv command.
+# shellcheck disable=SC2154
 setenv bootargs "ro no_console_suspend cryptomgr.notests loglevel=3 ${bootargs}"
 
 # Board-specific bootargs cannot be overwritten by above methods. If you
@@ -11,6 +14,7 @@ setenv bootargs "ro no_console_suspend cryptomgr.notests loglevel=3 ${bootargs}"
 #
 # This block is only needed for boards which might still run with an older
 # version of u-boot and thus might not yet set ${bootargs} correctly.
+# shellcheck disable=SC2154
 if test "${board}" = "nitrogen8m_som"; then
   setenv bootargs "${bootargs} console=ttymxc0,115200 cma=512M pci=nomsi"
 elif test "${board}" = "MNT Reform 2.0"; then

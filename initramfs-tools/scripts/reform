@@ -2,6 +2,7 @@
 
 case $1 in prereqs) exit 0 ;; esac
 
+# shellcheck disable=SC1091
 . /scripts/functions
 
 MACHINE=

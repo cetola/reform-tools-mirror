@@ -53,11 +53,13 @@ case "$MACHINE" in
 esac
 
 config=/etc/default/console-setup
+# shellcheck disable=SC1090
 oldfont="$(
   . $config
   echo "$FONTFACE"
 )"
 [ "$oldfont" = "Fixed" ] || exit 0 # do nothing if font is customized
+# shellcheck disable=SC1090
 oldsize="$(
   . $config
   echo "$FONTSIZE"

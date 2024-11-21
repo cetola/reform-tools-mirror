@@ -10,6 +10,7 @@ case $1 in prereqs)
   ;;
 esac
 
+# shellcheck disable=SC1091
 . /usr/share/initramfs-tools/hook-functions
 
 MACHINE=
@@ -29,8 +30,10 @@ case $MACHINE in
   "MNT Reform 2 HDMI") : ;;
   "MNT Reform 2 with BPI-CM4 Module") : ;;
   "MNT Reform 2 with LS1028A Module")
+    # shellcheck disable=SC2154
     [ "${verbose}" = "y" ] && echo "Adding firmware ls1028a-mhdpfw.bin"
     copy_file firmware /boot/ls1028a-mhdpfw.bin /lib/firmware
+    # shellcheck disable=SC2154
     [ "${verbose}" = "y" ] && echo "Adding /usr/bin/dmesg"
     copy_exec /usr/bin/dmesg
     ;;

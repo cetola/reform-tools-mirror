@@ -1,3 +1,5 @@
+#shellcheck shell=sh disable=SC2086,SC2154
+
 ######### BEGIN /usr/share/flash-kernel/preboot.d/00reform2_preboot ###########
 # We need to set ${fdtfile} in uboot to select a default dtb for boot mediums
 # that are supposed to boot on multiple devices like the Debian installer.
