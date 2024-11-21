@@ -4,6 +4,8 @@ build:
   script: |
     set -x
     apt-get update -o Acquire::AllowReleaseInfoChange=true -o quiet::ReleaseInfoChange=true
+    apt-get --no-install-recommends --yes install make clang-format black shfmt
+    make lint
     apt-get --no-install-recommends -y install sbuild build-essential fakeroot mmdebstrap uidmap debhelper dh-dkms
     adduser --comment build --disabled-password build
     runuser -u build -- sh -c 'echo "\$chroot_mode = \"unshare\";1;" > ~/.sbuildrc'
