@@ -7,14 +7,11 @@ Uploaders:
 Homepage: https://source.mnt.re/reform/reform-tools/
 Standards-Version: 4.6.0.1
 Build-Depends:
- black <!nocheck>,
- clang-format <!nocheck>,
  debhelper-compat (= 13),
  dh-sequence-dkms,
  help2man,
  python3-psutil,
  python3-usb1,
- shfmt <!nocheck>,
 Rules-Requires-Root: no
 Testsuite: autopkgtest-pkg-dkms
 

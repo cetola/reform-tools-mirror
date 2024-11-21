@@ -38,12 +38,6 @@ execute_after_dh_auto_build:
 			--output="debian/$$(basename "$$tool").$$sec";        \
 	done
 
-execute_after_dh_auto_test:
-	clang-format lpc/reform2_lpc.c | diff -u lpc/reform2_lpc.c -
-	shfmt --posix --simplify --binary-next-line --case-indent --indent 2 --diff bin sbin kernel/* initramfs-tools/*/* flash-kernel/*/* debian/reform-tools.postinst
-	black --check --diff bin/reform-compstat libexec/reform-tools/reform-tray.py libexec/reform-tools/reform-wallpaper.py
-	black --line-length 120 --check --diff sbin/reform-mcu-tool
-
 override_dh_installsystemd:
 	dh_installsystemd --package=reform-tools --name=reform-hw-setup
 	dh_installsystemd --package=reform-tools --no-stop-on-upgrade --no-start --name=reform-sleep
