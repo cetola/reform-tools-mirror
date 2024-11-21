@@ -9,8 +9,10 @@ set -e
 
 self="$0"
 version="$1"
+# shellcheck disable=SC2034
 image_path="$2"
 
+# shellcheck disable=SC2086
 set -- $DEB_MAINT_PARAMS
 
 # strip single quotes from beginning and end
@@ -21,6 +23,7 @@ set -u
 
 install_dtbs() {
   for CONF in /usr/share/reform-tools/machines/*.conf; do
+    # shellcheck disable=SC1090
     . "$CONF"
     if [ ! -d "/usr/lib/linux-image-$version" ]; then
       echo "W: /usr/lib/linux-image-$version does not exist -- skipping..." >&2
@@ -44,6 +47,7 @@ install_dtbs() {
 
 remove_dtbs() {
   for CONF in /usr/share/reform-tools/machines/*.conf; do
+    # shellcheck disable=SC1090
     . "$CONF"
     rm -f "/boot/dtbs/$version/$DTBPATH" || :
   done

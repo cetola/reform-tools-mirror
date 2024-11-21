@@ -111,3 +111,4 @@ lint:
 		bin sbin kernel/* initramfs-tools/*/* flash-kernel/*/*
 	black --check --diff bin/reform-compstat libexec/reform-tools/reform-tray.py libexec/reform-tools/reform-wallpaper.py
 	black --line-length 120 --check --diff sbin/reform-mcu-tool
+	shellcheck bin/* sbin/* kernel/* initramfs-tools/*/* flash-kernel/*/*

@@ -7,6 +7,9 @@
 # Installation
 #
 # Install `python3-usb1` as a pre-requisite. No other dependencies should be necessary.
+#
+# Do not run shellcheck on this file
+# shellcheck disable=SC1071
 
 _DOC = """
 Tool to interact with Microcontrollers used by MNT Research in Reform projects.

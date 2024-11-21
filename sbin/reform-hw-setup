@@ -47,6 +47,7 @@ init_a311d() {
 }
 
 init_rk3588() {
+  # shellcheck disable=SC2043
   for m in dwmac_rk; do
     grep --quiet "^$m " /proc/modules || continue
     rmmod "$m"
