@@ -39,6 +39,7 @@ ICON_SPACING = 10
 MARGIN_ROUNDED_WINDOW = 20
 PADDING_ROUNDED_WINDOW = 20
 PADDING_MENU_BUTTON = 10
+SPACE_FOR_SUBMENUS = MARGIN_ROUNDED_WINDOW + PADDING_ROUNDED_WINDOW + 2 * PADDING_MENU_BUTTON
 CSS = '''
 .rounded-window {
     border-radius: 20px;
@@ -118,7 +119,7 @@ class Tray(Gtk.Application):
         Gtk4LayerShell.set_layer(self.gtk_window, Gtk4LayerShell.Layer.TOP)
         Gtk4LayerShell.auto_exclusive_zone_enable(self.gtk_window)
         Gtk4LayerShell.set_keyboard_mode(self.gtk_window, Gtk4LayerShell.KeyboardMode.ON_DEMAND)
-        Gtk4LayerShell.set_margin(self.gtk_window, Gtk4LayerShell.Edge.RIGHT, MARGIN_ROUNDED_WINDOW + PADDING_ROUNDED_WINDOW + 2 * PADDING_MENU_BUTTON)
+        Gtk4LayerShell.set_margin(self.gtk_window, Gtk4LayerShell.Edge.RIGHT, SPACE_FOR_SUBMENUS)
         anchors = (False, True, True, False)
         for i in range(Gtk4LayerShell.Edge.ENTRY_NUMBER):
             Gtk4LayerShell.set_anchor(self.gtk_window, i, anchors[i])
