@@ -114,53 +114,34 @@ class Tray(Gtk.Application):
 
     def on_activate(self, _):
         self.gtk_window = Gtk.Window()
-
         Gtk4LayerShell.init_for_window(self.gtk_window)
-
         Gtk4LayerShell.set_layer(self.gtk_window, Gtk4LayerShell.Layer.TOP)
         Gtk4LayerShell.auto_exclusive_zone_enable(self.gtk_window)
-
         Gtk4LayerShell.set_keyboard_mode(self.gtk_window, Gtk4LayerShell.KeyboardMode.ON_DEMAND)
-
         Gtk4LayerShell.set_margin(self.gtk_window, Gtk4LayerShell.Edge.RIGHT, MARGIN_ROUNDED_WINDOW + PADDING_ROUNDED_WINDOW + 2 * PADDING_MENU_BUTTON)
         anchors = (False, True, True, False)
         for i in range(Gtk4LayerShell.Edge.ENTRY_NUMBER):
             Gtk4LayerShell.set_anchor(self.gtk_window, i, anchors[i])
-
         box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         self.gtk_window.props.child = box
 
-        # brightness controller
-        vbox1 = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-        scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
-        scale.set_inverted(True)
-        scale.set_size_request(SLIDER_WIDTH, -1)
-        scale.connect('value-changed', self.on_brightness_change)
-        icon1 = Gtk.Image.new_from_icon_name('display-brightness-symbolic')
-        icon2 = Gtk.Image.new_from_icon_name('display-brightness-symbolic')
-        vbox1.append(icon1)
-        vbox1.append(scale)
-        vbox1.append(icon2)
-        brite = get_brightness_percent()
-        scale.set_value(brite)
-        box.append(vbox1)
+        # sliders
+        def make_slider(getter, on_change, icon1_name, icon2_name):
+            vbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+            scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
+            scale.set_size_request(SLIDER_WIDTH, -1)
+            scale.connect('value-changed', on_change)
+            vbox.append(Gtk.Image.new_from_icon_name(icon1_name))
+            vbox.append(scale)
+            vbox.append(Gtk.Image.new_from_icon_name(icon2_name))
+            val = getter()
+            scale.set_value(val)
+            box.append(vbox)
 
-        # volume controller
-        vbox2 = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-        scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
-        scale.set_inverted(True)
-        scale.set_size_request(SLIDER_WIDTH, -1)
-        scale.connect('value-changed', self.on_volume_change)
-        icon1 = Gtk.Image.new_from_icon_name('audio-volume-medium-symbolic')
-        icon2 = Gtk.Image.new_from_icon_name('audio-volume-medium-symbolic')
-        vbox2.append(icon1)
-        vbox2.append(scale)
-        vbox2.append(icon2)
-        vol = get_volume_percent()
-        scale.set_value(vol)
-        box.append(vbox2)
-
-        # only apply slider changes at interval
+        make_slider(get_brightness_percent, self.on_brightness_change,
+                    'weather-clear-night-symbolic', 'display-brightness-symbolic')
+        make_slider(get_volume_percent, self.on_volume_change,
+                   'audio-volume-muted-symbolic', 'audio-volume-high-symbolic')
         self.new_brightness = self.new_volume = None
         GLib.timeout_add(SLIDER_CHANGE_INTERVAL_MS, self.apply_last_settings)
 
