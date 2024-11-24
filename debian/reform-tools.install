@@ -1,5 +1,6 @@
 usr/bin
 usr/lib/NetworkManager
+usr/lib/dracut/dracut.conf.d
 usr/lib/modprobe.d
 usr/lib/systemd
 usr/lib/udev
