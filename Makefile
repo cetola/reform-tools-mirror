@@ -99,6 +99,8 @@ install:
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/systemd/sleep.conf.d systemd/reform-sleep.conf
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/u-boot-menu/conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/u-boot-menu/conf.d u-boot-menu/reform.conf
+	$(INSTALL)     -d $(DESTDIR)$(libdir)/dracut/dracut.conf.d
+	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/dracut/dracut.conf.d dracut/20-pocket-reform.conf
 
 .PHONY: clean
 clean:
