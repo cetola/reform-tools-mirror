@@ -6,6 +6,7 @@
 #include <linux/delay.h>
 #include <linux/power_supply.h>
 #include <linux/of.h>
+#include <linux/backlight.h>
 
 /* abs_diff was only added to math.h in linux 6.6 */
 #ifndef abs_diff
@@ -47,6 +48,7 @@ typedef struct lpc_driver_data {
 	int last_batt_cap;
 	int last_batt_vol;
 	int last_batt_cur;
+	struct backlight_device *backlight;
 } lpc_driver_data;
 
 static DEVICE_ATTR(status, 0444, show_status, NULL);
@@ -85,6 +87,40 @@ static struct power_supply_desc bat_desc = {
 static struct power_supply_config psy_cfg = {};
 
 static struct device *poweroff_device;
+
+static int bl_get_brightness(struct backlight_device *bl)
+{
+	u16 brightness = bl->props.brightness;
+	return brightness & 0x7f;
+}
+
+static int bl_update_status(struct backlight_device *bl)
+{
+	struct lpc_driver_data *data = (struct lpc_driver_data *)bl_get_data(bl);
+	uint8_t buffer[8];
+	lpc_command(&data->spi->dev, 'b', bl->props.brightness, buffer);
+	return 0;
+}
+
+static const struct backlight_ops lpc_bl_ops = {
+	.update_status = bl_update_status,
+	.get_brightness = bl_get_brightness,
+};
+
+static struct backlight_device * lpc_create_backlight(struct device *dev, void *data)
+{
+	struct backlight_properties props;
+
+	memset(&props, 0, sizeof(props));
+	props.type = BACKLIGHT_RAW;
+	props.brightness = 100;
+	props.max_brightness = 100;
+
+	return devm_backlight_device_register(dev, "mnt_pocket_reform_backlight", dev,
+		data, &lpc_bl_ops, &props);
+}
+
+int (*__mnt_pocket_reform_get_panel_version)(void);
 
 static int lpc_probe(struct spi_device *spi)
 {
@@ -146,6 +182,20 @@ static int lpc_probe(struct spi_device *spi)
 	// this overwrites something else that has already claimed pm_power_off on reform2 but it'll do for now
 	poweroff_device = &spi->dev;
 	pm_power_off = lpc_power_off;
+
+	/* for MNT Pocket Reform with Display Version 2, the
+	   system controller has to control the backlight
+	   directly via PWM, but it must not do that on
+	   other versions of the display. */
+	__mnt_pocket_reform_get_panel_version = (void*)__symbol_get("mnt_pocket_reform_get_panel_version");
+
+	if (__mnt_pocket_reform_get_panel_version && __mnt_pocket_reform_get_panel_version() == 2) {
+		printk(KERN_INFO "%s: enabling backlight control for MNT Pocket Reform with Display Version 2.\n", __func__);
+		data->backlight = lpc_create_backlight(&spi->dev, data);
+		if (IS_ERR(data->backlight)) {
+			printk(KERN_ERR "%s: lpc_create_backlight failed\n", __func__);
+		}
+	}
 
 	return ret;
 }
