@@ -23,19 +23,19 @@ static int lpc_probe(struct spi_device *spi);
 static void lpc_remove(struct spi_device *spi);
 static void lpc_power_off(void);
 static ssize_t show_status(struct device *dev, struct device_attribute *attr,
-			  char *buf);
+			   char *buf);
 static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
-			 char *buf);
+			  char *buf);
 static ssize_t show_firmware(struct device *dev, struct device_attribute *attr,
-			    char *buf);
+			     char *buf);
 static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
-			    char *buf);
+			     char *buf);
 
 static ssize_t lpc_command(struct device *dev, char command, uint8_t arg1,
-			  uint8_t *response);
+			   uint8_t *response);
 static int get_bat_property(struct power_supply *psy,
-			  enum power_supply_property psp,
-			  union power_supply_propval *val);
+			    enum power_supply_property psp,
+			    union power_supply_propval *val);
 
 #define VOL_JUMP 1000000
 #define CAP_JUMP 1000000
@@ -96,7 +96,8 @@ static int bl_get_brightness(struct backlight_device *bl)
 
 static int bl_update_status(struct backlight_device *bl)
 {
-	struct lpc_driver_data *data = (struct lpc_driver_data *)bl_get_data(bl);
+	struct lpc_driver_data *data =
+		(struct lpc_driver_data *)bl_get_data(bl);
 	uint8_t buffer[8];
 	lpc_command(&data->spi->dev, 'b', bl->props.brightness, buffer);
 	return 0;
@@ -107,7 +108,8 @@ static const struct backlight_ops lpc_bl_ops = {
 	.get_brightness = bl_get_brightness,
 };
 
-static struct backlight_device * lpc_create_backlight(struct device *dev, void *data)
+static struct backlight_device *lpc_create_backlight(struct device *dev,
+						     void *data)
 {
 	struct backlight_properties props;
 
@@ -116,8 +118,9 @@ static struct backlight_device * lpc_create_backlight(struct device *dev, void *
 	props.brightness = 100;
 	props.max_brightness = 100;
 
-	return devm_backlight_device_register(dev, "mnt_pocket_reform_backlight", dev,
-		data, &lpc_bl_ops, &props);
+	return devm_backlight_device_register(dev,
+					      "mnt_pocket_reform_backlight",
+					      dev, data, &lpc_bl_ops, &props);
 }
 
 int (*__mnt_pocket_reform_get_panel_version)(void);
@@ -187,13 +190,18 @@ static int lpc_probe(struct spi_device *spi)
 	   system controller has to control the backlight
 	   directly via PWM, but it must not do that on
 	   other versions of the display. */
-	__mnt_pocket_reform_get_panel_version = (void*)__symbol_get("mnt_pocket_reform_get_panel_version");
+	__mnt_pocket_reform_get_panel_version =
+		(void *)__symbol_get("mnt_pocket_reform_get_panel_version");
 
-	if (__mnt_pocket_reform_get_panel_version && __mnt_pocket_reform_get_panel_version() == 2) {
-		printk(KERN_INFO "%s: enabling backlight control for MNT Pocket Reform with Display Version 2.\n", __func__);
+	if (__mnt_pocket_reform_get_panel_version &&
+	    __mnt_pocket_reform_get_panel_version() == 2) {
+		printk(KERN_INFO
+		       "%s: enabling backlight control for MNT Pocket Reform with Display Version 2.\n",
+		       __func__);
 		data->backlight = lpc_create_backlight(&spi->dev, data);
 		if (IS_ERR(data->backlight)) {
-			printk(KERN_ERR "%s: lpc_create_backlight failed\n", __func__);
+			printk(KERN_ERR "%s: lpc_create_backlight failed\n",
+			       __func__);
 		}
 	}
 
@@ -222,7 +230,7 @@ static void lpc_remove(struct spi_device *spi)
 }
 
 static ssize_t show_status(struct device *dev, struct device_attribute *attr,
-			  char *buf)
+			   char *buf)
 {
 	uint8_t buffer[8];
 	int16_t voltage;
@@ -247,7 +255,7 @@ static ssize_t show_status(struct device *dev, struct device_attribute *attr,
 }
 
 static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
-			 char *buf)
+			  char *buf)
 {
 	uint8_t buffer[8];
 	uint16_t cells[8];
@@ -289,7 +297,7 @@ static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
 }
 
 static ssize_t show_firmware(struct device *dev, struct device_attribute *attr,
-			    char *buf)
+			     char *buf)
 {
 	uint8_t str1[9];
 	uint8_t str2[9];
@@ -319,7 +327,7 @@ static ssize_t show_firmware(struct device *dev, struct device_attribute *attr,
 }
 
 static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
-			    char *buf)
+			     char *buf)
 {
 	uint8_t buffer[8];
 	int ret = 0;
@@ -338,7 +346,7 @@ static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 }
 
 static ssize_t lpc_command(struct device *dev, char command, uint8_t arg1,
-			  uint8_t *responseBuffer)
+			   uint8_t *responseBuffer)
 {
 	struct lpc_driver_data *data =
 		(struct lpc_driver_data *)dev_get_drvdata(dev);
@@ -372,8 +380,8 @@ static void lpc_power_off(void)
 }
 
 static int get_bat_property(struct power_supply *psy,
-			  enum power_supply_property psp,
-			  union power_supply_propval *val)
+			    enum power_supply_property psp,
+			    union power_supply_propval *val)
 {
 	int ret = 0;
 	uint8_t buffer[8];
