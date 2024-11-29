@@ -18,21 +18,21 @@
 	})
 #endif
 
-static int lpcProbe(struct spi_device *spi);
-static void lpcRemove(struct spi_device *spi);
-static void lpcPowerOff(void);
-static ssize_t showStatus(struct device *dev, struct device_attribute *attr,
+static int lpc_probe(struct spi_device *spi);
+static void lpc_remove(struct spi_device *spi);
+static void lpc_power_off(void);
+static ssize_t show_status(struct device *dev, struct device_attribute *attr,
 			  char *buf);
-static ssize_t showCells(struct device *dev, struct device_attribute *attr,
+static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
 			 char *buf);
-static ssize_t showFirmware(struct device *dev, struct device_attribute *attr,
+static ssize_t show_firmware(struct device *dev, struct device_attribute *attr,
 			    char *buf);
-static ssize_t showCapacity(struct device *dev, struct device_attribute *attr,
+static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 			    char *buf);
 
-static ssize_t lpcCommand(struct device *dev, char command, uint8_t arg1,
+static ssize_t lpc_command(struct device *dev, char command, uint8_t arg1,
 			  uint8_t *response);
-static int getBatProperty(struct power_supply *psy,
+static int get_bat_property(struct power_supply *psy,
 			  enum power_supply_property psp,
 			  union power_supply_propval *val);
 
@@ -49,10 +49,10 @@ typedef struct lpc_driver_data {
 	int last_batt_cur;
 } lpc_driver_data;
 
-static DEVICE_ATTR(status, 0444, showStatus, NULL);
-static DEVICE_ATTR(cells, 0444, showCells, NULL);
-static DEVICE_ATTR(firmware, 0444, showFirmware, NULL);
-static DEVICE_ATTR(capacity, 0444, showCapacity, NULL);
+static DEVICE_ATTR(status, 0444, show_status, NULL);
+static DEVICE_ATTR(cells, 0444, show_cells, NULL);
+static DEVICE_ATTR(firmware, 0444, show_firmware, NULL);
+static DEVICE_ATTR(capacity, 0444, show_capacity, NULL);
 
 static struct spi_board_info g_spi_board_info = {
 	.modalias = "reform2_lpc",
@@ -78,7 +78,7 @@ static struct power_supply_desc bat_desc = {
 	.name = "BAT0",
 	.properties = bat_props,
 	.num_properties = ARRAY_SIZE(bat_props),
-	.get_property = getBatProperty,
+	.get_property = get_bat_property,
 	.type = POWER_SUPPLY_TYPE_BATTERY,
 };
 
@@ -86,7 +86,7 @@ static struct power_supply_config psy_cfg = {};
 
 static struct device *poweroff_device;
 
-static int lpcProbe(struct spi_device *spi)
+static int lpc_probe(struct spi_device *spi)
 {
 	struct lpc_driver_data *data;
 	int ret;
@@ -145,12 +145,12 @@ static int lpcProbe(struct spi_device *spi)
 
 	// this overwrites something else that has already claimed pm_power_off on reform2 but it'll do for now
 	poweroff_device = &spi->dev;
-	pm_power_off = lpcPowerOff;
+	pm_power_off = lpc_power_off;
 
 	return ret;
 }
 
-static void lpcRemove(struct spi_device *spi)
+static void lpc_remove(struct spi_device *spi)
 {
 	struct lpc_driver_data *data =
 		(struct lpc_driver_data *)spi_get_drvdata(spi);
@@ -164,14 +164,14 @@ static void lpcRemove(struct spi_device *spi)
 
 	power_supply_unregister(data->bat);
 
-	if (pm_power_off == &lpcPowerOff) {
+	if (pm_power_off == &lpc_power_off) {
 		pm_power_off = NULL;
 	}
 
 	kfree(data);
 }
 
-static ssize_t showStatus(struct device *dev, struct device_attribute *attr,
+static ssize_t show_status(struct device *dev, struct device_attribute *attr,
 			  char *buf)
 {
 	uint8_t buffer[8];
@@ -181,9 +181,9 @@ static ssize_t showStatus(struct device *dev, struct device_attribute *attr,
 	uint8_t status;
 	int ret = 0;
 
-	ret = lpcCommand(dev, 'q', 0, buffer);
+	ret = lpc_command(dev, 'q', 0, buffer);
 	if (ret) {
-		printk(KERN_INFO "%s: lpcCommand failed\n", __func__);
+		printk(KERN_INFO "%s: lpc_command failed\n", __func__);
 	}
 
 	voltage = (int16_t)buffer[0] | ((int16_t)buffer[1] << 8);
@@ -196,7 +196,7 @@ static ssize_t showStatus(struct device *dev, struct device_attribute *attr,
 			percentage, status);
 }
 
-static ssize_t showCells(struct device *dev, struct device_attribute *attr,
+static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
 			 char *buf)
 {
 	uint8_t buffer[8];
@@ -204,18 +204,18 @@ static ssize_t showCells(struct device *dev, struct device_attribute *attr,
 	ssize_t wroteChars = 0;
 	int ret = 0;
 
-	ret = lpcCommand(dev, 'v', 0, buffer);
+	ret = lpc_command(dev, 'v', 0, buffer);
 	if (ret) {
-		printk(KERN_INFO "%s: lpcCommand failed\n", __func__);
+		printk(KERN_INFO "%s: lpc_command failed\n", __func__);
 	}
 
 	for (uint8_t s = 0; s < 4; s++) {
 		cells[s] = buffer[s * 2] | buffer[(s * 2) + 1] << 8;
 	}
 
-	ret = lpcCommand(dev, 'v', 1, buffer);
+	ret = lpc_command(dev, 'v', 1, buffer);
 	if (ret) {
-		printk(KERN_INFO "%s: lpcCommand failed\n", __func__);
+		printk(KERN_INFO "%s: lpc_command failed\n", __func__);
 	}
 
 	for (uint8_t s = 0; s < 4; s++) {
@@ -238,7 +238,7 @@ static ssize_t showCells(struct device *dev, struct device_attribute *attr,
 	return wroteChars;
 }
 
-static ssize_t showFirmware(struct device *dev, struct device_attribute *attr,
+static ssize_t show_firmware(struct device *dev, struct device_attribute *attr,
 			    char *buf)
 {
 	uint8_t str1[9];
@@ -246,19 +246,19 @@ static ssize_t showFirmware(struct device *dev, struct device_attribute *attr,
 	uint8_t str3[9];
 	int ret = 0;
 
-	ret = lpcCommand(dev, 'f', 0, str1);
+	ret = lpc_command(dev, 'f', 0, str1);
 	if (ret) {
-		printk(KERN_INFO "%s: lpcCommand failed\n", __func__);
+		printk(KERN_INFO "%s: lpc_command failed\n", __func__);
 	}
 
-	ret = lpcCommand(dev, 'f', 1, str2);
+	ret = lpc_command(dev, 'f', 1, str2);
 	if (ret) {
-		printk(KERN_INFO "%s: lpcCommand failed\n", __func__);
+		printk(KERN_INFO "%s: lpc_command failed\n", __func__);
 	}
 
-	ret = lpcCommand(dev, 'f', 2, str3);
+	ret = lpc_command(dev, 'f', 2, str3);
 	if (ret) {
-		printk(KERN_INFO "%s: lpcCommand failed\n", __func__);
+		printk(KERN_INFO "%s: lpc_command failed\n", __func__);
 	}
 
 	str1[8] = '\0';
@@ -268,15 +268,15 @@ static ssize_t showFirmware(struct device *dev, struct device_attribute *attr,
 	return snprintf(buf, PAGE_SIZE, "%s %s %s", str1, str2, str3);
 }
 
-static ssize_t showCapacity(struct device *dev, struct device_attribute *attr,
+static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 			    char *buf)
 {
 	uint8_t buffer[8];
 	int ret = 0;
 	uint16_t cap_accu_mah, cap_min_mah, cap_max_mah;
-	ret = lpcCommand(dev, 'c', 0, buffer);
+	ret = lpc_command(dev, 'c', 0, buffer);
 	if (ret) {
-		printk(KERN_INFO "%s: lpcCommand failed\n", __func__);
+		printk(KERN_INFO "%s: lpc_command failed\n", __func__);
 	}
 
 	cap_accu_mah = buffer[0] | (buffer[1] << 8);
@@ -287,7 +287,7 @@ static ssize_t showCapacity(struct device *dev, struct device_attribute *attr,
 			cap_max_mah);
 }
 
-static ssize_t lpcCommand(struct device *dev, char command, uint8_t arg1,
+static ssize_t lpc_command(struct device *dev, char command, uint8_t arg1,
 			  uint8_t *responseBuffer)
 {
 	struct lpc_driver_data *data =
@@ -313,15 +313,15 @@ static ssize_t lpcCommand(struct device *dev, char command, uint8_t arg1,
 	return ret;
 }
 
-static void lpcPowerOff(void)
+static void lpc_power_off(void)
 {
 	int ret = 0;
 	uint8_t buffer[8];
 
-	ret = lpcCommand(poweroff_device, 'p', 1, buffer);
+	ret = lpc_command(poweroff_device, 'p', 1, buffer);
 }
 
-static int getBatProperty(struct power_supply *psy,
+static int get_bat_property(struct power_supply *psy,
 			  enum power_supply_property psp,
 			  union power_supply_propval *val)
 {
@@ -337,9 +337,9 @@ static int getBatProperty(struct power_supply *psy,
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
 		val->intval = POWER_SUPPLY_STATUS_UNKNOWN;
-		ret = lpcCommand(dev, 'q', 0, buffer);
+		ret = lpc_command(dev, 'q', 0, buffer);
 		if (ret) {
-			printk(KERN_INFO "%s: lpcCommand failed\n", __func__);
+			printk(KERN_INFO "%s: lpc_command failed\n", __func__);
 		}
 		amp = (int16_t)buffer[2] | ((int16_t)buffer[3] << 8);
 		if (amp < 0) {
@@ -360,9 +360,9 @@ static int getBatProperty(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-		ret = lpcCommand(dev, 'q', 0, buffer);
+		ret = lpc_command(dev, 'q', 0, buffer);
 		if (ret) {
-			printk(KERN_INFO "%s: lpcCommand failed\n", __func__);
+			printk(KERN_INFO "%s: lpc_command failed\n", __func__);
 			ret = -EINVAL;
 		}
 		val->intval = (buffer[0] | buffer[1] << 8) * 1000;
@@ -381,9 +381,9 @@ static int getBatProperty(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
-		ret = lpcCommand(dev, 'q', 0, buffer);
+		ret = lpc_command(dev, 'q', 0, buffer);
 		if (ret) {
-			printk(KERN_INFO "%s: lpcCommand failed\n", __func__);
+			printk(KERN_INFO "%s: lpc_command failed\n", __func__);
 			ret = -EINVAL;
 		}
 		amp = (int16_t)buffer[2] | ((int16_t)buffer[3] << 8);
@@ -408,9 +408,9 @@ static int getBatProperty(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CAPACITY:
-		ret = lpcCommand(dev, 'q', 0, buffer);
+		ret = lpc_command(dev, 'q', 0, buffer);
 		if (ret) {
-			printk(KERN_INFO "%s: lpcCommand failed\n", __func__);
+			printk(KERN_INFO "%s: lpc_command failed\n", __func__);
 			ret = -EINVAL;
 		}
 		val->intval = buffer[4];
@@ -418,18 +418,18 @@ static int getBatProperty(struct power_supply *psy,
 
 	case POWER_SUPPLY_PROP_CHARGE_FULL:
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
-		ret = lpcCommand(dev, 'c', 0, buffer);
+		ret = lpc_command(dev, 'c', 0, buffer);
 		if (ret) {
-			printk(KERN_INFO "%s: lpcCommand failed\n", __func__);
+			printk(KERN_INFO "%s: lpc_command failed\n", __func__);
 			ret = -EINVAL;
 		}
 		val->intval = (buffer[4] | buffer[5] << 8) * 1000;
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
-		ret = lpcCommand(dev, 'c', 0, buffer);
+		ret = lpc_command(dev, 'c', 0, buffer);
 		if (ret) {
-			printk(KERN_INFO "%s: lpcCommand failed\n", __func__);
+			printk(KERN_INFO "%s: lpc_command failed\n", __func__);
 			ret = -EINVAL;
 		}
 		val->intval = (buffer[0] | buffer[1] << 8) * 1000;
@@ -448,9 +448,9 @@ static int getBatProperty(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_EMPTY:
-		ret = lpcCommand(dev, 'c', 0, buffer);
+		ret = lpc_command(dev, 'c', 0, buffer);
 		if (ret) {
-			printk(KERN_INFO "%s: lpcCommand failed\n", __func__);
+			printk(KERN_INFO "%s: lpc_command failed\n", __func__);
 			ret = -EINVAL;
 		}
 		val->intval = (buffer[2] | buffer[3] << 8) * 1000;
@@ -477,8 +477,8 @@ static struct spi_device_id g_spi_dev_id_list[] = {
 MODULE_DEVICE_TABLE(spi, g_spi_dev_id_list);
 
 static struct spi_driver g_spi_driver = {
-    .probe = lpcProbe,
-    .remove = lpcRemove,
+    .probe = lpc_probe,
+    .remove = lpc_remove,
     .driver = {
         .of_match_table = of_match_ptr(of_tis_spi_match),
         .owner = THIS_MODULE,
