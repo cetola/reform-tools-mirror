@@ -1,8 +1,30 @@
-reform-tools (1.64) UNRELEASED; urgency=medium
+reform-tools (1.64) reform; urgency=medium
 
-  * 
+  [ Johannes Schauer Marin Rodrigues ]
+  * add Makefile
+  * add CHANGELOG.md
+  * sbin/reform-flash-uboot: do not download anything if flash.bin is
+    up-to-date
+  * debian/reform-tools.install: install usr/lib/dracut/dracut.conf.d
+  * bin/reform-check:
+     - synchronize with reform-system-image:mkimage.sh
+     - warn about reform-qcacld2 on bookworm
+     - improve modprobe.d/reform.conf wording
+  * bin/reform-compstat: use read_time instead of read_bytes to determine disk
+    activity percent
+  * make everything shellcheck-clean
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Thu, 21 Nov 2024 10:57:46 +0100
+  [ Chris Hofstaedtler ]
+  * reform-flash-uboot: require using shorthands
+
+  [ Joe Albanese ]
+  * add dracut/20-pocket-reform.conf
+
+  [ Lukas F. Hartmann ]
+  * reform2_lpc: add backlight support for pocket reform display v2
+  * reform2_lpc: convert camelCase to conform to kernel coding style
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Fri, 06 Dec 2024 23:19:12 +0100
 
 reform-tools (1.63) reform; urgency=medium
 
