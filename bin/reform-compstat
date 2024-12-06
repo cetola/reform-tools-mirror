@@ -9,8 +9,10 @@ import time, psutil, sys, getopt
 
 
 def draw_bar(val, maxval):
+    if val < 0:
+        return "    "
     bars = ["    ", "▁", "▁", "▂", "▂", "▃", "▄", "▅", "▆", "▆", "▇", "█"]
-    return bars[int((len(bars) - 1) * min(val / maxval, 1))]
+    return bars[int((len(bars) - 1) * min(max(0, val / maxval), 1))]
 
 
 def draw_chart(lst, maxval):
@@ -87,10 +89,16 @@ def main(argv):
         else:
             history_insert(cpu_history, cpu_usage, depth)
         history_insert(
-            read_history, disk_activity.read_bytes - ldisk_activity.read_bytes, depth
+            read_history,
+            max(0, disk_activity.read_time - ldisk_activity.read_time)
+            / (interval * 1000),
+            depth,
         )
         history_insert(
-            write_history, disk_activity.write_bytes - ldisk_activity.write_bytes, depth
+            write_history,
+            max(0, disk_activity.write_time - ldisk_activity.write_time)
+            / (interval * 1000),
+            depth,
         )
 
         print(
@@ -106,9 +114,9 @@ def main(argv):
                 else draw_chart(cpu_history, 98.0)
             )
             + " R/W "
-            + draw_chart(read_history, 1.0 * 1024 * 1024)
+            + draw_chart(read_history, 0.98)
             + " "
-            + draw_chart(write_history, 1.0 * 1024 * 1024),
+            + draw_chart(write_history, 0.98),
             flush=True,
         )
 
