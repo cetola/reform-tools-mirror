@@ -367,12 +367,18 @@ case "$MIRROR" in mntre.com)
     echo "E: add the following line to your /etc/apt/sources.list to fix this" >&2
     echo "deb [arch=arm64 trusted=yes] https://mntre.com/reform-debian-repo reform main" >&2
   fi
+  case "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://reform.debian.net/debian/' --format '$(RELEASE)')" in
+    bookworm*) echo "E: you have the reform.debian.net repository enabled while also using the mntre.com mirror. Consider choosing one or the other but not both." >&2 ;;
+  esac
   ;;
 reform.debian.net)
   case "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://reform.debian.net/debian/' --format '$(RELEASE)')" in
     bookworm*) : ;;
     *) echo "E: the reform.debian.net repository is not known to apt" >&2 ;;
   esac
+  if [ "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://mntre.com/reform-debian-repo/' --format '$(RELEASE)')" = reform ]; then
+    echo "E: you have the mntre.com repository enabled while also using the reform.debian.net mirror. Consider choosing one or the other but not both." >&2
+  fi
   ;;
 *)
   echo "invalid mirror: $MIRROR" >&2
@@ -454,6 +460,13 @@ done
 
 if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-$(uname -r)" 2>/dev/null | grep -q '^installed$'; then
   echo "E: the currently running kernel is not installed as a package" >&2
+fi
+
+if [ "$MIRROR" = "reform.debian.net" ]; then
+  if dpkg-query --showformat '${db:Status-Status}\n' --show "reform-qcacld2" 2>/dev/null | grep -q '^installed$'; then
+    echo "E: Having reform-qcacld2 on a system configured to use packages for Debian stable from reform.debian.net will attempt installing the kernel package from the MNT repositories in the kernel postinstallation hook" >&2
+    echo "W: Consider replacing reform-qcacld2 with ezurio-qcacld-2.0-dkms for Debian stable and stable-backports kernels from reform.debian.net" >&2
+  fi
 fi
 
 if [ ! -e /boot/boot.scr ]; then
