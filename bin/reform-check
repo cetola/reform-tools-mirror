@@ -495,8 +495,9 @@ fi
 
 if [ -e "/etc/modprobe.d/reform.conf" ]; then
   if cmp --quiet "/usr/lib/modprobe.d/reform.conf" "/etc/modprobe.d/reform.conf"; then
-    echo "W: /etc/modprobe.d/reform.conf is identical to /usr/lib/modprobe.d/reform.conf" >&2
-    echo "W: and the latter succeeds the former. Consider deleting the former in favour of the latter." >&2
+    echo "W: Your /etc/modprobe.d/reform.conf is identical to /usr/lib/modprobe.d/reform.conf" >&2
+    echo "W: The reform.conf in /etc overrides the file in /usr which is shipped by the reform-tools package." >&2
+    echo "W: You can thus safely delete your /etc/modprobe.d/reform.conf in favour of the copy shipped by reform-tools in /usr." >&2
   else
     echo "W: your custom /etc/modprobe.d/reform.conf overrides /usr/lib/modprobe.d/reform.conf" >&2
   fi
