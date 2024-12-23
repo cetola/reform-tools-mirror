@@ -8,20 +8,28 @@ usage() {
   echo "reform-boot-config to set up the initramfs in /boot to load the" >&2
   echo "rootfs from the encrypted SSD." >&2
   echo >&2
-  echo "Usage: $0 [--help]" >&2
+  echo "Usage: $0 [--img IMG_FILE] [--help]" >&2
   echo >&2
   echo "Options:" >&2
+  echo "  --img IMG_FILE   Treat IMG_FILE as SSD." >&2
   echo "  --help           Display this help and exit." >&2
 }
 
-if [ "$#" -gt 0 ]; then
-  if [ "$1" != "--help" ]; then
-    echo "E: too many arguments" >&2
+IMG_FILE=
+if [ "$#" -eq 1 ] && [ "$1" = "--help" ]; then
+  usage
+  exit 0
+elif [ "$#" -eq 2 ] && [ "$1" = "--img" ]; then
+  if ! [ -f "$2" ]; then
+    echo "E: not a regular file: $2" >&2
     usage
     exit 1
   fi
+  IMG_FILE="$2"
+elif [ "$#" -ne 0 ]; then
+  echo "E: invalid arguments or argument combination: $@" >&2
   usage
-  exit 0
+  exit 1
 fi
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -42,14 +50,29 @@ command -v "mkfs.ext4" >/dev/null 2>&1 || {
   exit 1
 }
 
-# shellcheck source=/dev/null
-if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
-  . "./machines/$(cat /proc/device-tree/model).conf"
-elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf" ]; then
-  . "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
+DEV_LOOP=
+cleanuploop() {
+  if [ ! -z "$DEV_LOOP" ]; then
+    losetup -d "$DEV_LOOP"
+  fi
+}
+trap cleanuploop EXIT INT TERM
+
+if [ -z "$IMG_FILE" ]; then
+  # shellcheck source=/dev/null
+  if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
+    . "./machines/$(cat /proc/device-tree/model).conf"
+  elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf" ]; then
+    . "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
+  else
+    echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
+    exit 1
+  fi
 else
-  echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
-  exit 1
+  DEV_LOOP=$(losetup -f)
+  DEV_SSD=$(basename "$DEV_LOOP")
+  EMMC_USE=
+  losetup "$DEV_LOOP" "$IMG_FILE"
 fi
 
 if [ "$DEV_SSD" = "sda" ]; then
@@ -74,7 +97,7 @@ cleanupvg() { vgchange -an reformvg; }
 cleanupluks() { cryptsetup luksClose reform_crypt; }
 error() { echo "$0 FAILED to run" >&2; }
 
-trap error EXIT INT TERM
+trap "cleanuploop; error" EXIT INT TERM
 
 if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$DEV_SSD")" ]; then
   echo "/dev/$DEV_SSD is still in use" >&2
@@ -115,11 +138,11 @@ if [ "$mem" -le 1 ]; then
 fi
 
 cryptsetup luksFormat "/dev/$DEV_SSD"
-trap "cleanupluks; error" EXIT INT TERM
+trap "cleanupluks; cleanuploop; error" EXIT INT TERM
 cryptsetup luksOpen "/dev/$DEV_SSD" reform_crypt
 pvcreate /dev/mapper/reform_crypt
 vgcreate reformvg /dev/mapper/reform_crypt
-trap "cleanupvg; cleanupluks; error" EXIT INT TERM
+trap "cleanupvg; cleanupluks; cleanuploop; error" EXIT INT TERM
 lvcreate --name swap --size "${mem}G" reformvg
 mkswap /dev/reformvg/swap
 lvcreate --name root --extents 100%FREE reformvg
@@ -147,13 +170,13 @@ else
   # instead because we want to write out some files after the rsync but
   # before running reform-boot-config
   ROOTMNT="$(mktemp --tmpdir --directory reform-setup-encrypted-nvme.XXXXXXXXXX)"
-  trap 'umount $ROOTMNT; cleanupvg; cleanupluks; error' EXIT INT TERM
+  trap 'umount $ROOTMNT; cleanupvg; cleanupluks; cleanuploop; error' EXIT INT TERM
   mount /dev/reformvg/root "$ROOTMNT"
   rsync -axHAWXS --numeric-ids --info=progress2 / "$ROOTMNT"
   echo "RESUME=UUID=$SWAPUUID" >"$ROOTMNT/etc/initramfs-tools/conf.d/resume"
   echo "reform_crypt UUID=$CRYPTUUID none luks,discard,x-initrd.attach" >"$ROOTMNT/etc/crypttab"
   echo "UUID=$SWAPUUID none swap sw 0 0" >>"$ROOTMNT/etc/fstab"
-  trap "cleanupvg; cleanupluks; error" EXIT INT TERM
+  trap "cleanupvg; cleanupluks; cleanuploop; error" EXIT INT TERM
   umount "$ROOTMNT"
 
   emmc_flag=
@@ -165,6 +188,7 @@ else
     fi
   fi
   ret=0
+  # DO CHECK                    BOOTPREF/BOOTPART
   reform-boot-config $emmc_flag /dev/reformvg/root || ret=$?
   if [ "$ret" -ne 0 ]; then
     echo "reform-boot-config failed. To re-run it manually, perform the following steps:" >&2
@@ -177,11 +201,14 @@ else
   fi
 fi
 
-trap "cleanupluks; error" EXIT INT TERM
+trap "cleanupluks; cleanuploop; error" EXIT INT TERM
 cleanupvg
 
-trap "error" EXIT INT TERM
+trap "cleanuploop; error" EXIT INT TERM
 cleanupluks
+
+trap "error" EXIT INT TERM
+cleanuploop
 
 trap - EXIT INT TERM
 
