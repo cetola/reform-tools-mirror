@@ -188,7 +188,6 @@ else
     fi
   fi
   ret=0
-  # DO CHECK                    BOOTPREF/BOOTPART
   reform-boot-config $emmc_flag /dev/reformvg/root || ret=$?
   if [ "$ret" -ne 0 ]; then
     echo "reform-boot-config failed. To re-run it manually, perform the following steps:" >&2
