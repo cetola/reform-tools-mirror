@@ -27,7 +27,7 @@ elif [ "$#" -eq 2 ] && [ "$1" = "--img" ]; then
   fi
   IMG_FILE="$2"
 elif [ "$#" -ne 0 ]; then
-  echo "E: invalid arguments or argument combination: $@" >&2
+  echo "E: invalid arguments or argument combination" >&2
   usage
   exit 1
 fi
@@ -52,7 +52,7 @@ command -v "mkfs.ext4" >/dev/null 2>&1 || {
 
 DEV_LOOP=
 cleanuploop() {
-  if [ ! -z "$DEV_LOOP" ]; then
+  if [ -n "$DEV_LOOP" ]; then
     losetup -d "$DEV_LOOP"
   fi
 }
