@@ -101,6 +101,8 @@ install:
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/u-boot-menu/conf.d u-boot-menu/reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/dracut/dracut.conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/dracut/dracut.conf.d dracut/20-pocket-reform.conf
+	$(INSTALL)     -d $(DESTDIR)$(libdir)/sddm/sddm.conf.d
+	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/sddm/sddm.conf.d sddm/10-wayland.conf
 
 .PHONY: clean
 clean:
