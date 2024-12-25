@@ -31,6 +31,7 @@ fi
 
 for dev in "$@"; do
   case $dev in
+    --offline) : ;;
     emmc)
       if [ "$EMMC_BOOT" = false ]; then
         echo "E: writing uboot to eMMC not supported on $(cat /proc/device-tree/model)" >&2
