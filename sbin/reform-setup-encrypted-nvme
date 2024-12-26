@@ -135,7 +135,7 @@ if [ "$response" != "y" ]; then
   echo "If you want to migrate this system to $HUMAN SSD you can now run:"
   echo ""
   echo "echo RESUME=UUID=$SWAPUUID > /etc/initramfs-tools/conf.d/resume"
-  echo "echo reform_crypt UUID=$CRYPTUUID none luks,discard > /etc/crypttab"
+  echo "echo reform_crypt UUID=$CRYPTUUID none luks,discard,x-initrd.attach > /etc/crypttab"
   echo "echo UUID=$SWAPUUID none swap sw 0 0 >> /etc/fstab"
   echo "cryptsetup luksOpen /dev/$DEV_SSD reform_crypt"
   echo "vgchange -ay reformvg"
@@ -151,7 +151,7 @@ else
   mount /dev/reformvg/root "$ROOTMNT"
   rsync -axHAWXS --numeric-ids --info=progress2 / "$ROOTMNT"
   echo "RESUME=UUID=$SWAPUUID" >"$ROOTMNT/etc/initramfs-tools/conf.d/resume"
-  echo "reform_crypt UUID=$CRYPTUUID none luks,discard" >"$ROOTMNT/etc/crypttab"
+  echo "reform_crypt UUID=$CRYPTUUID none luks,discard,x-initrd.attach" >"$ROOTMNT/etc/crypttab"
   echo "UUID=$SWAPUUID none swap sw 0 0" >>"$ROOTMNT/etc/fstab"
   trap "cleanupvg; cleanupluks; error" EXIT INT TERM
   umount "$ROOTMNT"
