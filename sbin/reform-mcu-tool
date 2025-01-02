@@ -74,8 +74,8 @@ def device_reset(handle: usb1.USBDeviceHandle, reset_interface: int, reset_reque
         handle.controlWrite(
             usb1.TYPE_CLASS | usb1.RECIPIENT_INTERFACE, reset_request, 0, reset_interface, b"", timeout=2000
         )
-    except usb1.USBErrorIO:
-        pass  # Expected. MCU has reset and vanishes from USB.
+    except (usb1.USBErrorIO, usb1.USBErrorPipe):
+        pass  # Expected. MCU has reset and vanishes from USB. Exact error appears to be timing/fw-dependent.
     else:
         handle.releaseInterface(reset_interface)
 
