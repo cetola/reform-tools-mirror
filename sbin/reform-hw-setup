@@ -137,12 +137,11 @@ case "$(cat /proc/device-tree/model)" in
     # /sys/devices/platform/soc@0/30800000.bus/308?0000.serial/tty/ttymxc?/power/wakeup
     # to
     # /sys/devices/platform/soc@0/30800000.bus/308?0000.serial/308?0000.serial:0/308?0000.serial:0.0/tty/ttymxc?/power/wakeup
-    # use `find` to acquire either path
-    find /sys/devices/platform/soc@0/30800000.bus/308?0000.serial/ -wholename '*/tty/ttymxc?/power/wakeup' \
-      | while read -r f; do
-        [ -e "$f" ] || continue
-        echo enabled >"$f"
-      done
+    for p in 0 1 2; do
+      path="/sys/$(udevadm info --query=property --property=DEVPATH --value "/dev/ttymxc$p")/power/wakeup"
+      [ -e "$path" ] || continue
+      echo enabled >"$path"
+    done
     ;;
   "MNT Reform 2 with BPI-CM4 Module")
     # Workaround for WM8960 sometimes not coming out of reset
