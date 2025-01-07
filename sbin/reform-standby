@@ -41,9 +41,17 @@ esac
 
 setup_wake() {
   # configure UARTs as wakeup sources
-  echo enabled >/sys/devices/platform/soc@0/30800000.bus/30860000.serial/tty/ttymxc0/power/wakeup
-  echo enabled >/sys/devices/platform/soc@0/30800000.bus/30890000.serial/tty/ttymxc1/power/wakeup
-  echo enabled >/sys/devices/platform/soc@0/30800000.bus/30880000.serial/tty/ttymxc2/power/wakeup
+  # This should match paths before and after kernel commit b286f4e87e325b76789f30337c98ba72e00532e2
+  # For ttymxc0, that would be those paths, respectively:
+  # /sys/devices/platform/soc@0/30800000.bus/30860000.serial/tty/ttymxc0/power/wakeup
+  # /sys/devices/platform/soc@0/30800000.bus/30860000.serial/30860000.serial:0/30860000.serial:0.0/tty/ttymxc0/power/wakeup
+  for p in 0 1 2; do
+    path="/sys/$(udevadm info --query=property --property=DEVPATH --value "/dev/ttymxc$p")/power/wakeup"
+    if [ ! -e "$path" ]; then
+      continue
+    fi
+    echo enabled >"$path"
+  done
 }
 
 wifi_off() {
