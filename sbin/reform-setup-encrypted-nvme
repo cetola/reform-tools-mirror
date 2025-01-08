@@ -8,28 +8,25 @@ usage() {
   echo "reform-boot-config to set up the initramfs in /boot to load the" >&2
   echo "rootfs from the encrypted SSD." >&2
   echo >&2
-  echo "Usage: $0 [--img IMG_FILE] [--help]" >&2
+  echo "Usage: $0 [--help] [IMG_FILE]" >&2
   echo >&2
   echo "Options:" >&2
-  echo "  --img IMG_FILE   Treat IMG_FILE as SSD." >&2
   echo "  --help           Display this help and exit." >&2
+  echo >&2
+  echo "Arguments:" >&2
+  echo "  IMG_FILE         Image file to use (set up as loop device) instead of SSD" >&2
 }
 
 IMG_FILE=
-if [ "$#" -eq 1 ] && [ "$1" = "--help" ]; then
+if [ "$#" -ge 1 ] && [ "$1" = "--help" ]; then
   usage
   exit 0
-elif [ "$#" -eq 2 ] && [ "$1" = "--img" ]; then
-  if ! [ -f "$2" ]; then
-    echo "E: not a regular file: $2" >&2
-    usage
-    exit 1
-  fi
-  IMG_FILE="$2"
-elif [ "$#" -ne 0 ]; then
-  echo "E: invalid arguments or argument combination" >&2
+elif [ "$#" -ge 2 ]; then
+  echo "E: invalid number of arguments" >&2
   usage
   exit 1
+elif [ "$#" -eq 1 ]; then
+  IMG_FILE="$1"
 fi
 
 if [ "$(id -u)" -ne 0 ]; then
