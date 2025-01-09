@@ -31,6 +31,7 @@ man/%.$2: $1/%
 		compstat)       echo "system statistics for waybar" ;;        \
 		config)         echo "select keyboard and timezone" ;;        \
 		display-config) echo "select single/dual display" ;;          \
+		emmc-bootstrap) echo "set up /boot on emmc for / on nvme" ;;  \
 		flash-rescue)   echo "flash rescue image to eMMC" ;;          \
 		flash-uboot)    echo "download and flash u-boot" ;;           \
 		handbook)       echo "show Reform Handbook" ;;                \
