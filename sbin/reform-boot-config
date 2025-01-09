@@ -205,6 +205,7 @@ if [ "$MOUNTROOT" != "" ] && [ "$MOUNTROOT" != "/" ]; then
     echo "Please unmount before running this script" >&2
     exit 1
   fi
+  MOUNTROOT=
 fi
 
 # mount the desired root partition somewhere if it isn't mounted yet
