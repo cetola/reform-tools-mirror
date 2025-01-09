@@ -18,6 +18,7 @@ Testsuite: autopkgtest-pkg-dkms
 Package: reform-tools
 Architecture: all
 Depends:
+ jq,
  alsa-utils,
  console-setup,
  debconf,
