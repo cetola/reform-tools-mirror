@@ -39,13 +39,6 @@ case "$(cat /proc/device-tree/model)" in
     ;;
 esac
 
-setup_wake() {
-  # configure UARTs as wakeup sources
-  echo enabled >/sys/devices/platform/soc@0/30800000.bus/30860000.serial/tty/ttymxc0/power/wakeup
-  echo enabled >/sys/devices/platform/soc@0/30800000.bus/30890000.serial/tty/ttymxc1/power/wakeup
-  echo enabled >/sys/devices/platform/soc@0/30800000.bus/30880000.serial/tty/ttymxc2/power/wakeup
-}
-
 wifi_off() {
   echo 1 >/sys/class/pci_bus/0000:01/device/remove
 }
@@ -88,7 +81,6 @@ hid_unbind() {
 
 case $1 in
   suspend)
-    setup_wake
     wifi_off
     hantro_off
     kbd_backlight_off
