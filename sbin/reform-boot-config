@@ -275,6 +275,12 @@ else
     needumount="yes"
   fi
 
+  # sanity check
+  if ! mountpoint "$OLDMOUNTBOOT"; then
+    echo "E: expected $OLDBOOTPART mounted on $OLDMOUNTBOOT but nothing mounted there" >&2
+    exit 1
+  fi
+
   rsync -axHAWXS --numeric-ids --quiet "$OLDMOUNTBOOT/" "$MOUNTROOT/boot"
   if [ "$needumount" = "yes" ]; then
     [ "$1" = "$OLDBOOTPART" ] && shift && umount "$OLDBOOTPART"
