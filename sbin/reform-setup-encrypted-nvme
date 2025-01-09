@@ -8,16 +8,18 @@ usage() {
   echo "reform-boot-config to set up the initramfs in /boot to load the" >&2
   echo "rootfs from the encrypted SSD." >&2
   echo >&2
-  echo "Usage: $0 [--help] [IMG_FILE]" >&2
+  echo "Usage: $0 [--help] [DEVICE_PATH]" >&2
   echo >&2
   echo "Options:" >&2
   echo "  --help           Display this help and exit." >&2
   echo >&2
   echo "Arguments:" >&2
-  echo "  IMG_FILE         Image file to use (set up as loop device) instead of SSD" >&2
+  echo "  [DEVICE_PATH]    If provided, path to SSD device, or a disk" >&2
+  echo "                   image file to loop into this role. If left" >&2
+  echo "                   empty, a model-specific default is used." >&2
 }
 
-IMG_FILE=
+DEVICE_PATH=
 if [ "$#" -ge 1 ] && [ "$1" = "--help" ]; then
   usage
   exit 0
@@ -26,7 +28,7 @@ elif [ "$#" -ge 2 ]; then
   usage
   exit 1
 elif [ "$#" -eq 1 ]; then
-  IMG_FILE="$1"
+  DEVICE_PATH="$1"
 fi
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -55,7 +57,7 @@ cleanuploop() {
 }
 trap cleanuploop EXIT INT TERM
 
-if [ -z "$IMG_FILE" ]; then
+if [ -z "$DEVICE_PATH" ]; then
   # shellcheck source=/dev/null
   if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
     . "./machines/$(cat /proc/device-tree/model).conf"
@@ -66,10 +68,14 @@ if [ -z "$IMG_FILE" ]; then
     exit 1
   fi
 else
-  DEV_LOOP=$(losetup -f)
-  DEV_SSD=$(basename "$DEV_LOOP")
   EMMC_USE=
-  losetup "$DEV_LOOP" "$IMG_FILE"
+  if [ -f "$DEVICE_PATH" ]; then
+    DEV_LOOP=$(losetup -f)
+    DEV_SSD=$(basename "$DEV_LOOP")
+    losetup "$DEV_LOOP" "$DEVICE_PATH"
+  else
+    DEV_SSD="$DEVICE_PATH"
+  fi
 fi
 
 if [ "$DEV_SSD" = "sda" ]; then
