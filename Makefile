@@ -24,23 +24,23 @@ define help2man
 man/%.$2: $1/%
 	set -e;                                                               \
 	mkdir -p man;                                                         \
-	tool2whatis () { case $$$$1 in                                        \
-		reform-boot-config)  echo "choose rootfs to boot from" ;;     \
-		reform-chat)         echo "chat on #mnt-reform" ;;            \
-		reform-check)        echo "check your setup" ;;               \
-		reform-compstat)     echo "system statistics for waybar" ;;   \
-		reform-config)       echo "select keyboard and timezone" ;;   \
-		reform-display-config) echo "select single/dual display" ;;   \
-		reform-flash-rescue) echo "flash rescue image to eMMC" ;;     \
-		reform-flash-uboot)  echo "download and flash u-boot" ;;      \
-		reform-handbook)     echo "show Reform Handbook" ;;           \
-		reform-help)         echo "help with MNT Reform" ;;           \
-		reform-hw-setup)     echo "perform hardware tweaks" ;;        \
-		reform-migrate)      echo "copy rootfs to device" ;;          \
-		reform-mcu-tool)     echo "manage microcontrollers" ;;        \
-		reform-pavucontrol)  echo "kill and restart pavucontrol" ;;   \
-		reform-setup-encrypted-nvme) echo "setup encrypted SSD" ;;    \
-		reform-standby)      echo "suspend/wakeup tweaks" ;;          \
+	tool2whatis () { case $$$${1#reform-} in                              \
+		boot-config)    echo "choose rootfs to boot from" ;;          \
+		chat)           echo "chat on #mnt-reform" ;;                 \
+		check)          echo "check your setup" ;;                    \
+		compstat)       echo "system statistics for waybar" ;;        \
+		config)         echo "select keyboard and timezone" ;;        \
+		display-config) echo "select single/dual display" ;;          \
+		flash-rescue)   echo "flash rescue image to eMMC" ;;          \
+		flash-uboot)    echo "download and flash u-boot" ;;           \
+		handbook)       echo "show Reform Handbook" ;;                \
+		help)           echo "help with MNT Reform" ;;                \
+		hw-setup)       echo "perform hardware tweaks" ;;             \
+		migrate)        echo "copy rootfs to device" ;;               \
+		mcu-tool)       echo "manage microcontrollers" ;;             \
+		pavucontrol)    echo "kill and restart pavucontrol" ;;        \
+		setup-encrypted-nvme) echo "setup encrypted SSD" ;;           \
+		standby)        echo "suspend/wakeup tweaks" ;;               \
 		*) echo "unknown tool: $$$$1" 2>&1; exit 1 ;;                 \
 	esac; };                                                              \
 	whatis="$$$$(tool2whatis "$$*")";                                     \
