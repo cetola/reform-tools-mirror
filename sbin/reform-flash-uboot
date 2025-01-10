@@ -29,9 +29,12 @@ else
   exit 1
 fi
 
+OFFLINE=
+FORCE=
 for dev in "$@"; do
   case $dev in
-    --offline) : ;;
+    --offline) OFFLINE=yes ;;
+    --force) FORCE=yes ;;
     emmc)
       if [ "$EMMC_BOOT" = false ]; then
         echo "E: writing uboot to eMMC not supported on $(cat /proc/device-tree/model)" >&2
@@ -53,7 +56,7 @@ done
 
 usage() {
   echo "Usage: " >&2
-  echo "  reform-flash-uboot [--offline] [device...]" >&2
+  echo "  reform-flash-uboot [--offline] [--force] [device...]" >&2
   echo "" >&2
   if [ "$EMMC_BOOT" != false ] && [ "$SD_BOOT" = true ]; then
     echo "Download and write recent uboot to eMMC or SD-Card." >&2
@@ -79,6 +82,9 @@ usage() {
     echo "   sd (${DEV_SD})" >&2
   fi
   echo "" >&2
+  echo "The --force allows flashing to targets marked as 'warn' without " >&2
+  echo "interactively asking the user." >&2
+  echo "" >&2
 }
 
 if [ "$#" -gt 0 ] && [ "$1" = "--help" ] || [ "$#" -gt 0 ] && [ "$1" = "-h" ]; then
@@ -91,7 +97,7 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 1
 fi
 
-if [ "$#" -eq 0 ] || [ "$1" != "--offline" ]; then
+if [ "$#" -eq 0 ] || [ "$OFFLINE" != "yes" ]; then
   if echo "$UBOOT_SHA1  /boot/flash.bin" | sha1sum --strict --check >/dev/null 2>&1; then
     echo "/boot/flash.bin is up-to-date -- not downloading it again" >&2
   else
@@ -112,7 +118,7 @@ if [ "$#" -eq 0 ] || [ "$1" != "--offline" ]; then
     fi
     ;;
   esac
-elif [ "$#" -gt 0 ] && [ "$1" = "--offline" ]; then
+elif [ "$#" -gt 0 ] && [ "$OFFLINE" = "yes" ]; then
   echo "Not downloading uboot but using /boot/flash.bin without updating it." >&2
   shift
   if ! echo "$UBOOT_SHA1  /boot/flash.bin" | sha1sum --strict --check >/dev/null 2>&1; then
@@ -143,6 +149,7 @@ for dev in "$@"; do
     sd)
       realdev=/dev/${DEV_SD}
       ;;
+    *) continue ;;
   esac
 
   disk_label=$(parted --json --script "$realdev" unit B print 2>/dev/null | jq --raw-output '.disk.label')
@@ -168,7 +175,7 @@ for dev in "$@"; do
   fi
 done
 
-if [ "$EMMC_BOOT" = warn ]; then
+if [ "$EMMC_BOOT" = warn ] && [ "$FORCE" != "yes" ]; then
   for dev in "$@"; do
     if [ "$dev" = "emmc" ]; then
       echo "W: Flashing u-boot to eMMC on $(cat /proc/device-tree/model) is not without risk." >&2
@@ -201,6 +208,7 @@ for dev in "$@"; do
     sd)
       realdev=/dev/${DEV_SD}
       ;;
+    *) continue ;;
   esac
 
   echo "Writing /boot/flash.bin to $dev ($realdev)" >&2
