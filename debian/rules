@@ -13,3 +13,9 @@ override_dh_installsystemd:
 
 override_dh_dkms:
 	dh_dkms -V $(DEB_VERSION_UPSTREAM)
+
+execute_after_dh_install:
+	# workaround until this is in unstable:
+	# https://github.com/fwupd/fwupd/pull/8270
+	mkdir -p debian/reform-tools/usr/lib/systemd/system/fwupd.service.d
+	printf "[Unit]\nWants=modprobe@sd_mod.service\nAfter=modprobe@sd_mod.service" >debian/reform-tools/usr/lib/systemd/system/fwupd.service.d/pull8270.conf
