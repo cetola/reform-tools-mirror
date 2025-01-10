@@ -43,10 +43,13 @@ man/%.$2: $1/%
 		reform-standby)      echo "suspend/wakeup tweaks" ;;          \
 		*) echo "unknown tool: $$$$1" 2>&1; exit 1 ;;                 \
 	esac; };                                                              \
+	whatis="$$$$(tool2whatis "$$*")";                                     \
+	version=$$$$(head -c4 CHANGELOG.md);                                  \
+	case $$$$version in 1.[0-9][0-9]) : ;; *) echo invalid;exit 1;; esac; \
 	env "PATH=./$1:$$$$PATH" help2man                                     \
 		--section=$2                                                  \
-		--name="$$$$(tool2whatis "$$*")"                              \
-		--no-info --version-string=$$$$(head -c4 CHANGELOG.md)        \
+		--name="$$$$whatis"                                           \
+		--no-info --version-string="$$$$version"                      \
 		--no-discard-stderr "$$*"                                     \
 		--output="$$@";                                               \
 
