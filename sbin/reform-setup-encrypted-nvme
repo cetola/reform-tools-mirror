@@ -170,7 +170,7 @@ else
     echo "reform-boot-config failed. To re-run it manually, perform the following steps:" >&2
     echo "    $ cryptsetup luksOpen \"/dev/$DEV_SSD\" reform_crypt" >&2
     echo "    $ vgchange -ay reformvg" >&2
-    echo "    $ reform-boot-config $emmc_flag /dev/reformvg/root >&2"
+    echo "    $ reform-boot-config $emmc_flag /dev/reformvg/root" >&2
     echo "    $ vgchange -an reformvg" >&2
     echo "    $ cryptsetup luksClose reform_crypt" >&2
     exit "$ret"
