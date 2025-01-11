@@ -317,7 +317,12 @@ else
   mount -o bind /dev "$MOUNTROOT/dev"
   mount -t sysfs sys "$MOUNTROOT/sys"
   mount -t proc proc "$MOUNTROOT/proc"
-  chroot "$MOUNTROOT" update-initramfs -u
+  # We do not run update-initramfs with -u as that will attempt to update an
+  # existing initramfs and /boot may already contain an initramfs for a kernel
+  # version that we do not have.
+  # FIXME: this will fail if /boot contains a kernel that is newer than the
+  # latest kernel the system has installed, see #1092765
+  chroot "$MOUNTROOT" update-initramfs -c -k all
   [ "$1" = "$MOUNTROOT/proc" ] && shift && umount "$MOUNTROOT/proc"
   [ "$1" = "$MOUNTROOT/sys" ] && shift && umount "$MOUNTROOT/sys"
   [ "$1" = "$MOUNTROOT/dev" ] && shift && umount "$MOUNTROOT/dev"
