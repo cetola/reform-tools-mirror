@@ -1,8 +1,37 @@
-reform-tools (1.65) UNRELEASED; urgency=medium
+reform-tools (1.65) reform; urgency=medium
 
-  * 
+  [ Johannes Schauer Marin Rodrigues ]
+  * machines/* with BPI-CM4 Module.conf: update u-boot to 2024-12-23
+  * add reform-emmc-bootstrap
+  * sbin/reform-flash-uboot:
+     - restore support for --offline switch
+     - instead of finding the end of the first free space, find the beginning
+       of the first partition
+     - add --force
+  * sbin/reform-boot-config:
+     - reset MOUNTROOT after umounting, so that the right partition gets
+       mounted afterward
+     - make sure that OLDMOUNTBOOT actually is a mount point as a sanity check
+     - run mountpoint with --quiet
+     - do not update, but create the initramfs
+  * sbin/reform-setup-encrypted-nvme: fix incorrectly placed double quote
+  * install usr/lib/sddm/sddm.conf.d/10-wayland.conf to make sddm use wayland
+    by default instead of Xorg
+  * add x-initrd.attach to /etc/crypttab
+  * move 99-reform.rules -> 99-reform-audio.rules
+  * imx8mq: replace writing 'enabled' to /sys path in reform-hw-setup and
+    reform-standby by udev rule
+  * Makefile:
+     - let help2man error out in case of problems
+     - expect all tools to start with reform- prefix
+  * debian/control: simplify free-space check by using parted --json | jq
+  * debian/rules: install systemd dropin for
+    /usr/lib/systemd/system/fwupd.service.
 
- -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Mon, 23 Dec 2024 22:40:22 +0100
+  [ Chris Hofstaedtler ]
+  * reform-mcu-tool: allow USBErrorPipe on reset
+
+ -- Johannes Schauer Marin Rodrigues <josch@debian.org>  Sat, 11 Jan 2025 21:21:06 +0100
 
 reform-tools (1.64) reform; urgency=medium
 
