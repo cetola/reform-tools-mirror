@@ -129,8 +129,8 @@ case $disk_label in
       1) main "/dev/${DEV_SSD}p1" ;;
       2)
         # assume one partition to be swap and the other to be the rootfs
-        part1type=$(blkid -s TYPE -o value "/dev/${DEV_SSD}p1")
-        part2type=$(blkid -s TYPE -o value "/dev/${DEV_SSD}p2")
+        part1type=$(lsblk --noheadings --output=FSTYPE "/dev/${DEV_SSD}p1")
+        part2type=$(lsblk --noheadings --output=FSTYPE "/dev/${DEV_SSD}p2")
         case "${part1type}_${part2type}" in
           swap_ext4) main "/dev/${DEV_SSD}p2" ;;
           ext4_swap) main "/dev/${DEV_SSD}p1" ;;

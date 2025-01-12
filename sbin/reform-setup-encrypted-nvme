@@ -124,8 +124,8 @@ lvcreate --name swap --size "${mem}G" reformvg
 mkswap /dev/reformvg/swap
 lvcreate --name root --extents 100%FREE reformvg
 mkfs.ext4 /dev/reformvg/root
-SWAPUUID=$(blkid -s UUID -o value /dev/reformvg/swap)
-CRYPTUUID=$(blkid -s UUID -o value "/dev/$DEV_SSD")
+SWAPUUID=$(lsblk --noheadings --output=UUID /dev/reformvg/swap)
+CRYPTUUID=$(lsblk --noheadings --output=UUID "/dev/$DEV_SSD")
 
 echo ""
 printf "The encrypted %s is now set up. Do you want me to run reform-migrate now as well? [y/N] " "$HUMAN"
