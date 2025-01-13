@@ -30,10 +30,11 @@ static ssize_t show_firmware(struct device *dev, struct device_attribute *attr,
 			     char *buf);
 static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 			     char *buf);
-static ssize_t show_brightness(struct device *dev, struct device_attribute *attr,
-			     char *buf);
-static ssize_t store_brightness(struct device *dev, struct device_attribute *attr,
-			     const char *buf, size_t count);
+static ssize_t show_brightness(struct device *dev,
+			       struct device_attribute *attr, char *buf);
+static ssize_t store_brightness(struct device *dev,
+				struct device_attribute *attr, const char *buf,
+				size_t count);
 
 static ssize_t lpc_command(struct device *dev, char command, uint8_t arg1,
 			   uint8_t *response);
@@ -53,7 +54,7 @@ typedef struct lpc_driver_data {
 	int last_batt_vol;
 	int last_batt_cur;
 	struct backlight_device *backlight;
-  int brightness;
+	int brightness;
 } lpc_driver_data;
 
 static DEVICE_ATTR(status, 0444, show_status, NULL);
@@ -356,26 +357,27 @@ static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 			cap_max_mah);
 }
 
-static ssize_t show_brightness(struct device *dev, struct device_attribute *attr,
-			     char *buf)
+static ssize_t show_brightness(struct device *dev,
+			       struct device_attribute *attr, char *buf)
 {
-  /* readback not yet supported */
+	/* readback not yet supported */
 	return snprintf(buf, PAGE_SIZE, "%d", 0);
 }
 
-static ssize_t store_brightness(struct device *dev, struct device_attribute *attr,
-			     const char *buf, size_t count)
+static ssize_t store_brightness(struct device *dev,
+				struct device_attribute *attr, const char *buf,
+				size_t count)
 {
 	uint8_t buffer[8];
 	long brightness;
 	int ret = (int)kstrtol(buf, 10, &brightness);
-  if (ret == 0) {
+	if (ret == 0) {
 		ret = lpc_command(dev, 'b', (int)brightness, buffer);
 		if (ret) {
 			printk(KERN_INFO "%s: lpc_command failed\n", __func__);
 		}
 	}
-  return count;
+	return count;
 }
 
 static ssize_t lpc_command(struct device *dev, char command, uint8_t arg1,
