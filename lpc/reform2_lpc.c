@@ -30,6 +30,10 @@ static ssize_t show_firmware(struct device *dev, struct device_attribute *attr,
 			     char *buf);
 static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 			     char *buf);
+static ssize_t show_brightness(struct device *dev, struct device_attribute *attr,
+			     char *buf);
+static ssize_t store_brightness(struct device *dev, struct device_attribute *attr,
+			     const char *buf, size_t count);
 
 static ssize_t lpc_command(struct device *dev, char command, uint8_t arg1,
 			   uint8_t *response);
@@ -49,12 +53,14 @@ typedef struct lpc_driver_data {
 	int last_batt_vol;
 	int last_batt_cur;
 	struct backlight_device *backlight;
+  int brightness;
 } lpc_driver_data;
 
 static DEVICE_ATTR(status, 0444, show_status, NULL);
 static DEVICE_ATTR(cells, 0444, show_cells, NULL);
 static DEVICE_ATTR(firmware, 0444, show_firmware, NULL);
 static DEVICE_ATTR(capacity, 0444, show_capacity, NULL);
+static DEVICE_ATTR(brightness, 0644, show_brightness, store_brightness);
 
 static struct spi_board_info g_spi_board_info = {
 	.modalias = "reform2_lpc",
@@ -168,6 +174,11 @@ static int lpc_probe(struct spi_device *spi)
 	}
 
 	ret = device_create_file(&spi->dev, &dev_attr_capacity);
+	if (ret) {
+		printk(KERN_ERR "%s: device_create_file failed\n", __func__);
+	}
+
+	ret = device_create_file(&spi->dev, &dev_attr_brightness);
 	if (ret) {
 		printk(KERN_ERR "%s: device_create_file failed\n", __func__);
 	}
@@ -343,6 +354,28 @@ static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 
 	return snprintf(buf, PAGE_SIZE, "%d %d %d", cap_accu_mah, cap_min_mah,
 			cap_max_mah);
+}
+
+static ssize_t show_brightness(struct device *dev, struct device_attribute *attr,
+			     char *buf)
+{
+  /* readback not yet supported */
+	return snprintf(buf, PAGE_SIZE, "%d", 0);
+}
+
+static ssize_t store_brightness(struct device *dev, struct device_attribute *attr,
+			     const char *buf, size_t count)
+{
+	uint8_t buffer[8];
+	long brightness;
+	int ret = (int)kstrtol(buf, 10, &brightness);
+  if (ret == 0) {
+		ret = lpc_command(dev, 'b', (int)brightness, buffer);
+		if (ret) {
+			printk(KERN_INFO "%s: lpc_command failed\n", __func__);
+		}
+	}
+  return count;
 }
 
 static ssize_t lpc_command(struct device *dev, char command, uint8_t arg1,
