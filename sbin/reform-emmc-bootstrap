@@ -127,6 +127,31 @@ END
   reform-boot-config --emmc "$ROOTPART"
 }
 
+# eMMC device is being used (case 1): mount points are known, show them. Includes swap.
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/${DEV_MMC}")" ]; then
+  echo "E: eMMC has the following mounted volumes, unmount them before running this tool" >&2
+  lsblk --noheadings --output=MOUNTPOINT "/dev/${DEV_MMC}" | xargs --no-run-if-empty -I '{}' echo "E:   {}" >&2
+  exit 1
+fi
+
+# eMMC device is being used (case 2): there are not file systems directly mounted on the block device
+# but it is opened by consumers like device-mapper, raid or luks, to name some examples. In this situation
+# it is not trivial to locate the consumer.
+PYTHON_SCRIPT="
+import errno, os, sys
+
+try:
+    os.open(sys.argv[1], os.O_WRONLY | os.O_EXCL)
+except OSError as e:
+    if e.errno == errno.EBUSY:
+        sys.exit(1)
+    raise
+"
+if ! python3 -c "${PYTHON_SCRIPT}" "/dev/${DEV_MMC}"; then
+  echo "E: device /dev/${DEV_MMC} (eMMC) is still un use" >&2
+  exit 1
+fi
+
 disk_label=$(parted --json "/dev/${DEV_SSD}" print 2>/dev/null | jq --raw-output '.disk.label')
 case $disk_label in
   msdos | gpt)
