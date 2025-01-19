@@ -21,6 +21,11 @@ usage() {
   echo " - the luks/lvm setup created by reform-setup-encrypted-nvme" >&2
 }
 
+is_current_root() {
+  FSTAB_ROOT="$(findmnt --fstab --noheadings --evaluate --mountpoint / --output SOURCE)"
+  [ "${1}" = "${FSTAB_ROOT}" ]
+}
+
 if [ "$#" -gt 0 ] && [ "$1" = "--help" ]; then
   usage
   exit 0
@@ -43,18 +48,17 @@ cleanup() {
     umount --recursive "$MOUNTROOT"
   fi
   rmdir "$MOUNTROOT"
-  if [ -e /dev/reformvg ]; then
-    vgchange -an reformvg
-  fi
-  if [ -e /dev/mapper/reform_crypt ]; then
-    cryptsetup luksClose reform_crypt
+  if ! is_current_root /dev/mapper/reformvg-root; then
+    if [ -e /dev/reformvg ]; then
+      vgchange -an reformvg
+    fi
+    if [ -e /dev/mapper/reform_crypt ]; then
+      cryptsetup luksClose reform_crypt
+    fi
   fi
 }
 
 trap cleanup EXIT INT TERM
-
-# FIXME: support the scenario where we we are currently running from nvme
-# FIXME: in that case, fail if /boot is already on emmc
 
 main() {
   ROOTPART="$1"
@@ -95,8 +99,10 @@ END
     exit
   fi
   mv "$MOUNTROOT/etc/fstab.new" "$MOUNTROOT/etc/fstab"
-  rm -f "$MOUNTROOT/etc/resolv.conf" # make sure to remove a possible symlink
-  cp -a /etc/resolv.conf "$MOUNTROOT/etc/resolv.conf"
+  if ! is_current_root "${ROOTPART}"; then
+    rm -f "$MOUNTROOT/etc/resolv.conf" # make sure to remove a possible symlink
+    cp -a /etc/resolv.conf "$MOUNTROOT/etc/resolv.conf"
+  fi
   parted --script --machine "/dev/$DEV_MMC" "mklabel msdos"
   parted --script --machine "/dev/$DEV_MMC" "mkpart primary ext4 16MiB 100%"
   udevadm settle
@@ -148,11 +154,15 @@ case $disk_label in
     ;;
   unknown)
     echo "I: no partition table found trying to open LUKS device" >&2
-    cryptsetup luksOpen "/dev/${DEV_SSD}" reform_crypt
-    vgchange -ay reformvg
+    if ! is_current_root /dev/mapper/reformvg-root; then
+      cryptsetup luksOpen "/dev/${DEV_SSD}" reform_crypt
+      vgchange -ay reformvg
+    fi
     main /dev/mapper/reformvg-root
-    vgchange -an reformvg
-    cryptsetup luksClose reform_crypt
+    if ! is_current_root /dev/mapper/reformvg-root; then
+      vgchange -an reformvg
+      cryptsetup luksClose reform_crypt
+    fi
     ;;
   *) ;;
 esac
