@@ -95,7 +95,7 @@ install:
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/modprobe.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/modprobe.d modprobe.d/reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(sbindir)
-	$(INSTALLDATA) -t $(DESTDIR)$(sbindir) $(SBINPROGS)
+	$(INSTALL)     -t $(DESTDIR)$(sbindir) $(SBINPROGS)
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/glib-2.0/schemas
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/glib-2.0/schemas schemas/20_reform.gschema.override
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/backgrounds
