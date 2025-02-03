@@ -1,3 +1,16 @@
+1.66 (2025-02-03)
+=================
+
+  * Replace remaining uses of blkid by lsblk.
+    Thanks to Chris Hofstaedtler <zeha@debian.org>
+  * machines/* with i.MX8MP Module.conf: update to u-boot 2025-01-12
+  * Makefile: install files in /usr/sbin with 755
+  * sbin/reform-emmc-bootstrap: only run reform-flash-uboot
+    if EMMC_BOOT != false
+  * sbin/reform-emmc-bootstrap:
+     - allow execution when actual root is on nvme
+     - ensure emmc is not being used
+
 1.65 (2025-01-11)
 =================
 
