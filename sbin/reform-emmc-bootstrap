@@ -194,4 +194,6 @@ esac
 
 trap - EXIT INT TERM
 
-reform-flash-uboot --force emmc
+if [ "$EMMC_BOOT" != false ]; then
+  reform-flash-uboot --force emmc
+fi
