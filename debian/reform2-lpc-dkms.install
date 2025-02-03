@@ -1,2 +1,0 @@
-lpc/Makefile      /usr/src/reform2_lpc-${env:DEB_VERSION_UPSTREAM}
-lpc/reform2_lpc.c /usr/src/reform2_lpc-${env:DEB_VERSION_UPSTREAM}

@@ -1,3 +1,50 @@
+1.65 (2025-01-11)
+=================
+
+   * machines/* with BPI-CM4 Module.conf: update u-boot to 2024-12-23
+   * add reform-emmc-bootstrap
+   * sbin/reform-flash-uboot:
+      - restore support for --offline switch
+      - instead of finding the end of the first free space, find the beginning
+        of the first partition
+      - add --force
+   * sbin/reform-boot-config:
+      - reset MOUNTROOT after umounting, so that the right partition gets
+        mounted afterward
+      - make sure that OLDMOUNTBOOT actually is a mount point as a sanity check
+      - run mountpoint with --quiet
+      - do not update, but create the initramfs
+   * sbin/reform-setup-encrypted-nvme: fix incorrectly placed double quote
+   * install usr/lib/sddm/sddm.conf.d/10-wayland.conf to make sddm use wayland
+     by default instead of Xorg
+   * add x-initrd.attach to /etc/crypttab
+   * move 99-reform.rules -> 99-reform-audio.rules
+   * imx8mq: replace writing 'enabled' to /sys path in reform-hw-setup and
+     reform-standby by udev rule
+   * Makefile:
+      - let help2man error out in case of problems
+      - expect all tools to start with reform- prefix
+   * reform-mcu-tool: allow USBErrorPipe on reset
+
+1.64 (2024-12-06)
+=================
+
+   * add Makefile
+   * add CHANGELOG.md
+   * sbin/reform-flash-uboot: do not download anything if flash.bin is
+     up-to-date
+   * bin/reform-check:
+      - synchronize with reform-system-image:mkimage.sh
+      - warn about reform-qcacld2 on bookworm
+      - improve modprobe.d/reform.conf wording
+   * bin/reform-compstat: use read_time instead of read_bytes to determine disk
+     activity percent
+   * make everything shellcheck-clean
+   * reform-flash-uboot: require using shorthands
+   * add dracut/20-pocket-reform.conf
+   * reform2_lpc: add backlight support for pocket reform display v2
+   * reform2_lpc: convert camelCase to conform to kernel coding style
+
 1.63 (2024-11-20)
 =================
 
@@ -37,6 +84,10 @@
 
 1.59 (2024-10-30)
 =================
+
+   * debian/reform-tools.postinst: do not remove the world-readable bit from
+     files in /etc/skel. The bash package also installs files into /etc/skel
+     with mode 644
 
 1.58 (2024-10-30)
 =================
