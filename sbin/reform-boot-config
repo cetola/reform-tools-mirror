@@ -266,7 +266,7 @@ if [ "$OLDBOOTPART" = "/dev/$BOOTPART" ]; then
   echo "the /boot partition /dev/$BOOTPART referenced by the rootfs at /dev/$ROOTPART remains the same" >&2
 else
   # copy the contents of the old /boot to the new /boot
-  OLDMOUNTBOOT="$(lsblk --noheadings --output=MOUNTPOINT "$OLDBOOTPART")"
+  OLDMOUNTBOOT="$(lsblk --nodeps --noheadings --output=MOUNTPOINT "$OLDBOOTPART")"
   needumount="no"
   if [ "$OLDMOUNTBOOT" = "" ]; then
     OLDMOUNTBOOT="$(mktemp --tmpdir --directory reform-boot-config.XXXXXXXXXX)"
@@ -347,12 +347,12 @@ trap - EXIT INT TERM
 # rescue system on sd-card or emmc, respectively
 case "$BOOTPART" in
   "${DEV_SD}p1")
-    if [ "$(lsblk --noheadings --output=LABEL "/dev/$BOOTPART")" = "reformsdboot" ]; then
+    if [ "$(lsblk --nodeps --noheadings --output=LABEL "/dev/$BOOTPART")" = "reformsdboot" ]; then
       e2label "/dev/$BOOTPART" ""
     fi
     ;;
   "${DEV_MMC}p1")
-    if [ "$(lsblk --noheadings --output=LABEL "/dev/$BOOTPART")" = "reformemmcboot" ]; then
+    if [ "$(lsblk --nodeps --noheadings --output=LABEL "/dev/$BOOTPART")" = "reformemmcboot" ]; then
       e2label "/dev/$BOOTPART" ""
     fi
     ;;

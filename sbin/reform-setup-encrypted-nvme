@@ -95,7 +95,7 @@ if [ "$mem" -lt 4 ]; then
   mem=4
 fi
 
-disksize=$(lsblk -bno SIZE "/dev/$DEV_SSD" | head -1)
+disksize=$(lsblk --nodeps --bytes --noheadings --output=SIZE "/dev/$DEV_SSD")
 case "$disksize" in *[!0123456789]* | 0?* | "")
   echo "E: unable to acquire disk size of /dev/$DEV_SSD" >&2
   exit 1
@@ -124,8 +124,8 @@ lvcreate --name swap --size "${mem}G" reformvg
 mkswap /dev/reformvg/swap
 lvcreate --name root --extents 100%FREE reformvg
 mkfs.ext4 /dev/reformvg/root
-SWAPUUID=$(lsblk --noheadings --output=UUID /dev/reformvg/swap)
-CRYPTUUID=$(lsblk --noheadings --output=UUID "/dev/$DEV_SSD")
+SWAPUUID=$(lsblk --nodeps --noheadings --output=UUID /dev/reformvg/swap)
+CRYPTUUID=$(lsblk --nodeps --noheadings --output=UUID "/dev/$DEV_SSD")
 
 echo ""
 printf "The encrypted %s is now set up. Do you want me to run reform-migrate now as well? [y/N] " "$HUMAN"
