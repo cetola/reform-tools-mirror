@@ -12,6 +12,9 @@ usage() {
   echo >&2
   echo "Options:" >&2
   echo "  --help           Display this help and exit." >&2
+  echo "  --force          Avoid user interaction: run reform-migrate and" >&2
+  echo "                   put /boot on eMMC if allowed. Requires passphrase" >&2
+  echo "                   on standard input." >&2
   echo >&2
   echo "Arguments:" >&2
   echo "  [DEVICE_PATH]    If provided, path to SSD device, or a disk" >&2
@@ -19,16 +22,50 @@ usage() {
   echo "                   empty, a model-specific default is used." >&2
 }
 
+FORCE=false
+while getopts :h:-: OPTCHAR; do
+  case "$OPTCHAR" in
+    h)
+      usage
+      exit 0
+      ;;
+    -)
+      case "$OPTARG" in
+        help)
+          usage
+          exit 0
+          ;;
+        force) FORCE=true ;;
+        *)
+          echo "E: unrecognized option: --$OPTARG" >&2
+          exit 1
+          ;;
+      esac
+      ;;
+    :)
+      echo "E: missing argument for -$OPTARG" >&2
+      exit 1
+      ;;
+    '?')
+      echo "E: unrecognized option -$OPTARG" >&2
+      exit 1
+      ;;
+    *)
+      echo "E: error parsing options" >&2
+      exit 1
+      ;;
+  esac
+done
+shift "$((OPTIND - 1))"
+
 DEVICE_PATH=
-if [ "$#" -ge 1 ] && [ "$1" = "--help" ]; then
-  usage
-  exit 0
-elif [ "$#" -ge 2 ]; then
+
+if [ "$#" -eq 1 ]; then
+  DEVICE_PATH="$1"
+elif [ "$#" -gt 1 ]; then
   echo "E: invalid number of arguments" >&2
   usage
   exit 1
-elif [ "$#" -eq 1 ]; then
-  DEVICE_PATH="$1"
 fi
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -73,8 +110,13 @@ if [ -b "$DEVICE_PATH" ]; then
 
   echo ""
 
-  printf "Are you sure you want to proceed? [y/N] "
-  read -r response
+  if [ "$FORCE" = true ]; then
+    echo "Proceeding without user interaction because of --force"
+    response="y"
+  else
+    printf "Are you sure you want to proceed? [y/N] "
+    read -r response
+  fi
 
   if [ "$response" != "y" ]; then
     echo "Exiting."
@@ -137,9 +179,18 @@ if [ "$mem" -le 1 ]; then
   exit 1
 fi
 
-cryptsetup luksFormat "$DEVICE_PATH"
+if [ "$FORCE" = true ]; then
+  read -r PASSPHRASE
+  printf "%s" "$PASSPHRASE" | cryptsetup luksFormat "$DEVICE_PATH" "-"
+else
+  cryptsetup luksFormat "$DEVICE_PATH"
+fi
 trap "cleanupluks; error" EXIT INT TERM
-cryptsetup luksOpen "$DEVICE_PATH" reform_crypt
+if [ "$FORCE" = true ]; then
+  printf "%s" "$PASSPHRASE" | cryptsetup luksOpen --key-file=- "$DEVICE_PATH" reform_crypt
+else
+  cryptsetup luksOpen "$DEVICE_PATH" reform_crypt
+fi
 pvcreate /dev/mapper/reform_crypt
 vgcreate reformvg /dev/mapper/reform_crypt
 trap "cleanupvg; cleanupluks; error" EXIT INT TERM
@@ -151,8 +202,13 @@ SWAPUUID=$(lsblk --nodeps --noheadings --output=UUID /dev/reformvg/swap)
 CRYPTUUID=$(cryptsetup luksUUID "$DEVICE_PATH")
 
 echo ""
-printf "The encrypted %s is now set up. Do you want me to run reform-migrate now as well? [y/N] " "$HUMAN"
-read -r response
+if [ "$FORCE" = true ]; then
+  echo "Running reform-migrate because of --force"
+  response="y"
+else
+  printf "The encrypted %s is now set up. Do you want me to run reform-migrate now as well? [y/N] " "$HUMAN"
+  read -r response
+fi
 
 if [ "$response" != "y" ]; then
   echo "If you want to migrate this system to $HUMAN you can now run:"
@@ -181,14 +237,23 @@ else
 
   emmc_flag=
   if [ "$EMMC_USE" = true ]; then
-    printf "Your /boot partition will be on eMMC by default. Do you want it on the SD-Card instead? [y/N] "
-    read -r response
-    if [ "$response" != "y" ]; then
+    if [ "$FORCE" = true ]; then
+      echo "Placing /boot on eMMC because of --force"
       emmc_flag="--emmc"
+    else
+      printf "Your /boot partition will be on eMMC by default. Do you want it on the SD-Card instead? [y/N] "
+      read -r response
+      if [ "$response" != "y" ]; then
+        emmc_flag="--emmc"
+      fi
     fi
   fi
   ret=0
-  reform-boot-config $emmc_flag /dev/reformvg/root || ret=$?
+  if [ "$FORCE" = true ]; then
+    reform-boot-config --force $emmc_flag /dev/reformvg/root || ret=$?
+  else
+    reform-boot-config $emmc_flag /dev/reformvg/root || ret=$?
+  fi
   if [ "$ret" -ne 0 ]; then
     echo "reform-boot-config failed. To re-run it manually, perform the following steps:" >&2
     echo "    $ cryptsetup luksOpen \"$DEVICE_PATH\" reform_crypt" >&2
