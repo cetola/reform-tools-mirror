@@ -73,8 +73,13 @@ usage() {
 
 maybe_umount() {
   what="$1"
-  printf "Should this script run 'umount %s' for you? [y/N] " "$what"
-  read -r response
+  if [ "$FORCE" = true ]; then
+    echo "Unmounting without user interaction because of --force"
+    response="y"
+  else
+    printf "Should this script run 'umount %s' for you? [y/N] " "$what"
+    read -r response
+  fi
   if [ "$response" != "y" ]; then
     echo "I: Not unmounting as requested." >&2
     return 1
@@ -92,36 +97,66 @@ maybe_umount() {
   fi
 }
 
-if [ $# -ne 1 ] && [ $# -ne 2 ]; then
+BOOTPART="${DEV_SD}p1"
+FORCE=false
+while getopts :h:-: OPTCHAR; do
+  case "$OPTCHAR" in
+    h)
+      usage
+      exit 0
+      ;;
+    -)
+      case "$OPTARG" in
+        help)
+          # minimal device-agnostic help output for use with help2man
+          usage_minimal
+          exit 0
+          ;;
+        help-full)
+          usage
+          exit 0
+          ;;
+        force) FORCE=true ;;
+        emmc)
+          if [ "$EMMC_USE" = false ]; then
+            echo "E: writing to eMMC not supported on $(cat /proc/device-tree/model)" >&2
+            exit 1
+          fi
+          BOOTPART="${DEV_MMC}p1"
+          ;;
+        *)
+          echo "E: unrecognized option: --$OPTARG" >&2
+          exit 1
+          ;;
+      esac
+      ;;
+    :)
+      echo "E: missing argument for -$OPTARG" >&2
+      exit 1
+      ;;
+    '?')
+      echo "E: unrecognized option -$OPTARG" >&2
+      exit 1
+      ;;
+    *)
+      echo "E: error parsing options" >&2
+      exit 1
+      ;;
+  esac
+done
+shift "$((OPTIND - 1))"
+
+if [ "$#" -eq 1 ]; then
+  BOOTPREF="$1"
+elif [ "$#" -gt 1 ]; then
+  echo "E: invalid number of arguments" >&2
   usage
   exit 1
-fi
-
-if [ "$1" = "--help" ]; then
-  # minimal device-agnostic help output for use with help2man
-  usage_minimal
-  exit 0
-elif [ "$1" = "--help-full" ]; then
-  usage
-  exit 0
 fi
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "reform-boot-config has to be run as root / using sudo." >&2
   exit 1
-fi
-
-BOOTPREF="$1"
-BOOTPART="${DEV_SD}p1"
-
-if [ "--emmc" = "$1" ]; then
-  if [ "$EMMC_USE" = false ]; then
-    echo "E: writing to eMMC not supported on $(cat /proc/device-tree/model)" >&2
-    exit 1
-  fi
-
-  BOOTPREF="$2"
-  BOOTPART="${DEV_MMC}p1"
 fi
 
 if [ ! -e "/dev/$BOOTPART" ]; then
@@ -268,9 +303,14 @@ else
   echo "This script will copy the contents from the old /boot partition" >&2
   echo "$OLDBOOTPART to the new /boot partition $BOOTPART and delete all" >&2
   echo "files from the latter that were not present in the former." >&2
-  echo "Are you sure that you want to remove the contents of $BOOTPART" >&2
-  printf "and replace it with the contents of $OLDBOOTPART? [y/N] " >&2
-  read -r response
+  if [ "$FORCE" = true ]; then
+    echo "Proceeding without user interaction because of --force" >&2
+    response="y"
+  else
+    echo "Are you sure that you want to remove the contents of $BOOTPART" >&2
+    printf "and replace it with the contents of %s? [y/N] " "$OLDBOOTPART" >&2
+    read -r response
+  fi
   if [ "$response" != "y" ]; then
     echo "I: Not overwriting the contents of $BOOTPART as requested." >&2
     exit 1
