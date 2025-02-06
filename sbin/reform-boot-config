@@ -265,6 +265,17 @@ mount "/dev/$BOOTPART" "$MOUNTROOT/boot"
 if [ "$OLDBOOTPART" = "/dev/$BOOTPART" ]; then
   echo "the /boot partition /dev/$BOOTPART referenced by the rootfs at /dev/$ROOTPART remains the same" >&2
 else
+  echo "This script will copy the contents from the old /boot partition" >&2
+  echo "$OLDBOOTPART to the new /boot partition $BOOTPART and delete all" >&2
+  echo "files from the latter that were not present in the former." >&2
+  echo "Are you sure that you want to remove the contents of $BOOTPART" >&2
+  printf "and replace it with the contents of $OLDBOOTPART? [y/N] " >&2
+  read -r response
+  if [ "$response" != "y" ]; then
+    echo "I: Not overwriting the contents of $BOOTPART as requested." >&2
+    exit 1
+  fi
+
   # copy the contents of the old /boot to the new /boot
   OLDMOUNTBOOT="$(lsblk --nodeps --noheadings --output=MOUNTPOINT "$OLDBOOTPART")"
   needumount="no"
@@ -281,7 +292,8 @@ else
     exit 1
   fi
 
-  rsync -axHAWXS --numeric-ids --quiet "$OLDMOUNTBOOT/" "$MOUNTROOT/boot"
+  rsync --archive --one-file-system --hard-links --acls --xattrs --whole-file \
+    --sparse --numeric-ids --delete-delay "$OLDMOUNTBOOT/" "$MOUNTROOT/boot"
   if [ "$needumount" = "yes" ]; then
     [ "$1" = "$OLDBOOTPART" ] && shift && umount "$OLDBOOTPART"
     [ "$1" = "$OLDMOUNTBOOT" ] && shift && rmdir "$OLDMOUNTBOOT"
