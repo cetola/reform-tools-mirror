@@ -1,0 +1,199 @@
+#!/bin/sh
+
+set -eu
+
+usage() {
+  echo "Set up eMMC with a /boot partition which loads the OS from the SSD." >&2
+  echo "This tool is usually run from a rescue system on an SD-card to" >&2
+  echo "migrate a system from one SoM to another." >&2
+  echo "WARNING: this tool will erase the contents of your eMMC." >&2
+  echo >&2
+  echo "Usage: $0 [--help]" >&2
+  echo >&2
+  echo "Options:" >&2
+  echo "  --help           Display this help and exit." >&2
+  echo >&2
+  echo "This utility is not able to create a working /boot partition on" >&2
+  echo "eMMC for arbitrary installations. It currently understands" >&2
+  echo >&2
+  echo " - single partition on SSD with the rootfs" >&2
+  echo " - two partitions on SSD, one with the rootfs the other swap" >&2
+  echo " - the luks/lvm setup created by reform-setup-encrypted-nvme" >&2
+}
+
+is_current_root() {
+  FSTAB_ROOT="$(findmnt --fstab --noheadings --evaluate --mountpoint / --output SOURCE)"
+  [ "${1}" = "${FSTAB_ROOT}" ]
+}
+
+if [ "$#" -gt 0 ] && [ "$1" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+# shellcheck source=/dev/null
+if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
+  . "./machines/$(cat /proc/device-tree/model).conf"
+elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf" ]; then
+  . "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
+else
+  echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
+  exit 1
+fi
+
+MOUNTROOT="$(mktemp --tmpdir --directory reform-emmc-bootstrap.XXXXXXXXXX)"
+
+cleanup() {
+  if mountpoint --quiet "$MOUNTROOT"; then
+    umount --recursive "$MOUNTROOT"
+  fi
+  rmdir "$MOUNTROOT"
+  if ! is_current_root /dev/mapper/reformvg-root; then
+    if [ -e /dev/reformvg ]; then
+      vgchange -an reformvg
+    fi
+    if [ -e /dev/mapper/reform_crypt ]; then
+      cryptsetup luksClose reform_crypt
+    fi
+  fi
+}
+
+trap cleanup EXIT INT TERM
+
+main() {
+  ROOTPART="$1"
+  mount "$ROOTPART" "$MOUNTROOT"
+  mount -o bind /dev "$MOUNTROOT/dev/"
+  mount -t sysfs sys "$MOUNTROOT/sys/"
+  mount -t proc proc "$MOUNTROOT/proc/"
+  if ! chroot "$MOUNTROOT" dpkg-query --search '/boot/vmlinuz*' >/dev/null; then
+    echo "E: no kernel packages installed" >&2
+    exit 1
+  fi
+  # comment out old /etc/fstab
+  sed -e 's/^/#/' "$MOUNTROOT/etc/fstab" >"$MOUNTROOT/etc/fstab.new"
+  # write new mountpoints
+  cat <<END >>"$MOUNTROOT/etc/fstab.new"
+$ROOTPART / auto errors=remount-ro 0 1
+/dev/${DEV_MMC}p1 /boot auto errors=remount-ro 0 1
+END
+  cat <<END
+This script will replace the /etc/fstab in the root filesystem on your SSD
+with the following content:
+
+END
+  cat "$MOUNTROOT/etc/fstab.new"
+  cat <<END
+
+WARNING: This script will destroy the contents of your eMMC drive and replace
+it with a /boot partition which is able to boot your system on SSD.
+
+WARNING: This operation needs internet access to your Debian apt mirror. Make
+sure that your system is online before proceeding.
+
+END
+  printf "Are you sure you want to proceed? [y/N] "
+  read -r response
+  if [ "$response" != "y" ]; then
+    echo "Exiting."
+    exit
+  fi
+  mv "$MOUNTROOT/etc/fstab.new" "$MOUNTROOT/etc/fstab"
+  if ! is_current_root "${ROOTPART}"; then
+    rm -f "$MOUNTROOT/etc/resolv.conf" # make sure to remove a possible symlink
+    cp -a /etc/resolv.conf "$MOUNTROOT/etc/resolv.conf"
+  fi
+  parted --script --machine "/dev/$DEV_MMC" "mklabel msdos"
+  parted --script --machine "/dev/$DEV_MMC" "mkpart primary ext4 16MiB 100%"
+  udevadm settle
+  partprobe "/dev/$DEV_MMC"
+  mkfs.ext4 -F "/dev/${DEV_MMC}p1"
+  mount "/dev/${DEV_MMC}p1" "$MOUNTROOT/boot/"
+  # upgrade linux-image-mnt-reform-arm64 in case that the installed kernel is
+  # not downloadable anymore
+  chroot "$MOUNTROOT" apt-get update --error-on=any
+  chroot "$MOUNTROOT" apt-get install --yes --only-upgrade linux-image-mnt-reform-arm64
+  # also regenerate everything for other installed kernel packages
+  chroot "$MOUNTROOT" dpkg-query --search '/boot/vmlinuz*' | sed 's/:.*//' | while read -r pkg; do
+    # if a package cannot be downloaded, apt will still exit
+    # successfully
+    chroot "$MOUNTROOT" apt-get install --yes --reinstall "$pkg"
+  done
+  if [ -z "$(find "$MOUNTROOT/boot" -name 'vmlinuz-*')" ]; then
+    echo "E: no kernel images were installed into /boot" >&2
+    exit 1
+  fi
+  umount "$MOUNTROOT" --recursive
+  reform-boot-config --emmc "$ROOTPART"
+}
+
+# eMMC device is being used (case 1): mount points are known, show them. Includes swap.
+if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/${DEV_MMC}")" ]; then
+  echo "E: eMMC has the following mounted volumes, unmount them before running this tool" >&2
+  lsblk --noheadings --output=MOUNTPOINT "/dev/${DEV_MMC}" | xargs --no-run-if-empty -I '{}' echo "E:   {}" >&2
+  exit 1
+fi
+
+# eMMC device is being used (case 2): there are not file systems directly mounted on the block device
+# but it is opened by consumers like device-mapper, raid or luks, to name some examples. In this situation
+# it is not trivial to locate the consumer.
+PYTHON_SCRIPT="
+import errno, os, sys
+
+try:
+    os.open(sys.argv[1], os.O_WRONLY | os.O_EXCL)
+except OSError as e:
+    if e.errno == errno.EBUSY:
+        sys.exit(1)
+    raise
+"
+if ! python3 -c "${PYTHON_SCRIPT}" "/dev/${DEV_MMC}"; then
+  echo "E: device /dev/${DEV_MMC} (eMMC) is still un use" >&2
+  exit 1
+fi
+
+disk_label=$(parted --json "/dev/${DEV_SSD}" print 2>/dev/null | jq --raw-output '.disk.label')
+case $disk_label in
+  msdos | gpt)
+    num_parts=$(parted --json "/dev/${DEV_SSD}" print 2>/dev/null | jq '.disk.partitions | length')
+    case $num_parts in
+      1) main "/dev/${DEV_SSD}p1" ;;
+      2)
+        # assume one partition to be swap and the other to be the rootfs
+        part1type=$(lsblk --nodeps --noheadings --output=FSTYPE "/dev/${DEV_SSD}p1")
+        part2type=$(lsblk --nodeps --noheadings --output=FSTYPE "/dev/${DEV_SSD}p2")
+        case "${part1type}_${part2type}" in
+          swap_ext4) main "/dev/${DEV_SSD}p2" ;;
+          ext4_swap) main "/dev/${DEV_SSD}p1" ;;
+          *)
+            echo "E: no support for partitions other than one swap and one ext4" >&2
+            exit 1
+            ;;
+        esac
+        ;;
+      *)
+        echo "E: more than 2 partitions not implemented yet" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+  unknown)
+    echo "I: no partition table found trying to open LUKS device" >&2
+    if ! is_current_root /dev/mapper/reformvg-root; then
+      cryptsetup luksOpen "/dev/${DEV_SSD}" reform_crypt
+      vgchange -ay reformvg
+    fi
+    main /dev/mapper/reformvg-root
+    if ! is_current_root /dev/mapper/reformvg-root; then
+      vgchange -an reformvg
+      cryptsetup luksClose reform_crypt
+    fi
+    ;;
+  *) ;;
+esac
+
+trap - EXIT INT TERM
+
+if [ "$EMMC_BOOT" != false ]; then
+  reform-flash-uboot --force emmc
+fi

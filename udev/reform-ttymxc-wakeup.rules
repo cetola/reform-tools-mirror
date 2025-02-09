@@ -1,0 +1,5 @@
+# Configure UARTs as wakeup sources from suspend for i.MX8MQ.
+# According to Documentation/devicetree/bindings/serial/fsl-imx-uart.yaml,
+# wakeup-source is already set to "true" and it is not clear why this remains
+# ineffective and requires this hack.
+ACTION=="add", SUBSYSTEM=="tty", KERNEL=="ttymxc*", RUN+="/bin/sh -c 'echo enabled >/sys/$env{DEVPATH}/power/wakeup'"

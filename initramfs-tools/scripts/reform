@@ -1,19 +1,20 @@
 #!/bin/sh
 
-case $1 in prereqs) exit 0;; esac
+case $1 in prereqs) exit 0 ;; esac
 
+# shellcheck disable=SC1091
 . /scripts/functions
 
 MACHINE=
 if [ -e /etc/flash-kernel/machine ]; then
-	MACHINE=$(cat /etc/flash-kernel/machine)
+  MACHINE=$(cat /etc/flash-kernel/machine)
 elif [ -e /proc/device-tree/model ]; then
-	MACHINE=$(cat /proc/device-tree/model)
+  MACHINE=$(cat /proc/device-tree/model)
 fi
 
 case $MACHINE in
-	"MNT Reform 2 with LS1028A Module")
-		# https://source.mnt.re/reform/reform-debian-packages/-/issues/5
-		dmesg -n 7 || echo "E: failed to set kernel loglevel" >&2
-		;;
+  "MNT Reform 2 with LS1028A Module")
+    # https://source.mnt.re/reform/reform-debian-packages/-/issues/5
+    dmesg -n 7 || echo "E: failed to set kernel loglevel" >&2
+    ;;
 esac

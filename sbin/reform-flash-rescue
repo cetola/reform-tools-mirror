@@ -2,77 +2,90 @@
 
 set -eu
 
-usage () {
-	echo "Download and flash the latest sysimage-v4 to eMMC." >&2
-	echo "Calls reform-flash-uboot to install u-boot on eMMC, grows the root" >&2
-	echo "filesystem and adjusts filesystem labels." >&2
-	echo "Calls reform-boot-config to set up /boot on eMMC to load the rootfs from eMMC." >&2
-	echo >&2
-	echo "Usage: $0 [--help]" >&2
-	echo >&2
-	echo "Options:" >&2
-	echo "  --help           Display this help and exit." >&2
+usage() {
+  echo "Download and flash the latest sysimage-v4 to eMMC." >&2
+  echo "Calls reform-flash-uboot to install u-boot on eMMC, grows the root" >&2
+  echo "filesystem and adjusts filesystem labels." >&2
+  echo "Calls reform-boot-config to set up /boot on eMMC to load the rootfs from eMMC." >&2
+  echo >&2
+  echo "Usage: $0 [--help]" >&2
+  echo >&2
+  echo "Options:" >&2
+  echo "  --help           Display this help and exit." >&2
 }
 
 if [ "$#" -gt 0 ] && [ "$1" = "--help" ]; then
-	usage
-	exit 0
+  usage
+  exit 0
 fi
 
 # shellcheck source=/dev/null
 if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
-	. "./machines/$(cat /proc/device-tree/model).conf"
+  . "./machines/$(cat /proc/device-tree/model).conf"
 elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf" ]; then
-	. "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
+  . "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
 else
-	echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
-	exit 1
+  echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
+  exit 1
 fi
 
 if [ "$EMMC_USE" = false ]; then
-	echo "E: writing to eMMC not supported on $(cat /proc/device-tree/model)" >&2
-	exit 1
+  echo "E: writing to eMMC not supported on $(cat /proc/device-tree/model)" >&2
+  exit 1
 fi
 
-if [ "$EMMC_BOOT" = true ]; then
-	if [ ! -e "/sys/class/block/${DEV_MMC}boot0/force_ro" ]; then
-		echo "/sys/class/block/${DEV_MMC}boot0/force_ro doesn't exist" >&2
-		exit 1
-	fi
+if [ "$EMMC_BOOT" != false ]; then
+  if [ "$EMMC_BOOT" = warn ]; then
+    echo "W: Flashing u-boot to eMMC on $(cat /proc/device-tree/model) is not without risk." >&2
+    echo "W: If you flash the wrong u-boot or if the flashing process goes wrong, it is" >&2
+    echo "W: possible to soft-brick your board. Restoring it might need some extra hardware." >&2
+    echo "W: Please only proceed if you are sure that the benefits outweigh the risks for you." >&2
+    printf "Are you sure you want to proceed? [y/N] "
+    read -r response
 
-	if [ ! -w "/sys/class/block/${DEV_MMC}boot0/force_ro" ]; then
-		echo "/sys/class/block/${DEV_MMC}boot0/force_ro is not writable" >&2
-		exit 1
-	fi
+    if [ "$response" != "y" ]; then
+      echo "Exiting."
+      exit
+    fi
+  fi
+  if [ ! -e "/sys/class/block/${DEV_MMC}boot0/force_ro" ]; then
+    echo "/sys/class/block/${DEV_MMC}boot0/force_ro doesn't exist" >&2
+    exit 1
+  fi
 
-	if [ ! -e /boot/flash.bin ]; then
-		echo "/boot/flash.bin doesn't exist" >&2
-		exit 1
-	fi
+  if [ ! -w "/sys/class/block/${DEV_MMC}boot0/force_ro" ]; then
+    echo "/sys/class/block/${DEV_MMC}boot0/force_ro is not writable" >&2
+    exit 1
+  fi
 
-	for p in $(lsblk --list --noheadings --output=NAME "/dev/$DEV_MMC") "${DEV_MMC}boot0" "${DEV_MMC}boot1"; do
-		[ -b "/dev/$p" ] || continue
-		if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$p")" ]; then
-			echo "/dev/$p is still in use" >&2
-			exit 1
-		fi
-	done
+  if [ ! -e /boot/flash.bin ]; then
+    echo "/boot/flash.bin doesn't exist" >&2
+    exit 1
+  fi
 
-	echo "WARNING: This overwrites the bootloader on the eMMC rescue disk with the" >&2
-	echo "backup stored as /boot/flash.bin!" >&2
+  for p in $(lsblk --list --noheadings --output=NAME "/dev/$DEV_MMC") "${DEV_MMC}boot0" "${DEV_MMC}boot1"; do
+    [ -b "/dev/$p" ] || continue
+    if [ -n "$(lsblk --nodeps --noheadings --output=MOUNTPOINT "/dev/$p")" ]; then
+      echo "/dev/$p is still in use" >&2
+      exit 1
+    fi
+  done
 
-	printf "Are you sure you want to proceed? [y/N] "
-	read -r response
+  echo "WARNING: This overwrites the bootloader on the eMMC rescue disk with the" >&2
+  echo "backup stored as /boot/flash.bin!" >&2
 
-	if [ "$response" != "y" ]; then
-		echo "Exiting."
-		exit
-	fi
+  printf "Are you sure you want to proceed? [y/N] "
+  read -r response
 
-	reform-flash-uboot --offline emmc
+  if [ "$response" != "y" ]; then
+    echo "Exiting."
+    exit
+  fi
 
-	echo "Bootloader was successfully written to /dev/${DEV_MMC}boot0." >&2
-	echo "" >&2
+  reform-flash-uboot --offline emmc
+
+  echo "Bootloader was successfully written to /dev/${DEV_MMC}boot0." >&2
+  echo "" >&2
 fi
 
 echo "Do you want to download and install the latest sysimage-v4 to eMMC as well?" >&2
@@ -84,53 +97,54 @@ printf "Are you sure you want to proceed? [y/N] "
 read -r response
 
 if [ "$response" != "y" ]; then
-	echo "Exiting."
-	exit
+  echo "Exiting."
+  exit
 fi
 
 URL="https://source.mnt.re/reform/reform-system-image/-/jobs/artifacts/main/raw/${SYSIMAGE}.img.gz?job=build"
 DECOMPRESSOR=gzip
 
 if grep --silent '^URIs: https://reform.debian.net/debian/\?$' /etc/apt/sources.list.d/reform*.sources 2>/dev/null; then
-	echo "The current system image is configured to use the Debian stable mirror from" >&2
-	echo "reform.debian.net. Do you want to flash the system image from reform.debian.net" >&2
-	echo "to your eMMC? If you answer anything but \"y\", the official MNT system image will" >&2
-	echo "be downloaded and written to eMMC instead." >&2
-	printf "Do you want to download and use the rescue system image from reform.debian.net? [y/N] "
+  echo "The current system image is configured to use the Debian stable mirror from" >&2
+  echo "reform.debian.net. Do you want to flash the system image from reform.debian.net" >&2
+  echo 'to your eMMC? If you answer anything but "y", the official MNT system image will' >&2
+  echo "be downloaded and written to eMMC instead." >&2
+  printf "Do you want to download and use the rescue system image from reform.debian.net? [y/N] "
 
-	read -r response
-	if [ "$response" = "y" ]; then
-		# no need to use the backports kernel because a311d is not
-		# allowed to write to emmc anyways
-		URL="https://reform.debian.net/images/${SYSIMAGE}.img.xz"
-		DECOMPRESSOR=xz
-	fi
+  read -r response
+  if [ "$response" = "y" ]; then
+    # no need to use the backports kernel because a311d is not
+    # allowed to write to emmc anyways
+    URL="https://reform.debian.net/images/${SYSIMAGE}.img.xz"
+    DECOMPRESSOR=xz
+  fi
 fi
 
 echo "Downloading $URL..."
 
 # flash with bmaptool if available and use dd otherwise
 if command -v bmaptool >/dev/null 2>&1; then
-	# force gpg signature verification when downloading from reform.d.n
-	case $URL in
-		https://reform.debian.net/images/*)
-			# FIXME: use --keyring and --fingerprint options from
-			# https://github.com/yoctoproject/bmaptool/pull/32
-			bmaptool copy "$URL" "/dev/$DEV_MMC" ;;
-		*) bmaptool copy "$URL" "/dev/$DEV_MMC" ;;
-	esac
+  # force gpg signature verification when downloading from reform.d.n
+  case $URL in
+    https://reform.debian.net/images/*)
+      # FIXME: use --keyring and --fingerprint options from
+      # https://github.com/yoctoproject/bmaptool/pull/32
+      bmaptool copy "$URL" "/dev/$DEV_MMC"
+      ;;
+    *) bmaptool copy "$URL" "/dev/$DEV_MMC" ;;
+  esac
 else
-	{
-	if curl --version >/dev/null; then
-		curl --silent --location "$URL"
-	elif wget --version >/dev/null; then
-		wget --quiet --output-document=- "$URL"
-	else
-		echo "need curl or wget" >&2
-		exit 1
-	fi; } | "$DECOMPRESSOR" --decompress --to-stdout | dd of="/dev/$DEV_MMC" status=progress
+  {
+    if curl --version >/dev/null; then
+      curl --silent --location "$URL"
+    elif wget --version >/dev/null; then
+      wget --quiet --output-document=- "$URL"
+    else
+      echo "need curl or wget" >&2
+      exit 1
+    fi
+  } | "$DECOMPRESSOR" --decompress --to-stdout | dd of="/dev/$DEV_MMC" status=progress
 fi
-
 
 partprobe "/dev/$DEV_MMC"
 
@@ -154,10 +168,10 @@ e2label "/dev/${DEV_MMC}p2" reformemmcroot
 # reform-boot-config to update the /etc/fstab and initramfs to use the eMMC
 reform-boot-config --emmc emmc
 
-case "$(cat /proc/device-tree/model)" in "MNT Reform 2"|"MNT Reform 2 HDMI")
-	echo "If the SoM dip switch is turned off and no SD-Card is present, your" >&2
-	echo "system will now boot from eMMC and load the rootfs from there as well." >&2
-	echo "If you want to boot from eMMC but load the rootfs from elsewhere, run" >&2
-	echo "reform-boot-config with the --emmc switch." >&2
-	;;
+case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
+  echo "If the SoM dip switch is turned off and no SD-Card is present, your" >&2
+  echo "system will now boot from eMMC and load the rootfs from there as well." >&2
+  echo "If you want to boot from eMMC but load the rootfs from elsewhere, run" >&2
+  echo "reform-boot-config with the --emmc switch." >&2
+  ;;
 esac

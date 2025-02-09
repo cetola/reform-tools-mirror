@@ -2,63 +2,132 @@
 
 set -eu
 
-usage () {
-	echo "Set up the SSD with LUKS encryption containing LVM2 volumes for" >&2
-	echo "swap and the rootfs. Offers to run reform-migrate and " >&2
-	echo "reform-boot-config to set up the initramfs in /boot to load the" >&2
-	echo "rootfs from the encrypted SSD." >&2
-	echo >&2
-	echo "Usage: $0 [--help]" >&2
-	echo >&2
-	echo "Options:" >&2
-	echo "  --help           Display this help and exit." >&2
+usage() {
+  echo "Set up the SSD with LUKS encryption containing LVM2 volumes for" >&2
+  echo "swap and the rootfs. Offers to run reform-migrate and " >&2
+  echo "reform-boot-config to set up the initramfs in /boot to load the" >&2
+  echo "rootfs from the encrypted SSD." >&2
+  echo >&2
+  echo "Usage: $0 [--help] [DEVICE_PATH]" >&2
+  echo >&2
+  echo "Options:" >&2
+  echo "  --help           Display this help and exit." >&2
+  echo "  --force          Avoid user interaction: run reform-migrate and" >&2
+  echo "                   put /boot on eMMC if allowed. Requires passphrase" >&2
+  echo "                   on standard input." >&2
+  echo >&2
+  echo "Arguments:" >&2
+  echo "  [DEVICE_PATH]    If provided, path to SSD device, or a disk" >&2
+  echo "                   image file to loop into this role. If left" >&2
+  echo "                   empty, a model-specific default is used." >&2
 }
 
-if [ "$#" -gt 0 ]; then
-	if [ "$1" != "--help" ]; then
-		echo "E: too many arguments" >&2
-		usage
-		exit 1
-	fi
-	usage
-	exit 0
+FORCE=false
+while getopts :h:-: OPTCHAR; do
+  case "$OPTCHAR" in
+    h)
+      usage
+      exit 0
+      ;;
+    -)
+      case "$OPTARG" in
+        help)
+          usage
+          exit 0
+          ;;
+        force) FORCE=true ;;
+        *)
+          echo "E: unrecognized option: --$OPTARG" >&2
+          exit 1
+          ;;
+      esac
+      ;;
+    :)
+      echo "E: missing argument for -$OPTARG" >&2
+      exit 1
+      ;;
+    '?')
+      echo "E: unrecognized option -$OPTARG" >&2
+      exit 1
+      ;;
+    *)
+      echo "E: error parsing options" >&2
+      exit 1
+      ;;
+  esac
+done
+shift "$((OPTIND - 1))"
+
+DEVICE_PATH=
+
+if [ "$#" -eq 1 ]; then
+  DEVICE_PATH="$1"
+elif [ "$#" -gt 1 ]; then
+  echo "E: invalid number of arguments" >&2
+  usage
+  exit 1
 fi
 
 if [ "$(id -u)" -ne 0 ]; then
-	echo "reform-setup-encrypted-nvme has to be run as root / using sudo."
-	exit
+  echo "reform-setup-encrypted-nvme has to be run as root / using sudo."
+  exit
 fi
 
-command -v "cryptsetup" >/dev/null 2>&1 || { echo >&2 "Please install \"cryptsetup\" using: apt install cryptsetup"; exit 1; }
-command -v "lvchange" >/dev/null 2>&1 || { echo >&2 "Please install \"lvm2\" using: apt install lvm2"; exit 1; }
-command -v "mkfs.ext4" >/dev/null 2>&1 || { echo >&2 "Please install \"e2fsprogs\" using: apt install e2fsprogs"; exit 1; }
+command -v "cryptsetup" >/dev/null 2>&1 || {
+  echo >&2 'Please install "cryptsetup" using: apt install cryptsetup'
+  exit 1
+}
+command -v "lvchange" >/dev/null 2>&1 || {
+  echo >&2 'Please install "lvm2" using: apt install lvm2'
+  exit 1
+}
+command -v "mkfs.ext4" >/dev/null 2>&1 || {
+  echo >&2 'Please install "e2fsprogs" using: apt install e2fsprogs'
+  exit 1
+}
 
-# shellcheck source=/dev/null
-if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
-	. "./machines/$(cat /proc/device-tree/model).conf"
-elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf" ]; then
-	. "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
+if [ -z "$DEVICE_PATH" ]; then
+  # shellcheck source=/dev/null
+  if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
+    . "./machines/$(cat /proc/device-tree/model).conf"
+  elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf" ]; then
+    . "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
+  else
+    echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
+    exit 1
+  fi
+  DEVICE_PATH="/dev/$DEV_SSD"
+fi
+
+if [ -b "$DEVICE_PATH" ]; then
+  if [ "$DEV_SSD" = "sda" ]; then
+    HUMAN="SATA SSD"
+  else
+    HUMAN="NVMe SSD"
+  fi
+
+  echo "This will ERASE ALL DATA from your $HUMAN."
+
+  echo ""
+
+  if [ "$FORCE" = true ]; then
+    echo "Proceeding without user interaction because of --force"
+    response="y"
+  else
+    printf "Are you sure you want to proceed? [y/N] "
+    read -r response
+  fi
+
+  if [ "$response" != "y" ]; then
+    echo "Exiting."
+    exit
+  fi
+elif [ -f "$DEVICE_PATH" ]; then
+  # plain file -- do nothing
+  HUMAN="reguar file"
 else
-	echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
-	exit 1
-fi
-
-if [ "$DEV_SSD" = "sda" ]; then
-	HUMAN="SATA"
-else
-	HUMAN="NVMe"
-fi
-
-echo "This will ERASE ALL DATA from your $HUMAN SSD."
-
-echo ""
-
-printf "Are you sure you want to proceed? [y/N] "
-read -r response
-
-if [ "$response" != "y" ]; then
-	echo "Exiting."
-	exit
+  echo "E: $DEVICE_PATH is neither block device nor regular file" >&2
+  exit 1
 fi
 
 cleanupvg() { vgchange -an reformvg; }
@@ -67,45 +136,61 @@ error() { echo "$0 FAILED to run" >&2; }
 
 trap error EXIT INT TERM
 
-if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$DEV_SSD")" ]; then
-	echo "/dev/$DEV_SSD is still in use" >&2
-	exit 1
+if [ ! -f "$DEVICE_PATH" ] && [ -n "$(lsblk --noheadings --output=MOUNTPOINT "$DEVICE_PATH")" ]; then
+  echo "$DEVICE_PATH is still in use" >&2
+  exit 1
 fi
 
 # /proc/meminfo contains the sizes in kibibytes
 mem="$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)"
-case "$mem" in *[!0123456789]*|0?*|"")
-	echo "E: unable to acquire total memory from /proc/meminfo" >&2
-	exit 1
+case "$mem" in *[!0123456789]* | 0?* | "")
+  echo "E: unable to acquire total memory from /proc/meminfo" >&2
+  exit 1
+  ;;
 esac
 # convert memory size to gigabytes, rounding up
 mem="$(awk 'BEGIN {printf("%.f",'"$mem"'/1024/1024+0.5)}')"
 # minimum swap size is 4G
 if [ "$mem" -lt 4 ]; then
-	mem=4
+  mem=4
 fi
 
-disksize=$(lsblk -bno SIZE "/dev/$DEV_SSD" | head -1)
-case "$disksize" in *[!0123456789]*|0?*|"")
-	echo "E: unable to acquire disk size of /dev/$DEV_SSD" >&2
-	exit 1
-esac
+if [ -f "$DEVICE_PATH" ]; then
+  disksize="$(stat -c %s "$DEVICE_PATH")"
+else
+  disksize=$(lsblk --nodeps --bytes --noheadings --output=SIZE "$DEVICE_PATH" | head -1)
+  case "$disksize" in *[!0123456789]* | 0?* | "")
+    echo "E: unable to acquire disk size of $DEVICE_PATH" >&2
+    exit 1
+    ;;
+  esac
+fi
+
 # convert disk size to gigabytes, rounding down
-disksize="$((disksize/1024/1024/1024))"
+disksize="$((disksize / 1024 / 1024 / 1024))"
 
 # maximum swap size is 5% of disk size
-if [ "$mem" -gt "$((disksize*5/100))" ]; then
-	mem="$((disksize*5/100))"
+if [ "$mem" -gt "$((disksize * 5 / 100))" ]; then
+  mem="$((disksize * 5 / 100))"
 fi
 
 if [ "$mem" -le 1 ]; then
-	echo "E: your disk is too small for swap" >&2
-	exit 1
+  echo "E: your disk is too small for swap" >&2
+  exit 1
 fi
 
-cryptsetup luksFormat "/dev/$DEV_SSD"
+if [ "$FORCE" = true ]; then
+  read -r PASSPHRASE
+  printf "%s" "$PASSPHRASE" | cryptsetup luksFormat "$DEVICE_PATH" "-"
+else
+  cryptsetup luksFormat "$DEVICE_PATH"
+fi
 trap "cleanupluks; error" EXIT INT TERM
-cryptsetup luksOpen "/dev/$DEV_SSD" reform_crypt
+if [ "$FORCE" = true ]; then
+  printf "%s" "$PASSPHRASE" | cryptsetup luksOpen --key-file=- "$DEVICE_PATH" reform_crypt
+else
+  cryptsetup luksOpen "$DEVICE_PATH" reform_crypt
+fi
 pvcreate /dev/mapper/reform_crypt
 vgcreate reformvg /dev/mapper/reform_crypt
 trap "cleanupvg; cleanupluks; error" EXIT INT TERM
@@ -113,57 +198,71 @@ lvcreate --name swap --size "${mem}G" reformvg
 mkswap /dev/reformvg/swap
 lvcreate --name root --extents 100%FREE reformvg
 mkfs.ext4 /dev/reformvg/root
-SWAPUUID=$(blkid -s UUID -o value /dev/reformvg/swap)
-CRYPTUUID=$(blkid -s UUID -o value "/dev/$DEV_SSD")
+SWAPUUID=$(lsblk --nodeps --noheadings --output=UUID /dev/reformvg/swap)
+CRYPTUUID=$(cryptsetup luksUUID "$DEVICE_PATH")
 
 echo ""
-printf "The encrypted %s is now set up. Do you want me to run reform-migrate now as well? [y/N] " "$HUMAN"
-read -r response
+if [ "$FORCE" = true ]; then
+  echo "Running reform-migrate because of --force"
+  response="y"
+else
+  printf "The encrypted %s is now set up. Do you want me to run reform-migrate now as well? [y/N] " "$HUMAN"
+  read -r response
+fi
 
 if [ "$response" != "y" ]; then
-	echo "If you want to migrate this system to $HUMAN SSD you can now run:"
-	echo ""
-	echo "echo RESUME=UUID=$SWAPUUID > /etc/initramfs-tools/conf.d/resume"
-	echo "echo reform_crypt UUID=$CRYPTUUID none luks,discard > /etc/crypttab"
-	echo "echo UUID=$SWAPUUID none swap sw 0 0 >> /etc/fstab"
-	echo "cryptsetup luksOpen /dev/$DEV_SSD reform_crypt"
-	echo "vgchange -ay reformvg"
-	echo "reform-migrate /dev/reformvg/root"
-	echo "vgchange -an reformvg"
-	echo "cryptsetup luksClose reform_crypt"
+  echo "If you want to migrate this system to $HUMAN you can now run:"
+  echo ""
+  echo "echo RESUME=UUID=$SWAPUUID > /etc/initramfs-tools/conf.d/resume"
+  echo "echo reform_crypt UUID=$CRYPTUUID none luks,discard,x-initrd.attach > /etc/crypttab"
+  echo "echo UUID=$SWAPUUID none swap sw 0 0 >> /etc/fstab"
+  echo "cryptsetup luksOpen $DEVICE_PATH reform_crypt"
+  echo "vgchange -ay reformvg"
+  echo "reform-migrate /dev/reformvg/root"
+  echo "vgchange -an reformvg"
+  echo "cryptsetup luksClose reform_crypt"
 else
-	# we are not really running reform-migrate but imitate what it does
-	# instead because we want to write out some files after the rsync but
-	# before running reform-boot-config
-	ROOTMNT="$(mktemp --tmpdir --directory reform-setup-encrypted-nvme.XXXXXXXXXX)"
-	trap 'umount $ROOTMNT; cleanupvg; cleanupluks; error' EXIT INT TERM
-	mount /dev/reformvg/root "$ROOTMNT"
-	rsync -axHAWXS --numeric-ids --info=progress2 / "$ROOTMNT"
-	echo "RESUME=UUID=$SWAPUUID" > "$ROOTMNT/etc/initramfs-tools/conf.d/resume"
-	echo "reform_crypt UUID=$CRYPTUUID none luks,discard" > "$ROOTMNT/etc/crypttab"
-	echo "UUID=$SWAPUUID none swap sw 0 0" >> "$ROOTMNT/etc/fstab"
-	trap "cleanupvg; cleanupluks; error" EXIT INT TERM
-	umount "$ROOTMNT"
+  # we are not really running reform-migrate but imitate what it does
+  # instead because we want to write out some files after the rsync but
+  # before running reform-boot-config
+  ROOTMNT="$(mktemp --tmpdir --directory reform-setup-encrypted-nvme.XXXXXXXXXX)"
+  trap 'umount $ROOTMNT; cleanupvg; cleanupluks; error' EXIT INT TERM
+  mount /dev/reformvg/root "$ROOTMNT"
+  rsync -axHAWXS --numeric-ids --info=progress2 / "$ROOTMNT"
+  echo "RESUME=UUID=$SWAPUUID" >"$ROOTMNT/etc/initramfs-tools/conf.d/resume"
+  echo "reform_crypt UUID=$CRYPTUUID none luks,discard,x-initrd.attach" >"$ROOTMNT/etc/crypttab"
+  echo "UUID=$SWAPUUID none swap sw 0 0" >>"$ROOTMNT/etc/fstab"
+  trap "cleanupvg; cleanupluks; error" EXIT INT TERM
+  umount "$ROOTMNT"
 
-	emmc_flag=
-	if [ "$EMMC_USE" = true ]; then
-		printf "Your /boot partition will be on eMMC by default. Do you want it on the SD-Card instead? [y/N] "
-		read -r response
-		if [ "$response" != "y" ]; then
-			emmc_flag="--emmc"
-		fi
-	fi
-	ret=0
-	reform-boot-config $emmc_flag /dev/reformvg/root || ret=$?
-	if [ "$ret" -ne 0 ]; then
-		echo "reform-boot-config failed. To re-run it manually, perform the following steps:" >&2
-		echo "    $ cryptsetup luksOpen \"/dev/$DEV_SSD\" reform_crypt" >&2
-		echo "    $ vgchange -ay reformvg" >&2
-		echo "    $ reform-boot-config $emmc_flag /dev/reformvg/root >&2"
-		echo "    $ vgchange -an reformvg" >&2
-		echo "    $ cryptsetup luksClose reform_crypt" >&2
-		exit "$ret"
-	fi
+  emmc_flag=
+  if [ "$EMMC_USE" = true ]; then
+    if [ "$FORCE" = true ]; then
+      echo "Placing /boot on eMMC because of --force"
+      emmc_flag="--emmc"
+    else
+      printf "Your /boot partition will be on eMMC by default. Do you want it on the SD-Card instead? [y/N] "
+      read -r response
+      if [ "$response" != "y" ]; then
+        emmc_flag="--emmc"
+      fi
+    fi
+  fi
+  ret=0
+  if [ "$FORCE" = true ]; then
+    reform-boot-config --force $emmc_flag /dev/reformvg/root || ret=$?
+  else
+    reform-boot-config $emmc_flag /dev/reformvg/root || ret=$?
+  fi
+  if [ "$ret" -ne 0 ]; then
+    echo "reform-boot-config failed. To re-run it manually, perform the following steps:" >&2
+    echo "    $ cryptsetup luksOpen \"$DEVICE_PATH\" reform_crypt" >&2
+    echo "    $ vgchange -ay reformvg" >&2
+    echo "    $ reform-boot-config $emmc_flag /dev/reformvg/root" >&2
+    echo "    $ vgchange -an reformvg" >&2
+    echo "    $ cryptsetup luksClose reform_crypt" >&2
+    exit "$ret"
+  fi
 fi
 
 trap "cleanupluks; error" EXIT INT TERM

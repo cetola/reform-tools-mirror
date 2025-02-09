@@ -4,19 +4,5 @@ build:
   script: |
     set -x
     apt-get update -o Acquire::AllowReleaseInfoChange=true -o quiet::ReleaseInfoChange=true
-    apt-get --no-install-recommends -y install sbuild build-essential fakeroot mmdebstrap uidmap debhelper dh-dkms
-    adduser --comment build --disabled-password build
-    runuser -u build -- sh -c 'echo "\$chroot_mode = \"unshare\";1;" > ~/.sbuildrc'
-    runuser -u build -- sh -c 'mkdir -p ~/.cache/sbuild'
-    runuser -u build -- sh -c 'mmdebstrap --variant=buildd --mode=unshare unstable ~/.cache/sbuild/unstable-$(dpkg --print-architecture).tar'
-    runuser -u build -- sh -c 'sbuild -d unstable --verbose'
-    debversion="$(dpkg-parsechangelog -SVersion)"
-    mv ../reform-tools_${debversion}_amd64.changes ../reform-tools_${debversion}_amd64.buildinfo ../reform-tools_${debversion}_all.deb ../reform2-lpc-dkms_${debversion}_all.deb ../reform-tools_${debversion}.tar.xz ../reform-tools_${debversion}.dsc .
-  artifacts:
-    paths:
-      - reform-tools_*_amd64.changes
-      - reform-tools_*_amd64.buildinfo
-      - reform-tools_*_all.deb
-      - reform2-lpc-dkms_*_all.deb
-      - reform-tools_*.tar.xz
-      - reform-tools_*.dsc
+    apt-get --no-install-recommends --yes install make clang-format black shfmt shellcheck
+    make lint

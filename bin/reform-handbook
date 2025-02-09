@@ -1,9 +1,8 @@
 #!/bin/sh
-
 set -eu
 
 usage() {
-  echo "Kill any pavucontrol process and re-exec it." >&2
+  echo "Open the MNT Reform handbook in a browser" >&2
   echo >&2
   echo "Usage: $0 [--help]" >&2
   echo >&2
@@ -11,7 +10,7 @@ usage() {
   echo "  --help           Display this help and exit." >&2
 }
 
-if [ "$#" -gt 0 ]; then
+if [ $# -gt 0 ]; then
   if [ "$1" != "--help" ]; then
     echo "E: too many arguments" >&2
     usage
@@ -21,5 +20,11 @@ if [ "$#" -gt 0 ]; then
   exit 0
 fi
 
-pkill 'pavucontrol$'
-exec pavucontrol
+if [ -z ${DISPLAY+x} ]; then
+  # not running under X/wayland
+  set -- elinks
+else
+  set -- xdg-open
+fi
+set -- "$@" /usr/share/doc/reform-handbook/html/index.html
+exec "$@"

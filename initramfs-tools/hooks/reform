@@ -4,36 +4,48 @@ set -e
 
 PREREQ=""
 prereqs() { echo "$PREREQ"; }
-case $1 in prereqs) prereqs; exit 0 ;; esac
+case $1 in prereqs)
+  prereqs
+  exit 0
+  ;;
+esac
 
+# shellcheck disable=SC1091
 . /usr/share/initramfs-tools/hook-functions
 
 MACHINE=
 if [ -e /etc/flash-kernel/machine ]; then
-	MACHINE=$(cat /etc/flash-kernel/machine)
+  MACHINE=$(cat /etc/flash-kernel/machine)
 elif [ -e /proc/device-tree/model ]; then
-	MACHINE=$(cat /proc/device-tree/model)
+  MACHINE=$(cat /proc/device-tree/model)
 fi
 
+# The switch below creates device-specific initramfs depending on the platform
+# that update-initramfs is run on. For the system images, we would like to
+# create identical images that work on all boards. Thus, if you change anything
+# below, make sure to also adjust the respective initramfs hook in the
+# reform-system-image repository.
 case $MACHINE in
-	"MNT Reform 2") : ;;
-	"MNT Reform 2 HDMI") : ;;
-	"MNT Reform 2 with BPI-CM4 Module") : ;;
-	"MNT Reform 2 with LS1028A Module")
-		[ "${verbose}" = "y" ] && echo "Adding firmware ls1028a-mhdpfw.bin"
-		copy_file firmware /boot/ls1028a-mhdpfw.bin /lib/firmware
-		[ "${verbose}" = "y" ] && echo "Adding /usr/bin/dmesg"
-		copy_exec /usr/bin/dmesg
-		;;
-	"MNT Reform 2 with RCORE RK3588 Module") : ;;
-	"MNT Pocket Reform with i.MX8MP Module") : ;;
-	"MNT Pocket Reform with BPI-CM4 Module") : ;;
-	"MNT Pocket Reform with RCORE RK3588 Module") : ;;
-	"MNT Reform Next with RCORE RK3588 Module") : ;;
-	"")
-		echo "W: unable to deduce target machine for reform initramfs-hook" >&2
-		;;
-	*)
-		echo "W: unsupported machine: $MACHINE" >&2
-		;;
+  "MNT Reform 2") : ;;
+  "MNT Reform 2 HDMI") : ;;
+  "MNT Reform 2 with BPI-CM4 Module") : ;;
+  "MNT Reform 2 with LS1028A Module")
+    # shellcheck disable=SC2154
+    [ "${verbose}" = "y" ] && echo "Adding firmware ls1028a-mhdpfw.bin"
+    copy_file firmware /boot/ls1028a-mhdpfw.bin /lib/firmware
+    # shellcheck disable=SC2154
+    [ "${verbose}" = "y" ] && echo "Adding /usr/bin/dmesg"
+    copy_exec /usr/bin/dmesg
+    ;;
+  "MNT Reform 2 with RCORE RK3588 Module") : ;;
+  "MNT Pocket Reform with i.MX8MP Module") : ;;
+  "MNT Pocket Reform with BPI-CM4 Module") : ;;
+  "MNT Pocket Reform with RCORE RK3588 Module") : ;;
+  "MNT Reform Next with RCORE RK3588 Module") : ;;
+  "")
+    echo "W: unable to deduce target machine for reform initramfs-hook" >&2
+    ;;
+  *)
+    echo "W: unsupported machine: $MACHINE" >&2
+    ;;
 esac

@@ -9,8 +9,10 @@ set -e
 
 self="$0"
 version="$1"
+# shellcheck disable=SC2034
 image_path="$2"
 
+# shellcheck disable=SC2086
 set -- $DEB_MAINT_PARAMS
 
 # strip single quotes from beginning and end
@@ -20,40 +22,42 @@ action="${action%\'}"
 set -u
 
 install_dtbs() {
-	for CONF in /usr/share/reform-tools/machines/*.conf; do
-		. "$CONF"
-		if [ ! -d "/usr/lib/linux-image-$version" ]; then
-			echo "E: /usr/lib/linux-image-$version does not exist" >&2
-			continue
-		fi
-		dtb=$(find "/usr/lib/linux-image-$version" -wholename "*/$DTBPATH" 2>/dev/null | head -n 1)
-		if [ -z "$dtb" ]; then
-			echo "E: no dtb for $DTBPATH in /usr/lib/linux-image-$version" >&2
-			continue
-		elif [ ! -f "$dtb" ]; then
-			echo "E: $dtb does not exist" >&2
-			continue
-		fi
-		if [ ! -e "/usr/lib/linux-image-$version/$DTBPATH" ]; then
-			echo "W: irregular dtb path: $dtb" >&2
-		fi
-		mkdir -p "/boot/dtbs/$version/$(dirname "$DTBPATH")"
-		cp "$dtb" "/boot/dtbs/$version/$DTBPATH"
-	done
+  for CONF in /usr/share/reform-tools/machines/*.conf; do
+    # shellcheck disable=SC1090
+    . "$CONF"
+    if [ ! -d "/usr/lib/linux-image-$version" ]; then
+      echo "W: /usr/lib/linux-image-$version does not exist -- skipping..." >&2
+      continue
+    fi
+    dtb=$(find "/usr/lib/linux-image-$version" -wholename "*/$DTBPATH" 2>/dev/null | head -n 1)
+    if [ -z "$dtb" ]; then
+      echo "W: no dtb for $DTBPATH in /usr/lib/linux-image-$version -- skipping..." >&2
+      continue
+    elif [ ! -f "$dtb" ]; then
+      echo "W: $dtb does not exist -- skipping..." >&2
+      continue
+    fi
+    if [ ! -e "/usr/lib/linux-image-$version/$DTBPATH" ]; then
+      echo "W: irregular dtb path: $dtb" >&2
+    fi
+    mkdir -p "/boot/dtbs/$version/$(dirname "$DTBPATH")"
+    cp "$dtb" "/boot/dtbs/$version/$DTBPATH"
+  done
 }
 
 remove_dtbs() {
-	for CONF in /usr/share/reform-tools/machines/*.conf; do
-		. "$CONF"
-		rm -f "/boot/dtbs/$version/$DTBPATH" || :
-	done
-	rmdir --ignore-fail-on-non-empty "/boot/dtbs/$version"
+  for CONF in /usr/share/reform-tools/machines/*.conf; do
+    # shellcheck disable=SC1090
+    . "$CONF"
+    rm -f "/boot/dtbs/$version/$DTBPATH" || :
+  done
+  rmdir --ignore-fail-on-non-empty "/boot/dtbs/$version"
 }
 
 case "$self:$action" in
-	# Only run on postinst configure and postrm remove, to avoid wasting
-	# time by calling this script multiple times on upgrade and removal.
-	*/postinst.d/*:configure) install_dtbs ;;
-	*/postrm.d/*:remove) remove_dtbs ;;
-	*) exit 0 ;;
+  # Only run on postinst configure and postrm remove, to avoid wasting
+  # time by calling this script multiple times on upgrade and removal.
+  */postinst.d/*:configure) install_dtbs ;;
+  */postrm.d/*:remove) remove_dtbs ;;
+  *) exit 0 ;;
 esac
