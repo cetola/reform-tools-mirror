@@ -146,6 +146,8 @@ fi
 
 if [ -e "/etc/flash-kernel/machine" ] && [ -e "/proc/device-tree/model" ] && [ "$(cat /proc/device-tree/model)" != "$(cat /etc/flash-kernel/machine)" ]; then
   echo "E: your currently loaded dtb is not the one referenced by flash-kernel" >&2
+  echo "E: contents of /proc/device-tree/model: $(cat /proc/device-tree/model)" >&2
+  echo "E: contents of /etc/flash-kernel/machine: $(cat /etc/flash-kernel/machine)" >&2
 fi
 
 PKGSGUI="xwayland xterm sway fonts-inter fonts-noto-color-emoji waybar swayidle swaylock mesa-utils lxpolkit wayland-protocols wofi wireplumber papirus-icon-theme libglib2.0-bin gsettings-desktop-schemas gnome-disk-utility gnome-themes-extra-data gnome-icon-theme gnome-settings-daemon gnome-system-monitor grim slurp gedit evince mpv sxiv gvfs-backends unicode-data engrampa neverball minetest qt5ct kde-style-breeze dunst pasystray wev wf-recorder wayvnc network-manager-gnome blueman pavucontrol thunar"
