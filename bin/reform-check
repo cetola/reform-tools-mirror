@@ -492,7 +492,7 @@ if [ ! -e "/boot/dtb-$(uname -r)" ]; then
 elif [ ! -e "/boot/dtbs/$(uname -r)/$DTBPATH" ]; then
   echo "E: device tree file $DTBPATH is missing from /boot/dtbs" >&2
 elif [ "$(readlink "/boot/dtb-$(uname -r)")" != "dtbs/$(uname -r)/$DTBPATH" ]; then
-  echo "E: /boot/dtb-* symlink does not reference $DTBPATH" >&2
+  echo "E: /boot/dtb-$(uname -r) symlink does not reference dtbs/$(uname -r)/$DTBPATH but: $(readlink "/boot/dtb-$(uname -r)")" >&2
 fi
 
 if [ -e "/etc/modprobe.d/reform.conf" ]; then
