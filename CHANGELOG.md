@@ -1,3 +1,21 @@
+1.67 (2025-02-12)
+=================
+
+ * run `lsblk` with `--nodeps` where appropriate
+ * `machines/MNT Pocket Reform with RCORE RK3588 Module.conf`: update
+   `BOOTARGS` with `fbcon=font:TER16x32`
+ * `sbin/reform-boot-config`:
+    - delete the contents of the old `/boot`
+    - add `--force` option to proceed without user interaction
+ * `sbin/reform-setup-encrypted-nvme`: add `--force` option to run
+   `reform-migrate` and put `/boot` on eMMC if allowed
+ * `sbin/reform-display-config`: always write out
+   `/etc/u-boot-menu/conf.d/reform.conf`
+ * `bin/reform-check`:
+    - be more verbose in error messages
+    - make sure that `/etc/u-boot-menu/conf.d/reform.conf` exists with the
+      right contents
+
 1.66 (2025-02-03)
 =================
 
