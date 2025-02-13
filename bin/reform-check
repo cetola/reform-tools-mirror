@@ -126,10 +126,10 @@ else
   exit 1
 fi
 
-echo "I: Your platform name is: $(cat /proc/device-tree/model)" >&2
-echo "I: You are running kernel version: $(uname -r)" >&2
-echo "I: Your installed kernel version: $(dpkg-query --show --showformat '${Version}' linux-image-mnt-reform-arm64)" >&2
-echo "I: Your installed reform-tools version: $(dpkg-query --show --showformat '${Version}' reform-tools)" >&2
+echo "I: Contents of /proc/device-tree/model: $(cat /proc/device-tree/model)" >&2
+echo "I: \`uname -a\` output: $(uname -a)" >&2
+echo "I: Version of linux-image-mnt-reform-arm64: $(dpkg-query --show --showformat '${Version}' linux-image-mnt-reform-arm64)" >&2
+echo "I: Version of reform-tools: $(dpkg-query --show --showformat '${Version}' reform-tools)" >&2
 
 if [ ! -e "/etc/flash-kernel/machine" ]; then
   # /etc/flash-kernel/machine not existing is only a potential problem
