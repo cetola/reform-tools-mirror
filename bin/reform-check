@@ -130,6 +130,33 @@ echo "I: Contents of /proc/device-tree/model: $(cat /proc/device-tree/model)" >&
 echo "I: \`uname -a\` output: $(uname -a)" >&2
 echo "I: Version of linux-image-mnt-reform-arm64: $(dpkg-query --show --showformat '${Version}' linux-image-mnt-reform-arm64)" >&2
 echo "I: Version of reform-tools: $(dpkg-query --show --showformat '${Version}' reform-tools)" >&2
+HUMAN_ROOT=
+case $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) in
+  "/dev/reformvg/root")
+    pv_device="$(pvdisplay --noheadings --select vgname=reformvg --columns --options pv_name)"
+    pv_device="${pv_device#  }" # remove whitespace prefix
+    if [ "$pv_device" = "/dev/mapper/reform_crypt" ]; then
+      luks_disk="$(lsblk --json -o PATH,PKNAME | jq -r '.blockdevices[] | select(.path == "/dev/mapper/reform_crypt") | .pkname')"
+      if [ "$luks_disk" = "${DEV_SSD}" ]; then
+        HUMAN_ROOT="LVM vg 'reformvg' on LUKS device 'reform_crypt' on SSD"
+      else
+        echo "W: reform_crypt LUKS device on unusual disk: /dev/$luks_disk" >&2
+      fi
+    else
+      echo "W: LVM volume group reformvg on unexpected partition: $pv_device" >&2
+    fi
+    ;;
+  "/dev/${DEV_MMC}"*) HUMAN_ROOT="eMMC" ;;
+  "/dev/${DEV_SD}"*) HUMAN_ROOT="SD-card" ;;
+  "/dev/${DEV_SSD}"*) HUMAN_ROOT="SSD" ;;
+esac
+echo "I: Mount source of /: $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) (${HUMAN_ROOT:-n.a.})" >&2
+HUMAN_BOOT=
+case $(findmnt --noheadings --evaluate --mountpoint /boot --output SOURCE) in
+  "/dev/${DEV_MMC}"*) HUMAN_BOOT="eMMC" ;;
+  "/dev/${DEV_SD}"*) HUMAN_BOOT="SD-card" ;;
+esac
+echo "I: Mount source of /boot: $(findmnt --noheadings --evaluate --mountpoint /boot --output SOURCE) (${HUMAN_BOOT})" >&2
 
 if [ ! -e "/etc/flash-kernel/machine" ]; then
   # /etc/flash-kernel/machine not existing is only a potential problem
