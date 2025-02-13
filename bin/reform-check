@@ -497,6 +497,9 @@ done
 if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-$(uname -r)" 2>/dev/null | grep -q '^installed$'; then
   echo "E: the currently running kernel is not installed as a package" >&2
 fi
+if ! uname --kernel-version | grep --quiet --fixed-strings " $(dpkg-query --show --showformat '${Version}' linux-image-mnt-reform-arm64) "; then
+  echo "E: the currently running kernel is not the one provided by linux-image-mnt-reform-arm64" >&2
+fi
 
 if [ "$MIRROR" = "reform.debian.net" ]; then
   if dpkg-query --showformat '${db:Status-Status}\n' --show "reform-qcacld2" 2>/dev/null | grep -q '^installed$'; then
