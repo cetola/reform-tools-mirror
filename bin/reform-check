@@ -392,7 +392,7 @@ else
 fi
 
 if [ -n "$(dpkg --verify reform-tools)" ]; then
-  echo "I: the following files differ from how they are shipped by reform-tools:" >&2
+  echo "I: the following files differ from how they are shipped by reform-tools (ignore /var/lib/alsa/asound.state):" >&2
   dpkg --verify reform-tools
 fi
 
