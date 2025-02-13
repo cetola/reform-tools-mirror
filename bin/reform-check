@@ -103,8 +103,7 @@ fi
 if [ -z "$MIRROR" ] && grep --silent '^URIs: https://reform.debian.net/debian/\?$' /etc/apt/sources.list.d/reform*.sources 2>/dev/null; then
   echo "I: reform.debian.net is configured as a mirror in /etc/apt/sources.list.d" >&2
   echo "I: Assuming reform.debian.net stable mirror for this script" >&2
-  echo "I: If this is incorrect, you can set the mirror to its default by" >&2
-  echo "I: re-running this script with --mirror=mntre.com"
+  echo "I: If this is incorrect, you can set the mirror to its default by re-running this script with --mirror=mntre.com"
   MIRROR="reform.debian.net"
 fi
 
