@@ -7,6 +7,7 @@
 #include <linux/power_supply.h>
 #include <linux/of.h>
 #include <linux/backlight.h>
+#include <linux/version.h>
 
 /* abs_diff was only added to math.h in linux 6.6 */
 #ifndef abs_diff
@@ -175,7 +176,12 @@ static int lpc_probe(struct spi_device *spi)
 	psy_cfg.of_node = spi->dev.of_node;
 	psy_cfg.drv_data = data;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,13,0)
+	psy_cfg.no_wakeup_source = true;
+	data->bat = power_supply_register(&spi->dev, &bat_desc, &psy_cfg);
+#else
 	data->bat = power_supply_register_no_ws(&spi->dev, &bat_desc, &psy_cfg);
+#endif
 	if (IS_ERR(data->bat)) {
 		printk(KERN_ERR "%s: power_supply_register_no_ws failed\n",
 		       __func__);
