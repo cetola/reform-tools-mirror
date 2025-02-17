@@ -86,25 +86,26 @@ command -v "mkfs.ext4" >/dev/null 2>&1 || {
   exit 1
 }
 
+# shellcheck source=/dev/null
+if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
+  . "./machines/$(cat /proc/device-tree/model).conf"
+elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf" ]; then
+  . "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
+else
+  echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
+  exit 1
+fi
+
 if [ -z "$DEVICE_PATH" ]; then
-  # shellcheck source=/dev/null
-  if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
-    . "./machines/$(cat /proc/device-tree/model).conf"
-  elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf" ]; then
-    . "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
-  else
-    echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
-    exit 1
-  fi
   DEVICE_PATH="/dev/$DEV_SSD"
 fi
 
 if [ -b "$DEVICE_PATH" ]; then
-  if [ "$DEV_SSD" = "sda" ]; then
-    HUMAN="SATA SSD"
-  else
-    HUMAN="NVMe SSD"
-  fi
+  case $DEVICE_PATH in
+    /dev/sda*) HUMAN="SATA SSD" ;;
+    /dev/nvme0n1*) HUMAN="NVMe SSD" ;;
+    *) HUMAN="SSD" ;;
+  esac
 
   echo "This will ERASE ALL DATA from your $HUMAN."
 
