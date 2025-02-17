@@ -176,7 +176,7 @@ static int lpc_probe(struct spi_device *spi)
 	psy_cfg.of_node = spi->dev.of_node;
 	psy_cfg.drv_data = data;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,13,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
 	psy_cfg.no_wakeup_source = true;
 	data->bat = power_supply_register(&spi->dev, &bat_desc, &psy_cfg);
 #else
