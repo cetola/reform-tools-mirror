@@ -1,3 +1,10 @@
+1.68 (2025-02-18)
+=================
+
+ * bin/reform-check: make output more verbose
+ * lpc/reform2_lpc.c: support linux 6.13
+ * sbin/reform-setup-encrypted-nvme: fix manually passing path to /dev/nvme0n1
+
 1.67 (2025-02-12)
 =================
 
