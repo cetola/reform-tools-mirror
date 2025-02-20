@@ -21,6 +21,10 @@ usage_minimal() {
   echo "into the newly copied system. TARGET is a partition block device and will" >&2
   echo "temporarily get mounted by this script." >&2
   echo >&2
+  echo "This script does not set up partitions for you. If you would like to configure" >&2
+  echo "full disk encryption and set up partitions accordingly automatically, consider" >&2
+  echo "using the reform-setup-encrypted-nvme tool instead of reform-migrate." >&2
+  echo >&2
   echo "Usage: $0 [--help] [--help-full] [--emmc] DEVICE" >&2
   echo >&2
   echo "Options:" >&2
@@ -55,6 +59,10 @@ usage() {
     echo "will set up the first partition of the SD-card to load your newly copied rootfs"
     echo "and adjust /etc/fstab of TARGET accordingly."
   fi
+  echo >&2
+  echo "This script does not set up partitions for you. If you would like to configure" >&2
+  echo "full disk encryption and set up partitions accordingly automatically, consider" >&2
+  echo "using the reform-setup-encrypted-nvme tool instead of reform-migrate." >&2
   echo ""
   echo "Examples:"
   echo ""
