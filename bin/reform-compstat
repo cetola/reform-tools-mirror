@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # SPDX-License-Identifier: GPL-3.0+
-# Copyright 2022-2024 Lukas F. Hartmann <lukas@mntre.com>
+# Copyright 2022-2022 Lukas F. Hartmann <lukas@mntre.com>
+# Copyright 2024-2025 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
 #
 # Do not run shellcheck on this file
 # shellcheck disable=SC1071

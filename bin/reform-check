@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2022-2025 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
 #
 # This script checks the integrity of your MNT reform setup. It is meant for
 # two main use-cases:

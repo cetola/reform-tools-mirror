@@ -1,11 +1,10 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-2.0+
+# Copyright 2021-2023 Lukas F. Hartmann <lukas@mntre.com>
+# Copyright 2022-2025 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
 #
 # MNT Reform Standby Handler (For i.MX8MQ)
 # Thanks to ruff for contributions
-#
-# Copyright 2022 MNT Research GmbH (https://mntre.com)
-# License: GPLv2.0+
-#
 
 set -eu
 

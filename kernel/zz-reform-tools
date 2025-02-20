@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2024-2025 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
 #
 # Populate /boot with all known dtbs.
 # The flash-kernel package is still needed to provide the /boot/dtb-$(uname -r)

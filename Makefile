@@ -1,4 +1,6 @@
 #!/usr/bin/make -f
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2024-2025 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
 
 SHELL = /bin/sh
 INSTALL = /usr/bin/install

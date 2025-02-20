@@ -1,4 +1,7 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2020-2023 Lukas F. Hartmann <lukas@mntre.com>
+# Copyright 2022-2025 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
 #
 # uboot on either emmc or the sd-card (as decided by the position of the DIP
 # switch) will load the kernel and initramfs from the first /boot partiton

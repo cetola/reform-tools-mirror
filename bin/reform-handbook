@@ -1,4 +1,7 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2023 Lukas F. Hartmann <lukas@mntre.com>
+# Copyright 2024 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
 set -eu
 
 usage() {

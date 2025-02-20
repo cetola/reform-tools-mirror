@@ -1,3 +1,12 @@
+/*
+ * SPDX-License-Identifier: GPL-2.0
+ * Copyright 2022 nanocodebug <nanocodebug@gmail.com>
+ * Copyright 2023 Michael Fincham <michael@hotplate.co.nz>
+ * Copyright 2024 Michal Suchánek <hramrach@gmail.com>
+ * Copyright 2024 Lukas F. Hartmann <lukas@mntre.com>
+ * Copyright 2023-2025 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
+ */
+
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/math.h>
