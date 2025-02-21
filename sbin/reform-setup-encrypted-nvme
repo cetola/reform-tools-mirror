@@ -102,10 +102,20 @@ if [ -z "$DEVICE_PATH" ]; then
   DEVICE_PATH="/dev/$DEV_SSD"
 fi
 
+case $DEVICE_PATH in "/dev/$DEV_MMC"*)
+  if [ "$EMMC_USE" = false ]; then
+    echo "E: writing to eMMC not supported on $(cat /proc/device-tree/model)" >&2
+    exit 1
+  fi
+  ;;
+esac
+
 if [ -b "$DEVICE_PATH" ]; then
   case $DEVICE_PATH in
     /dev/sda*) HUMAN="SATA SSD" ;;
     /dev/nvme0n1*) HUMAN="NVMe SSD" ;;
+    "/dev/$DEV_MMC"*) HUMAN="eMMC" ;;
+    "/dev/$DEV_SD"*) HUMAN="SD card" ;;
     *) HUMAN="SSD" ;;
   esac
 
@@ -144,6 +154,29 @@ if [ ! -f "$DEVICE_PATH" ] && [ -n "$(lsblk --noheadings --output=MOUNTPOINT "$D
   exit 1
 fi
 
+# If the user chose eMMC or SD-card as the target device, then it has to be
+# partitioned first so that the unencrypted /boot partition can be in front
+# of the luks partition. Users who do not want this behaviour can manually
+# partition their eMMC or SD-card.
+case $DEVICE_PATH in "/dev/$DEV_MMC" | "/dev/$DEV_SD")
+  # Space in MB which needs to be kept empty for u-boot before the first
+  # partition starts. Biggest requirement comes from rk3588 which expects
+  # u-boot at an offset of 8 MiB and a 4 MiB trust (ATF, OP-TEE)
+  # partition after that. So the first partition can only start at byte
+  # 16777216 or 16 MiB: https://opensource.rock-chips.com/wiki_Partitions
+  MAX_UBOOT=16
+  BOOTSIZE=488
+  /sbin/parted --script --machine "$DEVICE_PATH" "mklabel msdos"
+  /sbin/parted --script --machine "$DEVICE_PATH" "mkpart primary ext4 ${MAX_UBOOT}MiB $((BOOTSIZE + MAX_UBOOT))MiB"
+  /sbin/parted --script --machine "$DEVICE_PATH" "mkpart primary $((BOOTSIZE + MAX_UBOOT))MiB 100%"
+  mkfs.ext4 "${DEVICE_PATH}p1"
+  case $DEVICE_PATH in
+    "/dev/$DEV_MMC") DEVICE_PATH="/dev/${DEV_MMC}p2" ;;
+    "/dev/$DEV_SD") DEVICE_PATH="/dev/${DEV_SD}p2" ;;
+  esac
+  ;;
+esac
+
 # /proc/meminfo contains the sizes in kibibytes
 mem="$(awk '/^MemTotal:/ {print $2}' /proc/meminfo)"
 case "$mem" in *[!0123456789]* | 0?* | "")
@@ -172,10 +205,17 @@ fi
 # convert disk size to gigabytes, rounding down
 disksize="$((disksize / 1024 / 1024 / 1024))"
 
-# maximum swap size is 5% of disk size
-if [ "$mem" -gt "$((disksize * 5 / 100))" ]; then
-  mem="$((disksize * 5 / 100))"
-fi
+case $DEVICE_PATH in
+  "/dev/$DEV_MMC"* | "/dev/$DEV_SD"*)
+    : # do not limit swap size for eMMC and SD-card
+    ;;
+  *)
+    # maximum swap size is 5% of disk size
+    if [ "$mem" -gt "$((disksize * 5 / 100))" ]; then
+      mem="$((disksize * 5 / 100))"
+    fi
+    ;;
+esac
 
 if [ "$mem" -le 1 ]; then
   echo "E: your disk is too small for swap" >&2
