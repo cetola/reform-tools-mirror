@@ -60,6 +60,11 @@ while getopts :h-: OPTCHAR; do
 done
 shift "$((OPTIND - 1))"
 
+if [ "$(id -u)" -ne 0 ]; then
+  echo "reform-setup-encrypted-nvme has to be run as root / using sudo."
+  exit
+fi
+
 DEVICE_PATH=
 
 if [ "$#" -eq 1 ]; then
@@ -68,11 +73,6 @@ elif [ "$#" -gt 1 ]; then
   echo "E: invalid number of arguments" >&2
   usage
   exit 1
-fi
-
-if [ "$(id -u)" -ne 0 ]; then
-  echo "reform-setup-encrypted-nvme has to be run as root / using sudo."
-  exit
 fi
 
 command -v "cryptsetup" >/dev/null 2>&1 || {
