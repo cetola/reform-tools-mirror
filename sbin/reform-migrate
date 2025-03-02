@@ -5,6 +5,80 @@
 
 set -eu
 
+usage() {
+  echo "Usage:" >&2
+  echo "  reform-migrate [--emmc] TARGET" >&2
+  echo "" >&2
+  echo "Mounts TARGET and copies the currently running system to it using rsync. This will" >&2
+  echo "overwrite all existing files in TARGET. At the end, reform-boot-config is run and" >&2
+  echo "will set up the first partition of the SD-card or eMMC (depending on the --emmc" >&2
+  echo "option) to load your newly copied rootfs and adjust /etc/fstab of TARGET accordingly." >&2
+  echo "" >&2
+  echo "Options:" >&2
+  echo "" >&2
+  echo "  -h, --help  Show this help message and exit." >&2
+  echo "  --emmc      Record boot preference on eMMC instead of SD card." >&2
+  echo >&2
+  echo "This script does not set up partitions for you. If you would like to configure" >&2
+  echo "full disk encryption and set up partitions accordingly automatically, consider" >&2
+  echo "using the reform-setup-encrypted-nvme tool instead of reform-migrate." >&2
+  echo "" >&2
+  echo "Examples:" >&2
+  echo "" >&2
+  echo "  reform-migrate --emmc /dev/nvme0n1p1" >&2
+  echo "          Mounts the first partition of an NVMe disk and mirrors your system to it." >&2
+  echo "          Configures booting from the first partition on eMMC." >&2
+  echo "" >&2
+  echo "  reform-migrate /dev/mapper/crypt" >&2
+  echo "          Mounts encrypted disk 'crypt' and mirrors your system to it." >&2
+  echo "          The disk has to be unlocked first with: cryptsetup luksOpen /dev/nvme0n1p1 crypt" >&2
+  echo "          Configures booting from the first partition on the SD-card as --emmc option is missing." >&2
+}
+
+EMMC=""
+while getopts :h-: OPTCHAR; do
+  case "$OPTCHAR" in
+    h)
+      usage
+      exit 0
+      ;;
+    -)
+      case "$OPTARG" in
+        help)
+          usage
+          exit 0
+          ;;
+        emmc) EMMC="--emmc" ;;
+        *)
+          echo "E: unrecognized option: --$OPTARG" >&2
+          exit 1
+          ;;
+      esac
+      ;;
+    :)
+      echo "E: missing argument for -$OPTARG" >&2
+      exit 1
+      ;;
+    '?')
+      echo "E: unrecognized option -$OPTARG" >&2
+      exit 1
+      ;;
+    *)
+      echo "E: error parsing options" >&2
+      exit 1
+      ;;
+  esac
+done
+shift "$((OPTIND - 1))"
+
+if [ "$#" -eq 1 ]; then
+  TARGET="$1"
+else
+  echo "E: invalid number of arguments" >&2
+  usage
+  exit 1
+fi
+
 # shellcheck source=/dev/null
 if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
   . "./machines/$(cat /proc/device-tree/model).conf"
@@ -15,99 +89,14 @@ else
   exit 1
 fi
 
-usage_minimal() {
-  echo "Copies the currently running system onto TARGET and run reform-boot-config" >&2
-  echo "to set up /boot on SD-card or eMMC (selected by the --emmc option) to boot" >&2
-  echo "into the newly copied system. TARGET is a partition block device and will" >&2
-  echo "temporarily get mounted by this script." >&2
-  echo >&2
-  echo "This script does not set up partitions for you. If you would like to configure" >&2
-  echo "full disk encryption and set up partitions accordingly automatically, consider" >&2
-  echo "using the reform-setup-encrypted-nvme tool instead of reform-migrate." >&2
-  echo >&2
-  echo "Usage: $0 [--help] [--help-full] [--emmc] DEVICE" >&2
-  echo >&2
-  echo "Options:" >&2
-  echo "  DEVICE           Rootfs partition in /dev." >&2
-  echo "  --help           Display this help and exit." >&2
-  echo "  --help-full      Extended device-specific help output." >&2
-  echo "  --emmc           Choose /boot partition on eMMC instead of SD-card." >&2
-}
-
-usage() {
-  echo "Usage:"
-  if [ "$EMMC_USE" = true ]; then
-    echo "  reform-migrate [--emmc] TARGET"
-  else
-    echo "  reform-migrate TARGET"
-  fi
-  echo ""
-  echo "Mounts TARGET and copies the currently running system to it using rsync. This will"
-  echo "overwrite all existing files in TARGET. At the end, reform-boot-config is run and"
-  if [ "$EMMC_USE" = true ]; then
-    echo "will set up the first partition of the SD-card or eMMC (depending on the --emmc"
-    echo "option) to load your newly copied rootfs and adjust /etc/fstab of TARGET accordingly."
-    echo ""
-    echo "Options:"
-    echo ""
-    echo "      --emmc Record boot preference on eMMC instead of SD card."
-    case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
-      echo "             This is only useful with SoM dip switch turned off."
-      ;;
-    esac
-  else
-    echo "will set up the first partition of the SD-card to load your newly copied rootfs"
-    echo "and adjust /etc/fstab of TARGET accordingly."
-  fi
-  echo >&2
-  echo "This script does not set up partitions for you. If you would like to configure" >&2
-  echo "full disk encryption and set up partitions accordingly automatically, consider" >&2
-  echo "using the reform-setup-encrypted-nvme tool instead of reform-migrate." >&2
-  echo ""
-  echo "Examples:"
-  echo ""
-  if [ "$EMMC_USE" = true ]; then
-    echo "  reform-migrate --emmc /dev/nvme0n1p1"
-    echo "          Mounts the first partition of an NVMe disk and mirrors your system to it."
-    echo "          Configures booting from the first partition on eMMC."
-  fi
-  echo "  reform-migrate /dev/mapper/crypt"
-  echo "          Mounts encrypted disk 'crypt' and mirrors your system to it."
-  echo "          The disk has to be unlocked first with: cryptsetup luksOpen /dev/nvme0n1p1 crypt"
-  echo "          Configures booting from the first partition on the SD-card as --emmc option is missing."
-}
-
-if [ $# -ne 1 ] && [ $# -ne 2 ]; then
-  usage
+if [ -n "$EMMC" ] && [ "$EMMC_USE" = false ]; then
+  echo "E: writing to eMMC not supported on $(cat /proc/device-tree/model)" >&2
   exit 1
 fi
 
-if [ "$1" = "--help" ]; then
-  # minimal device-agnostic help output for use with help2man
-  usage_minimal
-  exit 0
-elif [ "$1" = "--help-full" ]; then
-  usage
-  exit 0
-fi
-
-EMMC=""
-TARGET="$1"
 BOOTPART="${DEV_SD}p1"
-
-if [ "--emmc" = "$1" ]; then
-  if [ "$EMMC_USE" = false ]; then
-    echo "E: writing to eMMC not supported on $(cat /proc/device-tree/model)" >&2
-    exit 1
-  fi
-  EMMC="--emmc"
-  TARGET="$2"
+if [ -n "$EMMC" ]; then
   BOOTPART="${DEV_MMC}p1"
-fi
-
-if [ -z "$TARGET" ]; then
-  usage
-  exit 1
 fi
 
 if [ ! -e "$TARGET" ]; then
