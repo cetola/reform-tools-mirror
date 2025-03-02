@@ -25,7 +25,7 @@ usage() {
 }
 
 FORCE=false
-while getopts :h:-: OPTCHAR; do
+while getopts :h-: OPTCHAR; do
   case "$OPTCHAR" in
     h)
       usage
