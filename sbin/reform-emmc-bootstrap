@@ -28,9 +28,15 @@ is_current_root() {
   [ "${1}" = "${FSTAB_ROOT}" ]
 }
 
-if [ "$#" -gt 0 ] && [ "$1" = "--help" ]; then
-  usage
-  exit 0
+if [ "$#" -gt 0 ]; then
+  case $1 in --help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "E: unknown option: $1" >&2
+    ;;
+  esac
 fi
 
 # shellcheck source=/dev/null
@@ -43,14 +49,14 @@ else
   exit 1
 fi
 
-MOUNTROOT="$(mktemp --tmpdir --directory reform-emmc-bootstrap.XXXXXXXXXX)"
-
 cleanup() {
-  if mountpoint --quiet "$MOUNTROOT"; then
-    umount --recursive "$MOUNTROOT"
+  if [ -n "$MOUNTROOT" ]; then
+    if mountpoint --quiet "$MOUNTROOT"; then
+      umount --recursive "$MOUNTROOT"
+    fi
+    rmdir "$MOUNTROOT"
   fi
-  rmdir "$MOUNTROOT"
-  if ! is_current_root /dev/mapper/reformvg-root; then
+  if ! is_current_root /dev/reformvg/root; then
     if [ -e /dev/reformvg ]; then
       vgchange -an reformvg
     fi
@@ -60,14 +66,34 @@ cleanup() {
   fi
 }
 
-trap cleanup EXIT INT TERM
-
 main() {
   ROOTPART="$1"
-  mount "$ROOTPART" "$MOUNTROOT"
-  mount -o bind /dev "$MOUNTROOT/dev/"
-  mount -t sysfs sys "$MOUNTROOT/sys/"
-  mount -t proc proc "$MOUNTROOT/proc/"
+
+  trap cleanup EXIT INT TERM
+
+  MOUNTROOT="$(lsblk --noheadings --output=MOUNTPOINT "$ROOTPART")"
+  if [ -z "$MOUNTROOT" ]; then
+    if ! get_exclusive_write_lock "$ROOTPART"; then
+      echo "E: device $ROOTPART is still in use" >&2
+      exit 1
+    fi
+    MOUNTROOT="$(mktemp --tmpdir --directory reform-emmc-bootstrap.XXXXXXXXXX)"
+    mount "$ROOTPART" "$MOUNTROOT"
+    mount -o bind /dev "$MOUNTROOT/dev/"
+    mount -t sysfs sys "$MOUNTROOT/sys/"
+    mount -t proc proc "$MOUNTROOT/proc/"
+  elif [ -n "$MOUNTROOT" ]; then
+    if [ "$MOUNTROOT" = "/" ]; then
+      if mountpoint --quiet "/boot"; then
+        echo "E: /boot still has something mounted on it" >&2
+        exit 1
+      fi
+    else
+      echo "E: $ROOTPART is still being mounted on $MOUNTROOT -- umount before proceeding" >&2
+      exit 1
+    fi
+  fi
+
   if ! chroot "$MOUNTROOT" dpkg-query --search '/boot/vmlinuz*' >/dev/null; then
     echo "E: no kernel packages installed" >&2
     exit 1
@@ -101,7 +127,7 @@ END
     exit
   fi
   mv "$MOUNTROOT/etc/fstab.new" "$MOUNTROOT/etc/fstab"
-  if ! is_current_root "${ROOTPART}"; then
+  if [ "$MOUNTROOT" != "/" ]; then
     rm -f "$MOUNTROOT/etc/resolv.conf" # make sure to remove a possible symlink
     cp -a /etc/resolv.conf "$MOUNTROOT/etc/resolv.conf"
   fi
@@ -125,8 +151,14 @@ END
     echo "E: no kernel images were installed into /boot" >&2
     exit 1
   fi
-  umount "$MOUNTROOT" --recursive
+  if [ "$MOUNTROOT" != "/" ]; then
+    umount "$MOUNTROOT" --recursive
+  else
+    # if we are working on /, unmount /boot as that is required for reform-boot-config
+    umount /boot
+  fi
   reform-boot-config --emmc "$ROOTPART"
+  trap - EXIT INT TERM
 }
 
 # eMMC device is being used (case 1): mount points are known, show them. Includes swap.
@@ -139,7 +171,9 @@ fi
 # eMMC device is being used (case 2): there are not file systems directly mounted on the block device
 # but it is opened by consumers like device-mapper, raid or luks, to name some examples. In this situation
 # it is not trivial to locate the consumer.
-PYTHON_SCRIPT="
+get_exclusive_write_lock() {
+  ret=0
+  python3 - "$1" <<EOF || ret=$?
 import errno, os, sys
 
 try:
@@ -148,25 +182,34 @@ except OSError as e:
     if e.errno == errno.EBUSY:
         sys.exit(1)
     raise
-"
-if ! python3 -c "${PYTHON_SCRIPT}" "/dev/${DEV_MMC}"; then
-  echo "E: device /dev/${DEV_MMC} (eMMC) is still un use" >&2
+EOF
+  return $ret
+}
+
+if ! get_exclusive_write_lock "/dev/${DEV_MMC}"; then
+  echo "E: device /dev/${DEV_MMC} (eMMC) is still in use" >&2
   exit 1
 fi
+
+MOUNTROOT=
 
 disk_label=$(parted --json "/dev/${DEV_SSD}" print 2>/dev/null | jq --raw-output '.disk.label')
 case $disk_label in
   msdos | gpt)
     num_parts=$(parted --json "/dev/${DEV_SSD}" print 2>/dev/null | jq '.disk.partitions | length')
+    DEV_SSD_BASE="$DEV_SSD"
+    if [ "$DEV_SSD" != "sda" ]; then
+      DEV_SSD_BASE="${DEV_SSD}p"
+    fi
     case $num_parts in
-      1) main "/dev/${DEV_SSD}p1" ;;
+      1) main "/dev/${DEV_SSD_BASE}1" ;;
       2)
         # assume one partition to be swap and the other to be the rootfs
-        part1type=$(lsblk --nodeps --noheadings --output=FSTYPE "/dev/${DEV_SSD}p1")
-        part2type=$(lsblk --nodeps --noheadings --output=FSTYPE "/dev/${DEV_SSD}p2")
+        part1type=$(lsblk --nodeps --noheadings --output=FSTYPE "/dev/${DEV_SSD_BASE}1")
+        part2type=$(lsblk --nodeps --noheadings --output=FSTYPE "/dev/${DEV_SSD_BASE}2")
         case "${part1type}_${part2type}" in
-          swap_ext4) main "/dev/${DEV_SSD}p2" ;;
-          ext4_swap) main "/dev/${DEV_SSD}p1" ;;
+          swap_ext4) main "/dev/${DEV_SSD_BASE}2" ;;
+          ext4_swap) main "/dev/${DEV_SSD_BASE}1" ;;
           *)
             echo "E: no support for partitions other than one swap and one ext4" >&2
             exit 1
@@ -181,20 +224,18 @@ case $disk_label in
     ;;
   unknown)
     echo "I: no partition table found trying to open LUKS device" >&2
-    if ! is_current_root /dev/mapper/reformvg-root; then
+    if ! is_current_root /dev/reformvg/root; then
       cryptsetup luksOpen "/dev/${DEV_SSD}" reform_crypt
       vgchange -ay reformvg
     fi
-    main /dev/mapper/reformvg-root
-    if ! is_current_root /dev/mapper/reformvg-root; then
+    main /dev/reformvg/root
+    if ! is_current_root /dev/reformvg/root; then
       vgchange -an reformvg
       cryptsetup luksClose reform_crypt
     fi
     ;;
   *) ;;
 esac
-
-trap - EXIT INT TERM
 
 if [ "$EMMC_BOOT" != false ]; then
   reform-flash-uboot --force emmc
