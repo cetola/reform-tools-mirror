@@ -12,7 +12,7 @@
 # This script sets up the first partition on the sd-card or emmc (as decided
 # by whether the --emmc option was passed or not) such that the initramfs on
 # that partition will load the correct rootfs. The rootfs can either reside on
-# the sd-card, emmc, nvme, sata or a usb mass storage device.
+# the sd-card, emmc, ssd/nvme, sata or a usb mass storage device.
 #
 # The initramfs is tightly tied to the rootfs and the kernel version because it
 # is generated from the contents of the rootfs and contains the kernel modules
@@ -21,57 +21,28 @@
 
 set -eu
 
-# shellcheck source=/dev/null
-if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
-  . "./machines/$(cat /proc/device-tree/model).conf"
-elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf" ]; then
-  . "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
-else
-  echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
-  exit 1
-fi
-
-usage_minimal() {
-  echo "Regenerate the initramfs and adjust /etc/fstab to boot the desired rootfs." >&2
-  echo >&2
-  echo "Usage: $0 [--help] [--help-full] [--emmc] DEVICE" >&2
-  echo >&2
-  echo "Options:" >&2
-  echo "  DEVICE           Rootfs partition in /dev or one of sd, nvme, usb or emmc." >&2
-  echo "  --help           Display this help and exit." >&2
-  echo "  --help-full      Extended device-specific help output." >&2
-  echo "  --emmc           Choose /boot partition on eMMC instead of SD-card." >&2
-}
-
 usage() {
   echo "Usage: " >&2
-  if [ "$EMMC_USE" = true ]; then
-    echo "  reform-boot-config [--emmc] sd    # rootfs on SD card (/dev/${DEV_SD}p2, default)." >&2
-    echo "  reform-boot-config [--emmc] nvme  # rootfs on NVMe SSD (/dev/${DEV_SSD}p1)." >&2
-    echo "  reform-boot-config [--emmc] usb   # rootfs on USB storage device (/dev/${DEV_USB}1)." >&2
-    echo "  reform-boot-config [--emmc] emmc  # rootfs on eMMC (/dev/${DEV_MMC}p2)." >&2
-    echo "" >&2
-    echo "      --emmc Record boot preference on eMMC instead of SD card." >&2
-    case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
-      echo "             This is only useful with SoM dip switch turned off." >&2
-      ;;
-    esac
-    echo "" >&2
-    echo "Choosing sd, nvme, usb or emmc will set the root partition to" >&2
-    echo "/dev/${DEV_SD}p2, /dev/${DEV_SSD}p1, /dev/${DEV_USB}1 or /dev/${DEV_MMC}p2," >&2
-  else
-    echo "  reform-boot-config sd    # rootfs on SD card (/dev/${DEV_SD}p2, default)." >&2
-    echo "  reform-boot-config nvme  # rootfs on NVMe SSD (/dev/${DEV_SSD}p1)." >&2
-    echo "  reform-boot-config usb   # rootfs on USB storage device (/dev/${DEV_USB}1)." >&2
-    echo "" >&2
-    echo "Choosing sd, nvme, or usb  will set the root partition to" >&2
-    echo "/dev/${DEV_SD}p2, /dev/${DEV_SSD}p1 or /dev/${DEV_USB}1," >&2
-  fi
-  echo "respectively. You can choose another root partition by passing" >&2
-  echo "the absolute device path starting with /dev/ explicitly." >&2
-  echo "For example, to boot a rootfs on an LVM volume, run:" >&2
+  echo "  reform-boot-config [--emmc] sd    # rootfs on SD card (default)" >&2
+  echo "  reform-boot-config [--emmc] ssd   # rootfs on SSD or NVMe" >&2
+  echo "  reform-boot-config [--emmc] usb   # rootfs on USB storage device" >&2
+  echo "  reform-boot-config [--emmc] emmc  # rootfs on eMMC" >&2
+  echo "  reform-boot-config [--emmc] /dev/...  # custom rootfs device" >&2
   echo "" >&2
-  echo "    reform-boot-config /dev/reformvg/root" >&2
+  echo "Adjust /etc/fstab of the given root file system and regenerate the" >&2
+  echo "initramfs in /boot on eMMC or SD-card (as indicated by the --emmc" >&2
+  echo "switch) to boot that rootfs." >&2
+  echo "" >&2
+  echo "Options:" >&2
+  echo "      --emmc Record boot preference in /boot partition on eMMC instead of SD-card." >&2
+  echo "" >&2
+  echo "Instead of using the short-hands sd, ssd, usb or emmc," >&2
+  echo "you can choose another root partition by passing" >&2
+  echo "the absolute device path starting with /dev/ explicitly." >&2
+  echo "For example, to boot a rootfs on an LVM volume with /boot" >&2
+  echo "on eMMC, run:" >&2
+  echo "" >&2
+  echo "    reform-boot-config --emmc /dev/reformvg/root" >&2
 }
 
 maybe_umount() {
@@ -100,9 +71,8 @@ maybe_umount() {
   fi
 }
 
-BOOTPART="${DEV_SD}p1"
 FORCE=false
-while getopts :h:-: OPTCHAR; do
+while getopts :h-: OPTCHAR; do
   case "$OPTCHAR" in
     h)
       usage
@@ -111,22 +81,11 @@ while getopts :h:-: OPTCHAR; do
     -)
       case "$OPTARG" in
         help)
-          # minimal device-agnostic help output for use with help2man
-          usage_minimal
-          exit 0
-          ;;
-        help-full)
           usage
           exit 0
           ;;
         force) FORCE=true ;;
-        emmc)
-          if [ "$EMMC_USE" = false ]; then
-            echo "E: writing to eMMC not supported on $(cat /proc/device-tree/model)" >&2
-            exit 1
-          fi
-          BOOTPART="${DEV_MMC}p1"
-          ;;
+        emmc) EMMC=yes ;;
         *)
           echo "E: unrecognized option: --$OPTARG" >&2
           exit 1
@@ -149,9 +108,7 @@ while getopts :h:-: OPTCHAR; do
 done
 shift "$((OPTIND - 1))"
 
-if [ "$#" -eq 1 ]; then
-  BOOTPREF="$1"
-elif [ "$#" -gt 1 ]; then
+if [ "$#" -ne 1 ]; then
   echo "E: invalid number of arguments" >&2
   usage
   exit 1
@@ -160,6 +117,26 @@ fi
 if [ "$(id -u)" -ne 0 ]; then
   echo "reform-boot-config has to be run as root / using sudo." >&2
   exit 1
+fi
+
+# shellcheck source=/dev/null
+if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
+  . "./machines/$(cat /proc/device-tree/model).conf"
+elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf" ]; then
+  . "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
+else
+  echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
+  exit 1
+fi
+
+if [ "$EMMC" = "yes" ]; then
+  if [ "$EMMC_USE" = false ]; then
+    echo "E: writing to eMMC not supported on $(cat /proc/device-tree/model)" >&2
+    exit 1
+  fi
+  BOOTPART="${DEV_MMC}p1"
+else
+  BOOTPART="${DEV_SD}p1"
 fi
 
 if [ ! -e "/dev/$BOOTPART" ]; then
@@ -172,17 +149,23 @@ if [ ! -b "/dev/$BOOTPART" ]; then
   exit 1
 fi
 
-case $BOOTPREF in
-  sd) : "${ROOTPART:=${DEV_SD}p2}" ;;
-  nvme) : "${ROOTPART:=${DEV_SSD}p1}" ;;
-  usb) : "${ROOTPART:=${DEV_USB}1}" ;;
-  emmc) : "${ROOTPART:=${DEV_MMC}p2}" ;;
+case $1 in
+  sd) ROOTPART="${DEV_SD}p2" ;;
+  nvme | ssd)
+    if [ "$DEV_SSD" = "sda" ]; then
+      ROOTPART="${DEV_SSD}1"
+    else
+      ROOTPART="${DEV_SSD}p1"
+    fi
+    ;;
+  usb) ROOTPART="${DEV_USB}1" ;;
+  emmc) ROOTPART="${DEV_MMC}p2" ;;
   /dev/*)
-    if [ ! -b "$BOOTPREF" ]; then
-      echo "there is no block device called $BOOTPREF" >&2
+    if [ ! -b "$1" ]; then
+      echo "there is no block device called $1" >&2
       exit 1
     fi
-    : "${ROOTPART:=$BOOTPREF}"
+    ROOTPART="$1"
     ;;
   *)
     usage
