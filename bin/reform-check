@@ -184,7 +184,7 @@ case "$MIRROR" in
   reform.debian.net) PKGSGUI="$PKGSGUI firefox-esr" ;;
 esac
 PKGSTOOLS="bmap-tools brightnessctl fonts-font-awesome fonts-jetbrains-mono foot gir1.2-ayatanaappindicator3-0.1 gir1.2-gdesktopenums-3.0 gir1.2-gdkpixbuf-2.0 gir1.2-glib-2.0 gir1.2-gtk-3.0 gir1.2-gtklayershell-0.1 gir1.2-notify-0.7 gnome-system-monitor ircii pavucontrol pulseaudio-utils python3 python3-gi python3-usb1 thunar x11-xserver-utils"
-PKGSNET="iproute2 iptables inetutils-ping elinks isc-dhcp-client netcat-traditional net-tools network-manager nfacct ntp ntpdate rsync telnet traceroute wpasupplicant curl wget w3m rfkill ifupdown netbase openssh-client firmware-realtek wireless-regdb wavemon iw"
+PKGSNET="iproute2 iptables inetutils-ping elinks isc-dhcp-client netcat-traditional net-tools network-manager nfacct ntpsec ntpsec-ntpdate rsync telnet traceroute wpasupplicant curl wget w3m rfkill ifupdown netbase openssh-client firmware-realtek wireless-regdb wavemon iw"
 case "$MIRROR" in
   mntre.com) PKGSNET="$PKGSNET reform-qcacld2 firmware-mediatek" ;;
   reform.debian.net) PKGSNET="$PKGSNET ezurio-qcacld-2.0-dkms" ;;
