@@ -2,7 +2,7 @@
 # Copyright 2024 Chris Hofstaedtler <chris@hofstaedtler.name>
 # SPDX-License-Identifier: GPL-3.0+
 #
-# Use `black --line-length 120 sbin/reform-mcu-tool` to reformat.
+# Use `black --line-length 120 bin/reform-mcu-tool` to reformat.
 #
 # Installation
 #

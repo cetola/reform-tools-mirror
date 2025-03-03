@@ -9,24 +9,20 @@ INSTALLDATA = /usr/bin/install -m 644
 prefix = /usr
 datadir = $(prefix)/share
 bindir = $(prefix)/bin
-sbindir = $(prefix)/sbin
 libexecdir = $(prefix)/libexec
 libdir = $(prefix)/lib
 statedir = /var
 
 BINPROGS=$(wildcard bin/*)
-SBINPROGS=$(wildcard sbin/*)
 MAN1=$(patsubst bin/%,man/%.1,$(BINPROGS))
-MAN8=$(patsubst sbin/%,man/%.8,$(SBINPROGS))
 
 .PHONY: all
-all: $(MAN1) $(MAN8)
+all: $(MAN1)
 
-define help2man
-man/%.$2: $1/%
+man/%.1: bin/%
 	set -e;                                                               \
 	mkdir -p man;                                                         \
-	tool2whatis () { case $$$${1#reform-} in                              \
+	tool2whatis () { case $${1#reform-} in                                \
 		boot-config)    echo "choose rootfs to boot from" ;;          \
 		chat)           echo "chat on #mnt-reform" ;;                 \
 		check)          echo "check your setup" ;;                    \
@@ -45,23 +41,17 @@ man/%.$2: $1/%
 		setup-encrypted-disk) echo "setup encrypted disk" ;;          \
 		setup-encrypted-nvme) echo "use setup-encrypted-disk" ;;      \
 		standby)        echo "suspend/wakeup tweaks" ;;               \
-		*) echo "unknown tool: $$$$1" 2>&1; exit 1 ;;                 \
+		*) echo "unknown tool: $$1" 2>&1; exit 1 ;;                   \
 	esac; };                                                              \
-	whatis="$$$$(tool2whatis "$$*")";                                     \
-	version=$$$$(head -c4 CHANGELOG.md);                                  \
-	case $$$$version in 1.[0-9][0-9]) : ;; *) echo invalid;exit 1;; esac; \
-	env "PATH=./$1:$$$$PATH" help2man                                     \
-		--section=$2                                                  \
-		--name="$$$$whatis"                                           \
-		--no-info --version-string="$$$$version"                      \
-		--no-discard-stderr "$$*"                                     \
-		--output="$$@";                                               \
-
-endef
-
-$(eval $(call help2man,bin,1))
-
-$(eval $(call help2man,sbin,8))
+	whatis="$$(tool2whatis "$*")";                                        \
+	version=$$(head -c4 CHANGELOG.md);                                    \
+	case $$version in 1.[0-9][0-9]) : ;; *) echo invalid;exit 1;; esac;   \
+	env "PATH=./bin:$$PATH" help2man                                      \
+		--section=1                                                   \
+		--name="$$whatis"                                             \
+		--no-info --version-string="$$version"                        \
+		--no-discard-stderr "$*"                                      \
+		--output="$@";                                                \
 
 .PHONY: install
 install:
@@ -97,8 +87,6 @@ install:
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/reform-tools/machines machines/*
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/modprobe.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/modprobe.d modprobe.d/reform.conf
-	$(INSTALL)     -d $(DESTDIR)$(sbindir)
-	$(INSTALL)     -t $(DESTDIR)$(sbindir) $(SBINPROGS)
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/glib-2.0/schemas
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/glib-2.0/schemas schemas/20_reform.gschema.override
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/backgrounds
@@ -114,13 +102,13 @@ install:
 
 .PHONY: clean
 clean:
-	rm -f man/*.1 man/*.8
+	rm -f man/*.1
 
 .PHONY: lint
 lint:
 	clang-format lpc/reform2_lpc.c | diff -u lpc/reform2_lpc.c -
 	shfmt --posix --simplify --binary-next-line --case-indent --indent 2 --diff \
-		bin sbin kernel/* initramfs-tools/*/* flash-kernel/*/*
+		bin kernel/* initramfs-tools/*/* flash-kernel/*/*
 	black --check --diff bin/reform-compstat libexec/reform-tools/reform-tray.py libexec/reform-tools/reform-wallpaper.py
-	black --line-length 120 --check --diff sbin/reform-mcu-tool
-	shellcheck bin/* sbin/* kernel/* initramfs-tools/*/* flash-kernel/*/*
+	black --line-length 120 --check --diff bin/reform-mcu-tool
+	shellcheck bin/* kernel/* initramfs-tools/*/* flash-kernel/*/*

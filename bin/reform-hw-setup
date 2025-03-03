@@ -25,6 +25,11 @@ if [ "$#" -gt 0 ]; then
   exit 0
 fi
 
+if [ "$(id -u)" -ne 0 ]; then
+  echo "reform-hw-setup has to be run as root / using sudo and is usually run by /lib/systemd/system/reform-hw-setup.service" >&2
+  exit 1
+fi
+
 init_a311d() {
   # A311D sound controls
   # without setting these, there is no UCM profile and messages like this are produced:

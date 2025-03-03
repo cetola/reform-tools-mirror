@@ -4,7 +4,7 @@ Documentation=man:reform-hw-setup(1)
 
 [Service]
 Type=oneshot
-ExecStart=/usr/sbin/reform-hw-setup
+ExecStart=/usr/bin/reform-hw-setup
 StandardOutput=journal
 
 [Install]
