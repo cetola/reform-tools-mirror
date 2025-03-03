@@ -93,6 +93,8 @@ install:
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/backgrounds share/backgrounds/reform-mountains.jpg
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/systemd/sleep.conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/systemd/sleep.conf.d systemd/reform-sleep.conf
+	$(INSTALL)     -d $(DESTDIR)$(libdir)/systemd/system
+	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/systemd/system systemd/reform-hw-setup.service systemd/reform-sleep.service
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/u-boot-menu/conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/u-boot-menu/conf.d u-boot-menu/reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/dracut/dracut.conf.d
