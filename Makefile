@@ -54,7 +54,7 @@ man/%.1: bin/%
 		--output="$@";                                                \
 
 .PHONY: install
-install:
+install: $(MAN1)
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/NetworkManager/conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/NetworkManager/conf.d NetworkManager/default-wifi-powersave-off.conf
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/udev/rules.d
@@ -101,6 +101,8 @@ install:
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/dracut/dracut.conf.d dracut/20-pocket-reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/sddm/sddm.conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/sddm/sddm.conf.d sddm/10-wayland.conf
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/man/man1
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/man/man1 $(MAN1)
 
 .PHONY: clean
 clean:
