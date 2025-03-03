@@ -58,7 +58,7 @@ END
     ;;
   esac
   cat <<'END'
-Set up encrypted NVMe:             [1msudo reform-setup-encrypted-nvme[0m
+Set up full disk encryption:       [1msudo reform-setup-encrypted-disk[0m
 Update / install software:         [1msudo apt update[0m
                                    [1mapt search [1;4mkeyword[0m
                                    [1msudo apt install [1;4mpackage[0m

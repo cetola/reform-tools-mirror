@@ -20,7 +20,7 @@ usage() {
   echo >&2
   echo " - single partition on SSD with the rootfs" >&2
   echo " - two partitions on SSD, one with the rootfs the other swap" >&2
-  echo " - the luks/lvm setup created by reform-setup-encrypted-nvme" >&2
+  echo " - the luks/lvm setup created by reform-setup-encrypted-disk" >&2
 }
 
 is_current_root() {

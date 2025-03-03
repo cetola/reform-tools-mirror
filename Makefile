@@ -42,7 +42,8 @@ man/%.$2: $1/%
 		migrate)        echo "copy rootfs to device" ;;               \
 		mcu-tool)       echo "manage microcontrollers" ;;             \
 		pavucontrol)    echo "kill and restart pavucontrol" ;;        \
-		setup-encrypted-nvme) echo "setup encrypted SSD" ;;           \
+		setup-encrypted-disk) echo "setup encrypted disk" ;;          \
+		setup-encrypted-nvme) echo "use setup-encrypted-disk" ;;      \
 		standby)        echo "suspend/wakeup tweaks" ;;               \
 		*) echo "unknown tool: $$$$1" 2>&1; exit 1 ;;                 \
 	esac; };                                                              \

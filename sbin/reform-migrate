@@ -21,7 +21,7 @@ usage() {
   echo >&2
   echo "This script does not set up partitions for you. If you would like to configure" >&2
   echo "full disk encryption and set up partitions accordingly automatically, consider" >&2
-  echo "using the reform-setup-encrypted-nvme tool instead of reform-migrate." >&2
+  echo "using the reform-setup-encrypted-disk tool instead of reform-migrate." >&2
   echo "" >&2
   echo "Examples:" >&2
   echo "" >&2
@@ -144,7 +144,7 @@ echo '    parted /dev/nvme0n1 "mklabel msdos"'
 echo '    parted /dev/nvme0n1 "mkpart primary ext4 4MiB -1"'
 echo "    mkfs.ext4 /dev/nvme0n1p1"
 echo ""
-echo "You can also setup an encrypted NVMe SSD by running reform-setup-encrypted-nvme"
+echo "You can also setup full disk encryption by running reform-setup-encrypted-disk"
 echo ""
 
 # FIXME: mkimage.sh in reform-system-image could write out the exact values into a known location
