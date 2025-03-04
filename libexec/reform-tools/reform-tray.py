@@ -11,7 +11,7 @@ gi.require_version('Gio', '2.0')
 gi.require_version('Gtk4LayerShell', '1.0')
 from gi.repository import Gdk, Gtk, Gio, GLib, Gtk4LayerShell
 
-TRAY_TEST_MODE = int(environ.get('TRAY_TEST_MODE', '0'))
+TRAY_TEST_MODE = int(environ.get('TRAY_TEST_MODE', '2'))
 
 # old variant: building pop-up menu widget tree by hand
 # DISADVANTAGES:
@@ -22,13 +22,14 @@ BUILD_DIY_MENU = TRAY_TEST_MODE == 0
 # pop out menu from a button inserted /over/ the waybar, ideally where it places the systray icon
 # DISADVANTAGES:
 # - don't know where waybar will place systray icon, so WAYBAR_HEIGHT and SYSTRAY_X values guessing game
+# - bug: two clicks necessary for first systray open
 HOVER_BUTTON = TRAY_TEST_MODE == 1
 
 # on systray click pop down menu at fixed place
 # DISADVANTAGES:
 # - placement questionable if systray icon not near right edge of screen
 # - somewhat hacky abuse of LayerShell using OFFSCREEN_X
-# - bug: keyboard navigation of menu not yet working
+# - bug: keyboard navigation of menu only works once, after a first systray opening, user clicked into different window before (?)
 FIXED_POPDOWN = TRAY_TEST_MODE == 2
 
 USE_SYSTRAY = BUILD_DIY_MENU or FIXED_POPDOWN
@@ -158,7 +159,7 @@ class Tray(Gtk.Application):
         # layer shell setup
         self.gtk_window = Gtk.ApplicationWindow(application=self)
         Gtk4LayerShell.init_for_window(self.gtk_window)
-        Gtk4LayerShell.set_keyboard_mode(self.gtk_window, Gtk4LayerShell.KeyboardMode.ON_DEMAND)
+        Gtk4LayerShell.set_keyboard_mode(self.gtk_window, Gtk4LayerShell.KeyboardMode.EXCLUSIVE)
         Gtk4LayerShell.set_layer(self.gtk_window, Gtk4LayerShell.Layer.TOP)
         for i in range(Gtk4LayerShell.Edge.ENTRY_NUMBER):
             Gtk4LayerShell.set_anchor(self.gtk_window, i, (False, True, True, False)[i])
