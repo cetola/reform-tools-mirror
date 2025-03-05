@@ -34,57 +34,78 @@ usage() {
   echo '/etc/skel and those in your $HOME. Running this script as root performs the' >&2
   echo "system-wide checks." >&2
   echo >&2
-  echo "Usage: $0 [--help] [--mirror={mntre.com,reform.debian.net}]" >&2
+  echo "Usage: $0 [--help] [--mirror={mntre.com,reform.debian.net}] [--offline]" >&2
   echo >&2
   echo "Options:" >&2
   echo "  --help           Display this help and exit." >&2
   echo "  --mirror=MIRROR  Force MIRROR, either mntre.com or reform.debian.net" >&2
+  echo "  --offline        Disable all checks that require an internet connection" >&2
+  echo "                   and a filled apt cache." >&2
 }
 
-MIRROR=
+nth_arg() {
+  shift "$1"
+  printf "%s" "$1"
+}
 
-if [ "$#" -gt 0 ]; then case "$1" in
-  --help)
-    usage
-    exit 0
-    ;;
-  --mirror=mntre.com)
-    if [ "$#" -gt 1 ]; then
-      echo "E: too many arguments" >&2
+OFFLINE=
+MIRROR="mntre.com"
+
+while getopts :h-: OPTCHAR; do
+  case "$OPTCHAR" in
+    h)
       usage
+      exit 0
+      ;;
+    -)
+      case "$OPTARG" in
+        help)
+          usage
+          exit 0
+          ;;
+        offline) OFFLINE=yes ;;
+        mirror)
+          if [ "$OPTIND" -gt "$#" ]; then
+            echo "E: missing argument for --image" >&2
+            exit 1
+          fi
+          MIRROR="$(nth_arg "$OPTIND" "$@")"
+          OPTIND=$((OPTIND + 1))
+          ;;
+        mirror=*)
+          MIRROR="${OPTARG#*=}"
+          ;;
+        *)
+          echo "E: unrecognized option: --$OPTARG" >&2
+          exit 1
+          ;;
+      esac
+      ;;
+    :)
+      echo "E: missing argument for -$OPTARG" >&2
       exit 1
-    fi
-    MIRROR="mntre.com"
-    ;;
-  --mirror=reform.debian.net)
-    if [ "$#" -gt 1 ]; then
-      echo "E: too many arguments" >&2
-      usage
+      ;;
+    '?')
+      echo "E: unrecognized option -$OPTARG" >&2
       exit 1
-    fi
-    MIRROR="reform.debian.net"
-    ;;
-  --mirror=*)
-    echo "E: invalid argument for --mirror" >&2
-    usage
-    exit 1
-    ;;
-  --mirror)
-    if [ "$#" -eq 1 ]; then
-      echo "E: missing argument" >&2
-      usage
+      ;;
+    *)
+      echo "E: error parsing options" >&2
       exit 1
-    elif [ "$#" -gt 2 ]; then
-      echo "E: too many arguments" >&2
-      usage
-      exit 1
-    fi
-    case "$2" in
-      mntre.com) MIRROR="mntre.com" ;;
-      reform.debian.net) MIRROR="reform.debian.net" ;;
-    esac
-    ;;
-esac fi
+      ;;
+  esac
+done
+shift "$((OPTIND - 1))"
+
+if [ "$#" -gt 0 ]; then
+  usage
+  exit 1
+fi
+
+if [ "$MIRROR" != "mntre.com" ] && [ "$MIRROR" != "reform.debian.net" ]; then
+  echo "E: invalid value for --mirror: $MIRROR -- only mntre.com and reform.debian.net are supported" >&2
+  exit 1
+fi
 
 if [ "$(id -u)" -ne 0 ]; then
   for path in $(cd /etc/skel && find . -type f); do
@@ -113,9 +134,16 @@ if [ -z "$MIRROR" ]; then
   MIRROR="mntre.com"
 fi
 
-if [ -z "$(apt-get indextargets)" ]; then
-  echo "E: the apt cache is empty. Please run 'apt update' before running reform-check" >&2
-  exit 1
+if [ -z "$(apt-get indextargets)" ] && [ "$OFFLINE" != "yes" ]; then
+  echo "E: reform-check needs a populated apt cache for some of its operation." >&2
+  echo "E: re-run with --offline (disabling some checks) or choose to run apt-update now." >&2
+  printf "Should reform-check run 'apt update' for you? [y/N]" >&2
+  read -r response
+  if [ "$response" != "y" ]; then
+    echo "Exiting."
+    exit 1
+  fi
+  apt-get update --error-on=any
 fi
 
 # shellcheck source=/dev/null
@@ -245,66 +273,6 @@ if ! mountpoint --quiet /boot; then
   echo "E: your /boot has nothing mounted on it -- fix your /etc/fstab" >&2
 fi
 
-# FIXME: on ls1028a, also check for /boot/ls1028a-mhdpfw.bin
-
-ubooturl="https://source.mnt.re/reform/${UBOOT_PROJECT}/-/jobs/artifacts/${UBOOT_TAG}/raw/$(basename "$DTBPATH" .dtb)-flash.bin?job=build"
-ubootbin=$(mktemp)
-ret=0
-/usr/lib/apt/apt-helper download-file "$ubooturl" "$ubootbin" "SHA1:$UBOOT_SHA1" >/dev/null || ret=$?
-if [ "$ret" != 0 ]; then
-  echo "E: download of $ubooturl failed" >&2
-else
-  if [ ! -e /boot/flash.bin ]; then
-    echo "W: /boot/flash.bin doesn't exist" >&2
-    echo "W: You can download the latest version by running as root:" >&2
-    echo "reform-flash-uboot" >&2
-  elif ! cmp --quiet /boot/flash.bin "$ubootbin"; then
-    echo "W: /boot/flash.bin is not the latest uboot" >&2
-    echo "W: You can update it to the latest version by running as root:" >&2
-    echo "reform-flash-uboot" >&2
-  fi
-  ubootsize=$(stat --format=%s "$ubootbin")
-
-  if [ "$EMMC_BOOT" = true ]; then
-    if cmp --quiet --bytes="$((ubootsize - FLASHBIN_OFFSET))" "--ignore-initial=$FLASHBIN_OFFSET:$UBOOT_OFFSET" "$ubootbin" "/dev/${DEV_MMC}boot0" 2>/dev/null; then
-      echo "I: eMMC contains the latest u-boot version ${UBOOT_TAG}" >&2
-    else
-      echo "W: eMMC does not contain latest uboot" >&2
-      echo "W: You can update it to the latest version by running as root:" >&2
-      echo "reform-flash-uboot emmc" >&2
-    fi
-  fi
-
-  if [ "$SD_BOOT" = true ] && [ -e "/dev/$DEV_SD" ]; then
-    if cmp --quiet --bytes="$((ubootsize - FLASHBIN_OFFSET))" --ignore-initial="$FLASHBIN_OFFSET:$UBOOT_OFFSET" "$ubootbin" "/dev/$DEV_SD" 2>/dev/null; then
-      echo "I: SD-card contains the latest u-boot version ${UBOOT_TAG}" >&2
-    else
-      echo "W: SD-Card does not contain latest uboot" >&2
-      echo "W: You can update it to the latest version by running as root:" >&2
-      echo "reform-flash-uboot sd" >&2
-    fi
-  fi
-fi
-rm "$ubootbin"
-
-case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with LS1028A Module")
-  mhdpfwbin=$(mktemp)
-  /usr/lib/apt/apt-helper download-file \
-    "https://source.mnt.re/reform/reform-ls1028a-uboot/-/raw/main/ls1028a-mhdpfw.bin" \
-    "$mhdpfwbin" "SHA1:fa96b9aa59d7c1e9e6ee1c0375d0bcc8f8e5b78c" >/dev/null
-  if [ ! -e /boot/ls1028a-mhdpfw.bin ]; then
-    echo "W: /boot/ls1028a-mhdpfw.bin doesn't exist" >&2
-    echo "W: You can download the latest version by running as root:" >&2
-    echo "reform-flash-uboot" >&2
-  elif ! cmp --quiet /boot/ls1028a-mhdpfw.bin "$mhdpfwbin"; then
-    echo "W: /boot/ls1028a-mhdpfw.bin is not the latest uboot" >&2
-    echo "W: You can update it to the latest version by running as root:" >&2
-    echo "reform-flash-uboot" >&2
-  fi
-  rm "$mhdpfwbin"
-  ;;
-esac
-
 if [ "$EMMC_USE" = true ] && [ ! -e "/dev/${DEV_MMC}p2" ]; then
   echo "W: /dev/${DEV_MMC}p2 doesn't exist." >&2
   echo "W: To update your eMMC to sysimage-v4 you can run reform-flash-rescue" >&2
@@ -396,41 +364,6 @@ fi
 if [ -n "$(dpkg --verify reform-tools)" ]; then
   echo "I: the following files differ from how they are shipped by reform-tools (ignore /var/lib/alsa/asound.state):" >&2
   dpkg --verify reform-tools
-fi
-
-# shellcheck disable=SC2016
-case "$MIRROR" in mntre.com)
-  if [ "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://mntre.com/reform-debian-repo/' --format '$(RELEASE)')" != reform ]; then
-    echo "E: the reform repository is not known to apt" >&2
-    echo "E: add the following line to your /etc/apt/sources.list to fix this" >&2
-    echo "deb [arch=arm64 trusted=yes] https://mntre.com/reform-debian-repo reform main" >&2
-  fi
-  case "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://reform.debian.net/debian/' --format '$(RELEASE)')" in
-    bookworm*) echo "E: you have the reform.debian.net repository enabled while also using the mntre.com mirror. Consider choosing one or the other but not both." >&2 ;;
-  esac
-  ;;
-reform.debian.net)
-  case "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://reform.debian.net/debian/' --format '$(RELEASE)')" in
-    bookworm*) : ;;
-    *) echo "E: the reform.debian.net repository is not known to apt" >&2 ;;
-  esac
-  if [ "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://mntre.com/reform-debian-repo/' --format '$(RELEASE)')" = reform ]; then
-    echo "E: you have the mntre.com repository enabled while also using the reform.debian.net mirror. Consider choosing one or the other but not both." >&2
-  fi
-  ;;
-*)
-  echo "invalid mirror: $MIRROR" >&2
-  exit 1
-  ;;
-esac
-
-# on a311d we need non-free-firmware
-# shellcheck disable=SC2016
-if [ "$NEED_NONFREE" = true ] && ! apt-get indextargets 'Created-By: Packages' 'Origin: Debian' 'Repo-URI: http://deb.debian.org/debian/' --format '$(COMPONENT)' | sort -u | grep --silent non-free-firmware; then
-  echo "W: you do not have non-free-firmware enabled" >&2
-  echo "W: this is required to install non-free firmware blobs that are required for platforms like Banana Pi A311D" >&2
-  echo "W: you can add a line like this to your /etc/apt/sources.list:" >&2
-  echo "deb http://deb.debian.org/debian unstable non-free-firmware" >&2
 fi
 
 if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-arm64" 2>/dev/null | grep -q '^installed$'; then
@@ -638,3 +571,100 @@ case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
   fi
   ;;
 esac
+
+if [ "$OFFLINE" = "yes" ]; then
+  echo "I: skipping the remaining checks because --offline was used" >&2
+else
+  # shellcheck disable=SC2016
+  case "$MIRROR" in mntre.com)
+    if [ "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://mntre.com/reform-debian-repo/' --format '$(RELEASE)')" != reform ]; then
+      echo "E: the reform repository is not known to apt" >&2
+      echo "E: add the following line to your /etc/apt/sources.list to fix this" >&2
+      echo "deb [arch=arm64 trusted=yes] https://mntre.com/reform-debian-repo reform main" >&2
+    fi
+    case "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://reform.debian.net/debian/' --format '$(RELEASE)')" in
+      bookworm*) echo "E: you have the reform.debian.net repository enabled while also using the mntre.com mirror. Consider choosing one or the other but not both." >&2 ;;
+    esac
+    ;;
+  reform.debian.net)
+    case "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://reform.debian.net/debian/' --format '$(RELEASE)')" in
+      bookworm*) : ;;
+      *) echo "E: the reform.debian.net repository is not known to apt" >&2 ;;
+    esac
+    if [ "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://mntre.com/reform-debian-repo/' --format '$(RELEASE)')" = reform ]; then
+      echo "E: you have the mntre.com repository enabled while also using the reform.debian.net mirror. Consider choosing one or the other but not both." >&2
+    fi
+    ;;
+  *)
+    echo "invalid mirror: $MIRROR" >&2
+    exit 1
+    ;;
+  esac
+
+  # on a311d we need non-free-firmware
+  # shellcheck disable=SC2016
+  if [ "$NEED_NONFREE" = true ] && ! apt-get indextargets 'Created-By: Packages' 'Origin: Debian' 'Repo-URI: http://deb.debian.org/debian/' --format '$(COMPONENT)' | sort -u | grep --silent non-free-firmware; then
+    echo "W: you do not have non-free-firmware enabled" >&2
+    echo "W: this is required to install non-free firmware blobs that are required for platforms like Banana Pi A311D" >&2
+    echo "W: you can add a line like this to your /etc/apt/sources.list:" >&2
+    echo "deb http://deb.debian.org/debian unstable non-free-firmware" >&2
+  fi
+
+  ubooturl="https://source.mnt.re/reform/${UBOOT_PROJECT}/-/jobs/artifacts/${UBOOT_TAG}/raw/$(basename "$DTBPATH" .dtb)-flash.bin?job=build"
+  ubootbin=$(mktemp)
+  ret=0
+  /usr/lib/apt/apt-helper download-file "$ubooturl" "$ubootbin" "SHA1:$UBOOT_SHA1" >/dev/null || ret=$?
+  if [ "$ret" != 0 ]; then
+    echo "E: download of $ubooturl failed" >&2
+  else
+    if [ ! -e /boot/flash.bin ]; then
+      echo "W: /boot/flash.bin doesn't exist" >&2
+      echo "W: You can download the latest version by running as root:" >&2
+      echo "reform-flash-uboot" >&2
+    elif ! cmp --quiet /boot/flash.bin "$ubootbin"; then
+      echo "W: /boot/flash.bin is not the latest uboot" >&2
+      echo "W: You can update it to the latest version by running as root:" >&2
+      echo "reform-flash-uboot" >&2
+    fi
+    ubootsize=$(stat --format=%s "$ubootbin")
+
+    if [ "$EMMC_BOOT" = true ]; then
+      if cmp --quiet --bytes="$((ubootsize - FLASHBIN_OFFSET))" "--ignore-initial=$FLASHBIN_OFFSET:$UBOOT_OFFSET" "$ubootbin" "/dev/${DEV_MMC}boot0" 2>/dev/null; then
+        echo "I: eMMC contains the latest u-boot version ${UBOOT_TAG}" >&2
+      else
+        echo "W: eMMC does not contain latest uboot" >&2
+        echo "W: You can update it to the latest version by running as root:" >&2
+        echo "reform-flash-uboot emmc" >&2
+      fi
+    fi
+
+    if [ "$SD_BOOT" = true ] && [ -e "/dev/$DEV_SD" ]; then
+      if cmp --quiet --bytes="$((ubootsize - FLASHBIN_OFFSET))" --ignore-initial="$FLASHBIN_OFFSET:$UBOOT_OFFSET" "$ubootbin" "/dev/$DEV_SD" 2>/dev/null; then
+        echo "I: SD-card contains the latest u-boot version ${UBOOT_TAG}" >&2
+      else
+        echo "W: SD-Card does not contain latest uboot" >&2
+        echo "W: You can update it to the latest version by running as root:" >&2
+        echo "reform-flash-uboot sd" >&2
+      fi
+    fi
+  fi
+  rm "$ubootbin"
+
+  case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with LS1028A Module")
+    mhdpfwbin=$(mktemp)
+    /usr/lib/apt/apt-helper download-file \
+      "https://source.mnt.re/reform/reform-ls1028a-uboot/-/raw/main/ls1028a-mhdpfw.bin" \
+      "$mhdpfwbin" "SHA1:fa96b9aa59d7c1e9e6ee1c0375d0bcc8f8e5b78c" >/dev/null
+    if [ ! -e /boot/ls1028a-mhdpfw.bin ]; then
+      echo "W: /boot/ls1028a-mhdpfw.bin doesn't exist" >&2
+      echo "W: You can download the latest version by running as root:" >&2
+      echo "reform-flash-uboot" >&2
+    elif ! cmp --quiet /boot/ls1028a-mhdpfw.bin "$mhdpfwbin"; then
+      echo "W: /boot/ls1028a-mhdpfw.bin is not the latest uboot" >&2
+      echo "W: You can update it to the latest version by running as root:" >&2
+      echo "reform-flash-uboot" >&2
+    fi
+    rm "$mhdpfwbin"
+    ;;
+  esac
+fi
