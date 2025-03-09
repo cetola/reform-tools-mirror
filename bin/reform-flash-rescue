@@ -32,10 +32,25 @@ else
   exit 1
 fi
 
-if [ "$EMMC_USE" = false ]; then
-  echo "E: writing to eMMC not supported on $(cat /proc/device-tree/model)" >&2
-  exit 1
-fi
+case $EMMC_USE in
+  false)
+    echo "E: writing to eMMC not supported on $(cat /proc/device-tree/model)" >&2
+    exit 1
+    ;;
+  warn)
+    echo "W: Using eMMC on $(cat /proc/device-tree/model) is not without risk." >&2
+    echo "W: For example, flashing the wrong u-boot or if the flashing process goes wrong, it is" >&2
+    echo "W: possible to soft-brick your board. Restoring it might need some extra hardware." >&2
+    echo "W: Please only proceed if you are sure that the benefits outweigh the risks for you." >&2
+    printf "Are you sure you want to proceed? [y/N] "
+    read -r response
+
+    if [ "$response" != "y" ]; then
+      echo "Exiting."
+      exit
+    fi
+    ;;
+esac
 
 if [ "$EMMC_BOOT" != false ]; then
   if [ "$EMMC_BOOT" = warn ]; then
