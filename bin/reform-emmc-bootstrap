@@ -132,7 +132,10 @@ END
     cp -a /etc/resolv.conf "$MOUNTROOT/etc/resolv.conf"
   fi
   parted --script --machine "/dev/$DEV_MMC" "mklabel msdos"
-  parted --script --machine "/dev/$DEV_MMC" "mkpart primary ext4 16MiB 100%"
+  # create two partitions as expected by reform-check (but we only format /boot)
+  # make /boot as big as mkimage.sh would
+  parted --script --machine "/dev/$DEV_MMC" "mkpart primary ext4 16MiB $((16 + 488))MiB"
+  parted --script --machine "/dev/$DEV_MMC" "mkpart primary ext4 $((16 + 488))MiB 100%"
   udevadm settle
   partprobe "/dev/$DEV_MMC"
   mkfs.ext4 -F "/dev/${DEV_MMC}p1"
