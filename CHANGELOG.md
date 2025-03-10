@@ -1,3 +1,49 @@
+1.69 (2025-03-10)
+=================
+
+ * Add SPDX license information
+ * Add `README.md`
+ * move all tools from `/usr/sbin` to `/usr/bin`
+ * rename `reform-setup-encrypted-nvme` -> `reform-setup-encrypted-disk`
+ * `bin/reform-setup-encrypted-disk`:
+    - allow setting up eMMC or SD-card with LUKS
+    - `-h` does not take arguments
+    - move superuser check above check for installed commands
+    - support `EMMC_USE=warn`
+ * `bin/reform-migrate`:
+    - device agnostic `--help` output
+    - use getopts for command line parsing
+    - support `EMMC_USE=warn`
+ * `bin/reform-boot-config`:
+    - device agnostic `--help` output
+    - support `EMMC_USE=warn`
+ * `bin/reform-flash-uboot`:
+    - new `--image` option for custom flash.bin
+    - device agnostic `--help` output
+    - proper cli parsing with getopts
+    - allow flashing to devices other than SD or eMMC
+ * `bin/reform-emmc-bootstrap`:
+    - print unknown option for any option other than --help
+    - expect rootfs mountpoint to be `/dev/reformvg/root` instead of
+      `/dev/mapper/reformvg-root`
+    - do not attempt re-mounting root partition if it's already mounted as `/`
+    - check if partition is in use before mounting it
+    - `/dev/sda` partitions are `sda1` and `sda2` and not `sdap1` and `sdap2`
+    - do not run `reform-flash-uboot` with `--force`
+    - create a second partition on eMMC as expected by `reform-check`
+ * `bin/reform-check`:
+    - replace `ntp`,`ntpdate` with `ntpsec`,`ntpsec-ntpdate`
+    - add `--offline` switch
+ * `bin/reform-display-config`:
+    - drop workaround for #1091979 in favour of patching u-boot-menu
+ * `bin/reform-flash-rescue`:
+    - support `EMMC_USE=warn`
+ * `machines/MNT Reform 2.conf`: add cryptomgr.notests loglevel=3
+ * `machines/MNT * with BPI-CM4 Module.conf`: set EMMC_USE=warn
+ * `Makefile`:
+    - install man pages
+    - install systemd service files
+
 1.68 (2025-02-18)
 =================
 
