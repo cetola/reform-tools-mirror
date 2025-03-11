@@ -94,10 +94,6 @@ main() {
     fi
   fi
 
-  if ! chroot "$MOUNTROOT" dpkg-query --search '/boot/vmlinuz*' >/dev/null; then
-    echo "E: no kernel packages installed" >&2
-    exit 1
-  fi
   # comment out old /etc/fstab
   sed -e 's/^/#/' "$MOUNTROOT/etc/fstab" >"$MOUNTROOT/etc/fstab.new"
   # write new mountpoints
@@ -140,10 +136,21 @@ END
   partprobe "/dev/$DEV_MMC"
   mkfs.ext4 -F "/dev/${DEV_MMC}p1"
   mount "/dev/${DEV_MMC}p1" "$MOUNTROOT/boot/"
-  # upgrade linux-image-mnt-reform-arm64 in case that the installed kernel is
-  # not downloadable anymore
   chroot "$MOUNTROOT" apt-get update --error-on=any
-  chroot "$MOUNTROOT" apt-get install --yes --only-upgrade linux-image-mnt-reform-arm64
+  if ! chroot "$MOUNTROOT" dpkg-query --search '/boot/vmlinuz*' >/dev/null; then
+    echo "I: No kernel package installed." >&2
+    printf "Do you want this script to install linux-image-mnt-reform-arm64 for you? [y/N] "
+    read -r response
+    if [ "$response" != "y" ]; then
+      echo "E: no kernel packages installed, exiting." >&2
+      exit 1
+    fi
+    chroot "$MOUNTROOT" apt-get install --yes linux-image-mnt-reform-arm64
+  else
+    # upgrade linux-image-mnt-reform-arm64 in case that the installed kernel is
+    # not downloadable anymore
+    chroot "$MOUNTROOT" apt-get install --yes --only-upgrade linux-image-mnt-reform-arm64
+  fi
   # also regenerate everything for other installed kernel packages
   chroot "$MOUNTROOT" dpkg-query --search '/boot/vmlinuz*' | sed 's/:.*//' | while read -r pkg; do
     # if a package cannot be downloaded, apt will still exit
