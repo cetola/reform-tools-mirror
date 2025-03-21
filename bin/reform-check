@@ -452,11 +452,16 @@ if ! uname --kernel-version | grep --quiet --fixed-strings " $(dpkg-query --show
   echo "E: the currently running kernel is not the one provided by linux-image-mnt-reform-arm64" >&2
 fi
 
-if [ "$MIRROR" = "reform.debian.net" ]; then
-  if dpkg-query --showformat '${db:Status-Status}\n' --show "reform-qcacld2" 2>/dev/null | grep -q '^installed$'; then
-    echo "E: Having reform-qcacld2 on a system configured to use packages for Debian stable from reform.debian.net will attempt installing the kernel package from the MNT repositories in the kernel postinstallation hook" >&2
-    echo "W: Consider replacing reform-qcacld2 with ezurio-qcacld-2.0-dkms for Debian stable and stable-backports kernels from reform.debian.net" >&2
-  fi
+if [ "$MIRROR" = "reform.debian.net" ] && dpkg-query --showformat '${db:Status-Status}\n' --show "reform-qcacld2" 2>/dev/null | grep -q '^installed$'; then
+  echo "E: Having reform-qcacld2 on a system configured to use packages for Debian stable from reform.debian.net will attempt installing the kernel package from the MNT repositories in the kernel postinstallation hook" >&2
+  echo "W: Consider replacing reform-qcacld2 with ezurio-qcacld-2.0-dkms for Debian stable and stable-backports kernels from reform.debian.net" >&2
+fi
+
+if [ "$MIRROR" = "mntre.com" ] && ! dpkg-query --showformat '${db:Status-Status}\n' --show "reform-qcacld2" 2>/dev/null | grep -q '^installed$'; then
+  case "$(cat /proc/device-tree/model)" in "MNT Pocket Reform with i.MX8MP Module.conf")
+    echo "E: For the official MNT Debian on Pocket Reform with i.MX8MP, the reform-qcacld2 package needs to be installed for working wifi" >&2
+    ;;
+  esac
 fi
 
 if [ ! -e /boot/boot.scr ]; then
