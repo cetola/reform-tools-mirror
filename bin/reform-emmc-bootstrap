@@ -218,14 +218,23 @@ case $disk_label in
       DEV_SSD_BASE="${DEV_SSD}p"
     fi
     case $num_parts in
-      1) main "/dev/${DEV_SSD_BASE}1" ;;
+      1)
+        echo "I: assuming root file system on /dev/${DEV_SSD_BASE}1" >&2
+        main "/dev/${DEV_SSD_BASE}1"
+        ;;
       2)
         # assume one partition to be swap and the other to be the rootfs
         part1type=$(lsblk --nodeps --noheadings --output=FSTYPE "/dev/${DEV_SSD_BASE}1")
         part2type=$(lsblk --nodeps --noheadings --output=FSTYPE "/dev/${DEV_SSD_BASE}2")
         case "${part1type}_${part2type}" in
-          swap_ext4) main "/dev/${DEV_SSD_BASE}2" ;;
-          ext4_swap) main "/dev/${DEV_SSD_BASE}1" ;;
+          swap_ext4)
+            echo "I: assuming root file system on /dev/${DEV_SSD_BASE}2" >&2
+            main "/dev/${DEV_SSD_BASE}2"
+            ;;
+          ext4_swap)
+            echo "I: assuming root file system on /dev/${DEV_SSD_BASE}1" >&2
+            main "/dev/${DEV_SSD_BASE}1"
+            ;;
           *)
             echo "E: no support for partitions other than one swap and one ext4" >&2
             exit 1
