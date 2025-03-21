@@ -2,19 +2,10 @@
 
 set -eu
 
-if [ "$#" -eq "0" ]; then
-  echo "E: reform-setup-encrypted-nvme got renamed to reform-setup-encrypted-disk" >&2
-  echo "I: use reform-setup-encrypted-disk instead" >&2
-  exit 1
-elif [ "$#" -eq "1" ]; then
-  if [ "$1" = "--help" ]; then
-    echo "reform-setup-encrypted-nvme got renamed to reform-setup-encrypted-disk" >&2
-    echo "use reform-setup-encrypted-disk instead"
-  else
-    echo "E: unknown argument: $1" >&2
-    exit 1
-  fi
-else
-  echo "E: too many arguments" >&2
+echo "reform-setup-encrypted-nvme got renamed to reform-setup-encrypted-disk" >&2
+echo "use reform-setup-encrypted-disk instead"
+
+if [ "$#" -ne "1" ] || [ "$1" != "--help" ]; then
+  echo "E: unknown argument: $1" >&2
   exit 1
 fi
