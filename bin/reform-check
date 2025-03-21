@@ -158,7 +158,17 @@ fi
 
 echo "I: Contents of /proc/device-tree/model: $(cat /proc/device-tree/model)" >&2
 echo "I: \`uname -a\` output: $(uname -a)" >&2
-echo "I: Version of linux-image-mnt-reform-arm64: $(dpkg-query --show --showformat '${Version}' linux-image-mnt-reform-arm64)" >&2
+if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-mnt-reform-arm64" 2>/dev/null | grep -q '^installed$'; then
+  echo "I: Version of linux-image-mnt-reform-arm64: $(dpkg-query --show --showformat '${Version}' linux-image-mnt-reform-arm64)" >&2
+else
+  # The error message below is not quite correct. dpkg *will* tell us a version
+  # even when a package was removed (but not purged). But showing a version
+  # for a removed package is misleading the reader of the reform-check output
+  # into believing that the package is actually installed (or why else would
+  # it show the version of the package?). Thus, when the package is not
+  # installed, we forcefully do not show the version even though we could.
+  echo "E: Cannot get version of linux-image-mnt-reform-arm64 as it is not installed" >&2
+fi
 echo "I: Version of reform-tools: $(dpkg-query --show --showformat '${Version}' reform-tools)" >&2
 HUMAN_ROOT=
 case $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) in
