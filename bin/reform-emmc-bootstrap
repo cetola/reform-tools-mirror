@@ -79,6 +79,12 @@ main() {
     fi
     MOUNTROOT="$(mktemp --tmpdir --directory reform-emmc-bootstrap.XXXXXXXXXX)"
     mount "$ROOTPART" "$MOUNTROOT"
+    for dir in dev sys proc; do
+      if [ ! -d "$MOUNTROOT/$dir" ]; then
+        echo "E: The directory '$dir' does not exist in the filesystem on $ROOTPART" >&2
+        exit 1
+      fi
+    done
     mount -o bind /dev "$MOUNTROOT/dev/"
     mount -t sysfs sys "$MOUNTROOT/sys/"
     mount -t proc proc "$MOUNTROOT/proc/"
