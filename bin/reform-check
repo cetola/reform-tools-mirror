@@ -499,7 +499,7 @@ if [ -e "/etc/modprobe.d/reform.conf" ]; then
 fi
 
 if [ -e /proc/modules ] && ! grep --quiet '^reform2_lpc ' /proc/modules; then
-  echo "E: reform2_lpc is not loaded" >&2
+  echo "E: reform2_lpc is not loaded (battery status information will be missing)" >&2
 fi
 
 if [ ! -e "/usr/lib/modules/$(uname -r)/updates/dkms/reform2_lpc.ko" ] \
