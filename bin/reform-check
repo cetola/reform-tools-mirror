@@ -421,6 +421,12 @@ if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-mnt-refor
     exit 1
     ;;
   esac
+else
+  echo "E: linux-image-mnt-reform-arm64 is not installed" >&2
+fi
+
+if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-headers-mnt-reform-arm64" 2>/dev/null | grep -q '^installed$'; then
+  echo "E: linux-headers-mnt-reform-arm64 is not installed -- cannot compile reform2_lpc module" >&2
 fi
 
 for file in /boot/initrd.img-*-reform2-arm64 /boot/vmlinuz-*-reform2-arm64; do
