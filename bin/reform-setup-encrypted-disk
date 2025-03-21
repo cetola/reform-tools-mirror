@@ -7,8 +7,9 @@ set -eu
 usage() {
   echo "Set up a disk with LUKS encryption containing LVM2 volumes for" >&2
   echo "swap and the rootfs. Offers to run reform-migrate and " >&2
-  echo "reform-boot-config to set up the initramfs in /boot to load the" >&2
-  echo "rootfs from the encrypted disk." >&2
+  echo "reform-boot-config to set up the initramfs in /boot on the first" >&2
+  echo "partition of the eMMC or SD-card to load the rootfs from the " >&2
+  echo "encrypted disk." >&2
   echo >&2
   echo "Usage: $0 [--help] [DEVICE_PATH]" >&2
   echo >&2
@@ -19,9 +20,36 @@ usage() {
   echo "                   on standard input." >&2
   echo >&2
   echo "Arguments:" >&2
-  echo "  [DEVICE_PATH]    If provided, path to disk device, or a disk" >&2
-  echo "                   image file to loop into this role. If left" >&2
-  echo "                   empty, a model-specific default is used." >&2
+  echo "  [DEVICE_PATH]    Disk, partition or regular file to set up with " >&2
+  echo "                   LUKS and LVM. If this argument is missing, defaults" >&2
+  echo "                   to the SSD." >&2
+  echo "                   If the eMMC device is provided, it will be" >&2
+  echo "                   partitioned with the first partition for /boot and" >&2
+  echo "                   the second partition for LUKS&LVM." >&2
+  echo "                   The shorthands ssd, emmc, sd and usb can be used" >&2
+  echo "                   to install to the SSD, the eMMC, the SD card or" >&2
+  echo "                   to a USB drive respectively." >&2
+  echo "                   To copy to a file of the same name as one of the" >&2
+  echo "                   shorthands, prefix the filename with a dot and" >&2
+  echo "                   and a slash for a relative path." >&2
+  echo >&2
+  echo "Example 1:" >&2
+  echo "When booted from SD-card set up the first partition on eMMC as /boot" >&2
+  echo "and set up the SSD with LUKS. Set up LVM inside LUKS with" >&2
+  echo "one volume for swap and the other for the root file system. Copy" >&2
+  echo "the current system to /dev/reformvg/root:" >&2
+  echo >&2
+  echo "    $0" >&2
+  echo >&2
+  echo "Example 2:" >&2
+  echo "When booted from SD-card, set up eMMC with two partitions, the first" >&2
+  echo "one for /boot and the second for LUKS. Set up LVM inside LUKS with" >&2
+  echo "one volume for swap and the other for the root file system. Copy" >&2
+  echo "the current system to /dev/reformvg/root. Suppress any interactivity" >&2
+  echo "by using --force and obtain the LUKS passphrase from standard input." >&2
+  echo >&2
+  echo "    echo hunter2 | $0 --force emmc" >&2
+  echo >&2
 }
 
 FORCE=false
@@ -128,6 +156,13 @@ case $DEVICE_PATH in "/dev/$DEV_MMC"*)
       ;;
   esac
   ;;
+esac
+
+case $DEVICE_PATH in
+  sd) DEVICE_PATH="/dev/${DEV_SD}" ;;
+  ssd) DEVICE_PATH="/dev/${DEV_SSD}" ;;
+  emmc) DEVICE_PATH="/dev/${DEV_MMC}" ;;
+  usb) DEVICE_PATH="/dev/${DEV_USB}" ;;
 esac
 
 if [ -b "$DEVICE_PATH" ]; then
