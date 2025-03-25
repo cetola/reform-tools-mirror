@@ -38,7 +38,7 @@ usage() {
   echo >&2
   echo "Options:" >&2
   echo "  --help           Display this help and exit." >&2
-  echo "  --mirror=MIRROR  Force MIRROR, either mntre.com or reform.debian.net" >&2
+  echo "  --mirror=MIRROR  Force MIRROR, one of mntre.com, reform.debian.net or voidlinux.org" >&2
   echo "  --offline        Disable all checks that require an internet connection" >&2
   echo "                   and a filled apt cache." >&2
 }
@@ -49,7 +49,14 @@ nth_arg() {
 }
 
 OFFLINE=
-MIRROR="mntre.com"
+
+. /etc/os-release
+
+if [ "$ID" = "debian" ]; then
+  MIRROR="mntre.com"
+elif [ "$ID" = "void" ]; then
+  MIRROR="voidlinux.org"
+fi 
 
 while getopts :h-: OPTCHAR; do
   case "$OPTCHAR" in
@@ -102,8 +109,13 @@ if [ "$#" -gt 0 ]; then
   exit 1
 fi
 
-if [ "$MIRROR" != "mntre.com" ] && [ "$MIRROR" != "reform.debian.net" ]; then
-  echo "E: invalid value for --mirror: $MIRROR -- only mntre.com and reform.debian.net are supported" >&2
+if [ "${MIRROR:-none}" = "none" ]; then
+    echo "E: mirror not set and autodetection failed. Are you running a distro besides debian or void?"
+    exit 1
+fi
+
+if [ "$MIRROR" != "mntre.com" ] && [ "$MIRROR" != "reform.debian.net" ] && [ "$MIRROR"  != "voidlinux.org" ]; then
+  echo "E: invalid value for --mirror: $MIRROR -- only mntre.com, reform.debian.net and voidlinux.org are supported" >&2
   exit 1
 fi
 
@@ -134,7 +146,7 @@ if [ -z "$MIRROR" ]; then
   MIRROR="mntre.com"
 fi
 
-if [ -z "$(apt-get indextargets)" ] && [ "$OFFLINE" != "yes" ]; then
+if [ "$MIRROR" != "voidlinux.org" ] && [ -z "$(apt-get indextargets)" ] && [ "$OFFLINE" != "yes" ]; then
   echo "E: reform-check needs a populated apt cache for some of its operation." >&2
   echo "E: re-run with --offline (disabling some checks) or choose to run apt-update now." >&2
   printf "Should reform-check run 'apt update' for you? [y/N]" >&2
@@ -158,8 +170,19 @@ fi
 
 echo "I: Contents of /proc/device-tree/model: $(cat /proc/device-tree/model)" >&2
 echo "I: \`uname -a\` output: $(uname -a)" >&2
-echo "I: Version of linux-image-mnt-reform-arm64: $(dpkg-query --show --showformat '${Version}' linux-image-mnt-reform-arm64)" >&2
-echo "I: Version of reform-tools: $(dpkg-query --show --showformat '${Version}' reform-tools)" >&2
+
+case $MIRROR in
+  mntre.com|reform.debian.net)
+    echo "I: Version of linux-image-mnt-reform-arm64: $(dpkg-query --show --showformat '${Version}' linux-image-mnt-reform-arm64)" >&2
+    echo "I: Version of reform-tools: $(dpkg-query --show --showformat '${Version}' reform-tools)" >&2
+    ;;
+  voidlinux.org)
+    echo "I: Version of pocket-reform-kernel: $(xbps-query --property=pkgver pocket-reform-kernel)" >&2
+    echo "I: Version of reform-tools: $(xbps-query --property=pkgver reform-tools)" >&2
+    ;;
+esac
+
+
 HUMAN_ROOT=
 case $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) in
   "/dev/reformvg/root")
@@ -206,39 +229,61 @@ if [ -e "/etc/flash-kernel/machine" ] && [ -e "/proc/device-tree/model" ] && [ "
   echo "E: contents of /etc/flash-kernel/machine: $(cat /etc/flash-kernel/machine)" >&2
 fi
 
-PKGSGUI="xwayland xterm sway fonts-inter fonts-noto-color-emoji waybar swayidle swaylock mesa-utils lxpolkit wayland-protocols wofi wireplumber papirus-icon-theme libglib2.0-bin gsettings-desktop-schemas gnome-disk-utility gnome-themes-extra-data gnome-icon-theme gnome-settings-daemon gnome-system-monitor grim slurp gedit evince mpv sxiv gvfs-backends unicode-data engrampa neverball minetest qt5ct kde-style-breeze dunst pasystray wev wf-recorder wayvnc network-manager-gnome blueman pavucontrol thunar"
+PKGSGUI="xterm sway swayidle swaylock wireplumber papirus-icon-theme gsettings-desktop-schemas gnome-disk-utility gnome-icon-theme gnome-settings-daemon gnome-system-monitor grim slurp gedit evince mpv minetest qt5ct dunst pasystray wev wf-recorder wayvnc blueman pavucontrol thunar"
 case "$MIRROR" in
-  mntre.com) PKGSGUI="$PKGSGUI wayfire reform-firedecor firefox tuigreet" ;;
-  reform.debian.net) PKGSGUI="$PKGSGUI firefox-esr" ;;
+  mntre.com) PKGSGUI="$PKGSGUI xwayland wayfire fonts-inter fonts-noto-color-emoji waybar mesa-utils lxpolkit wayland-protocols wofi libglib2.0-bin gnome-themes-extra-data sxiv gvfs-backends unicode-data engrampa neverball kde-style-breeze network-manager-gnome reform-firedecor firefox tuigreet" ;;
+  reform.debian.net) PKGSGUI="$PKGSGUI xwayland fonts-inter fonts-noto-color-emoji waybar mesa-utils lxpolkit wayland-protocols wofi libglib2.0-bin gnome-themes-extra-data sxiv gvfs-backends unicode-data engrampa neverball kde-style-breeze network-manager-gnome firefox-esr" ;;
+  voidlinux.org) PKGSGUI="$PKGSGUI xorg-server-xwayland mesa-demos polkit wmenu gnome-themes-extra grimshot nsxiv NetworkManager firefox" ;;
 esac
-PKGSTOOLS="bmap-tools brightnessctl fonts-font-awesome fonts-jetbrains-mono foot gir1.2-ayatanaappindicator3-0.1 gir1.2-gdesktopenums-3.0 gir1.2-gdkpixbuf-2.0 gir1.2-glib-2.0 gir1.2-gtk-3.0 gir1.2-gtklayershell-0.1 gir1.2-notify-0.7 gnome-system-monitor ircii pavucontrol pulseaudio-utils python3 python3-gi python3-usb1 thunar x11-xserver-utils"
-PKGSNET="iproute2 iptables inetutils-ping elinks isc-dhcp-client netcat-traditional net-tools network-manager nfacct ntpsec ntpsec-ntpdate rsync telnet traceroute wpasupplicant curl wget w3m rfkill ifupdown netbase openssh-client firmware-realtek wireless-regdb wavemon iw"
+PKGSTOOLS="brightnessctl foot gnome-system-monitor  pavucontrol pulseaudio-utils python3 thunar"
 case "$MIRROR" in
-  mntre.com) PKGSNET="$PKGSNET reform-qcacld2 firmware-mediatek" ;;
-  reform.debian.net) PKGSNET="$PKGSNET ezurio-qcacld-2.0-dkms" ;;
+  mntre.com) PKGSTOOLS="$PKGSTOOLS bmap-tools fonts-font-awesome fonts-jetbrains-mono gir1.2-ayatanaappindicator3-0.1 gir1.2-gdesktopenums-3.0 gir1.2-gdkpixbuf-2.0 gir1.2-glib-2.0 gir1.2-gtk-3.0 gir1.2-gtklayershell-0.1 gir1.2-notify-0.7 ircii python3-gi python3-usb1 x11-xserver-utils" ;;
+  reform.debian.net) PKGSTOOLS="$PKGSTOOLS bmap-tools fonts-font-awesome fonts-jetbrains-mono gir1.2-ayatanaappindicator3-0.1 gir1.2-gdesktopenums-3.0 gir1.2-gdkpixbuf-2.0 gir1.2-glib-2.0 gir1.2-gtk-3.0 gir1.2-gtklayershell-0.1 gir1.2-notify-0.7 ircii python3-gi python3-usb1 x11-xserver-utils" ;;
+  voidlinux.org) PKGSTOOLS="$PKGSTOOLS font-awesome ii python3-gobject python3-usb" ;;
 esac
-PKGSADMIN="apt apt-utils apt-listbugs apt-file cron cryptsetup lvm2 dbus-bin e2fsprogs fbset init-system-helpers ncdu parted pciutils procps sudo systemd systemd-sysv tmux u-boot-tools screen greetd"
-PKGSUTILS="busybox console-data console-setup cpio file flash-kernel gnupg gpgv htop kbd lm-sensors readline-common usbutils xdg-utils bsdmainutils less nano micro vim alsa-utils dosfstools python3-psutil unzip nvme-cli fdisk lshw hdparm"
+PKGSNET="iproute2 iptables inetutils-ping elinks net-tools rsync telnet traceroute curl wget w3m rfkill ifupdown wireless-regdb wavemon iw"
 case "$MIRROR" in
-  mntre.com) PKGSUTILS="$PKGSUTILS reform-handbook pocket-reform-handbook picotool" ;;
+  mntre.com) PKGSNET="$PKGSNET reform-qcacld2 firmware-mediatek isc-dhcp-client netcat-traditional network-manager nfacct ntpsec ntpsec-ntpdate wpasupplicant netbase openssh-client firmware-realtek" ;;
+  reform.debian.net) PKGSNET="$PKGSNET ezurio-qcacld-2.0-dkms isc-dhcp-client netcat-traditional network-manager nfacct ntpsec ntpsec-ntpdate wpasupplicant netbase openssh-client firmware-realtek" ;;
+  voidlinux.org) PKGSNET="$PKGSNET ezurio-qcacld-2.0-dkms dhcpcd netcat NetworkManager libnetfilter_acct chrony wpa_supplicant openssh linux-firmware-network" ;;
 esac
-PKGSMISC="brightnessctl brightness-udev ca-certificates debian-archive-keyring dialog gpm ncurses-term locales bash-completion man-db cryptsetup-initramfs reform-tools reform-branding gpiod firmware-misc-nonfree firmware-atheros zstd linux-image-mnt-reform-arm64 linux-headers-mnt-reform-arm64"
+PKGSADMIN="cryptsetup lvm2 e2fsprogs fbset ncdu parted pciutils sudo tmux u-boot-tools screen greetd"
+case "$MIRROR" in
+    mntre.com|reform.debian.net) PKGSADMIN="$PKGSADMIN apt apt-utils apt-listbugs apt-file cron dbus-bin init-system-helpers procps systemd systemd-sysv" ;;
+    voidlinux.org) PKGSADMIN="$PKGSADMIN cronie dbus procps-ng runit-void" ;;
+esac
+PKGSUTILS="busybox console-setup cpio file gnupg htop kbd usbutils xdg-utils less nano micro vim alsa-utils dosfstools python3-psutil unzip nvme-cli fdisk lshw hdparm"
+case "$MIRROR" in
+  mntre.com) PKGSUTILS="$PKGSUTILS reform-handbook pocket-reform-handbook picotool console-data flash-kernel gpgv lm-sensors readline-common bsdmainutils" ;;
+  reform.debian.net) PKGSUTIlS="$PKGSUTILS console-data flash-kernel gpgv lm-sensors readline-common bsdmainutils" ;;
+  voidlinux.org) PKGSUTILS="$PKGSUTILS lm_sensors readline" ;;
+esac
+PKGSMISC="brightnessctl ca-certificates dialog gpm ncurses-term bash-completion man-db reform-tools gpiod zstd"
+case "$MIRROR" in
+  mntre.com|reform.debian.net) PKGSUTILS="$PKGSUTILS brightness-udev debian-archive-keyring firmware-misc-nonfree locales cryptsetup-initramfs reform-branding firmware-atheros linux-image-mnt-reform-arm64 linux-headers-mnt-reform-arm64" ;;
+  voidlinux.org) PKGSUTILS="$PKGSUTILS void-packages-nonfree pocket-reform-kernel pocket-reform-kernel-headers" ;;
+esac
 case "$MIRROR" in
   mntre.com) aptprefcontent="Package: *\nPin: release n=reform, l=reform\nPin-Priority: 990\n" ;;
   reform.debian.net) aptprefcontent="Package: *\nPin: origin \"reform.debian.net\"\nPin-Priority: 999\n" ;;
 esac
-if [ ! -e /etc/apt/preferences.d/reform.pref ]; then
-  echo "E: /etc/apt/preferences.d/reform.pref doesn't exist" >&2
-  echo "E: you should not install packages on this system unless you know what you are doing" >&2
-  echo "E: /etc/apt/preferences.d/reform.pref should contain the following lines:" >&2
-  printf "$aptprefcontent" >&2
-else
-  if ! printf "$aptprefcontent" | cmp --quiet - /etc/apt/preferences.d/reform.pref; then
-    echo "W: unexpected content in /etc/apt/preferences.d/reform.pref:" >&2
-    printf "$aptprefcontent" | diff -u - /etc/apt/preferences.d/reform.pref || true
-    echo "W: you should not install packages on this system unless you know what you are doing" >&2
-  fi
-fi
+
+case "$MIRROR" in
+  mntre.com|reform.debian.net)
+    if [ ! -e /etc/apt/preferences.d/reform.pref ]; then
+      echo "E: /etc/apt/preferences.d/reform.pref doesn't exist" >&2
+      echo "E: you should not install packages on this system unless you know what you are doing" >&2
+      echo "E: /etc/apt/preferences.d/reform.pref should contain the following lines:" >&2
+      printf "$aptprefcontent" >&2
+    else
+      if ! printf "$aptprefcontent" | cmp --quiet - /etc/apt/preferences.d/reform.pref; then
+	echo "W: unexpected content in /etc/apt/preferences.d/reform.pref:" >&2
+	printf "$aptprefcontent" | diff -u - /etc/apt/preferences.d/reform.pref || true
+	echo "W: you should not install packages on this system unless you know what you are doing" >&2
+      fi
+    fi
+    ;;
+esac
 
 notinstalled=
 for package in $PKGSGUI $PKGSTOOLS $PKGSNET $PKGSADMIN $PKGSUTILS $PKGSMISC; do
