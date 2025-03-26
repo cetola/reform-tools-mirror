@@ -84,6 +84,7 @@ static enum power_supply_property bat_props[] = {
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
 	POWER_SUPPLY_PROP_CHARGE_NOW,
 	POWER_SUPPLY_PROP_CHARGE_EMPTY,
+	POWER_SUPPLY_PROP_PRESENT,
 };
 
 static struct power_supply_desc bat_desc = {
@@ -527,6 +528,10 @@ static int get_bat_property(struct power_supply *psy,
 			ret = -EINVAL;
 		}
 		val->intval = (buffer[2] | buffer[3] << 8) * 1000;
+		break;
+
+	case POWER_SUPPLY_PROP_PRESENT:
+		val->intval = 1;
 		break;
 
 	default:
