@@ -43,6 +43,15 @@ usage() {
   echo "on eMMC, run:" >&2
   echo "" >&2
   echo "    reform-boot-config --emmc /dev/reformvg/root" >&2
+  echo "" >&2
+  echo "Note: The Debian kernel package installs files into /boot. Thus, the" >&2
+  echo "selected partition for /boot must already contain the kernel image" >&2
+  echo "belonging to the Debian kernel package installed in the selected" >&2
+  echo "rootfs. This script will not attempt to re-install the Debian kernel" >&2
+  echo "package to re-populate an empty or non-matching /boot partition." >&2
+  echo "" >&2
+  echo "To re-create a /boot partition on eMMC from scratch, use" >&2
+  echo "reform-emmc-bootstrap." >&2
 }
 
 maybe_umount() {
