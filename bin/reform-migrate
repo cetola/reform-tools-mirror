@@ -112,8 +112,10 @@ if [ -n "$EMMC" ]; then
 fi
 
 BOOTPART="${DEV_SD}p1"
+HUMAN_BOOT="SD-card"
 if [ -n "$EMMC" ]; then
   BOOTPART="${DEV_MMC}p1"
+  HUMAN_BOOT="eMMC"
 fi
 
 if [ ! -e "$TARGET" ]; then
@@ -137,8 +139,9 @@ if [ ! -b "/dev/$BOOTPART" ]; then
 fi
 
 # check if the new boot is still mounted somewhere
-if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART")" ]; then
-  echo "/dev/$BOOTPART is still mounted somewhere." >&2
+MOUNT_BOOT="$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART")"
+if [ -n "$MOUNT_BOOT" ]; then
+  echo "E: /dev/$BOOTPART ($HUMAN_BOOT) is still mounted on $MOUNT_BOOT." >&2
   echo "Please unmount before running this script" >&2
   exit 1
 fi

@@ -325,8 +325,9 @@ if [ ! -e "$OLDBOOTPART" ]; then
 fi
 
 # check if the new boot is still mounted somewhere
-if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART")" ]; then
-  echo "/dev/$BOOTPART is still mounted somewhere, which means that it is" >&2
+MOUNT_BOOT="$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART")"
+if [ -n "$MOUNT_BOOT" ]; then
+  echo "W: /dev/$BOOTPART ($HUMAN_BOOT) is still mounted on $MOUNT_BOOT, which means that it is" >&2
   echo "probably used by the currently running system and that replacing" >&2
   echo "its contents might make the currently running system unbootable."
 
