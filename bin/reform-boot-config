@@ -155,16 +155,65 @@ if [ "$EMMC" = true ]; then
       fi
       ;;
   esac
-  BOOTPART="${DEV_MMC}p1"
+  BOOTPART="$DEV_MMC"
+  HUMAN_BOOT="eMMC"
 else
-  BOOTPART="${DEV_SD}p1"
+  BOOTPART="$DEV_SD"
+  HUMAN_BOOT="SD-card"
 fi
 
-if [ ! -e "/dev/$BOOTPART" ]; then
-  echo "/dev/$BOOTPART doesn't exist" >&2
-  # FIXME: offer to create it
-  exit 1
+# Try opening with an exclusive write lock to check whether a device is still
+# opened by consumers like device-mapper, raid or luks, to name some examples.
+# reform-emmc-bootstrap does the same thing (could share code?)
+get_exclusive_write_lock() {
+  ret=0
+  python3 - "$1" <<EOF || ret=$?
+import errno, os, sys
+
+try:
+    os.open(sys.argv[1], os.O_WRONLY | os.O_EXCL)
+except OSError as e:
+    if e.errno == errno.EBUSY:
+        sys.exit(1)
+    raise
+EOF
+  return $ret
+}
+
+echo "I: Using partition on $HUMAN_BOOT for /boot: /dev/${BOOTPART}p1."
+if [ ! -e "/dev/${BOOTPART}p1" ]; then
+  echo "W: Partition 1 on $HUMAN_BOOT does not exist" >&2
+  echo "W: This script can create a new partition table on $HUMAN_BOOT for you." >&2
+  echo "WARNING: doing so will destroy the contents of your $HUMAN_BOOT." >&2
+  if [ "$FORCE" = true ]; then
+    echo "I: Proceeding without user interaction because of --force" >&2
+    response="y"
+  else
+    printf "Are you sure you want to proceed? [y/N] "
+    read -r response
+  fi
+
+  if [ "$response" != "y" ]; then
+    echo "Exiting."
+    exit
+  fi
+
+  if ! get_exclusive_write_lock "/dev/${BOOTPART}"; then
+    echo "E: device /dev/${BOOTPART} ($HUMAN_BOOT) is still in use" >&2
+    exit 1
+  fi
+
+  # reform-emmc-bootstrap does the same thing (could share code?)
+  parted --script --machine "/dev/$BOOTPART" "mklabel msdos"
+  # create two partitions as expected by reform-check (but we only format /boot)
+  # make /boot as big as mkimage.sh would
+  parted --script --machine "/dev/$BOOTPART" "mkpart primary ext4 16MiB $((16 + 488))MiB"
+  parted --script --machine "/dev/$BOOTPART" "mkpart primary ext4 $((16 + 488))MiB 100%"
+  udevadm settle
+  partprobe "/dev/$BOOTPART"
+  mkfs.ext4 -F "/dev/${BOOTPART}p1"
 fi
+BOOTPART="${BOOTPART}p1"
 
 if [ ! -b "/dev/$BOOTPART" ]; then
   echo "/dev/$BOOTPART is not a block device" >&2

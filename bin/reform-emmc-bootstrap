@@ -133,6 +133,8 @@ END
     rm -f "$MOUNTROOT/etc/resolv.conf" # make sure to remove a possible symlink
     cp -a /etc/resolv.conf "$MOUNTROOT/etc/resolv.conf"
   fi
+
+  # reform-boot-config does the same thing (could share code?)
   parted --script --machine "/dev/$DEV_MMC" "mklabel msdos"
   # create two partitions as expected by reform-check (but we only format /boot)
   # make /boot as big as mkimage.sh would
@@ -187,6 +189,7 @@ fi
 # eMMC device is being used (case 2): there are not file systems directly mounted on the block device
 # but it is opened by consumers like device-mapper, raid or luks, to name some examples. In this situation
 # it is not trivial to locate the consumer.
+# reform-boot-config does the same thing (could share code?)
 get_exclusive_write_lock() {
   ret=0
   python3 - "$1" <<EOF || ret=$?
