@@ -72,6 +72,7 @@ maybe_umount() {
 }
 
 FORCE=false
+EMMC=false
 while getopts :h-: OPTCHAR; do
   case "$OPTCHAR" in
     h)
@@ -85,7 +86,7 @@ while getopts :h-: OPTCHAR; do
           exit 0
           ;;
         force) FORCE=true ;;
-        emmc) EMMC=yes ;;
+        emmc) EMMC=true ;;
         *)
           echo "E: unrecognized option: --$OPTARG" >&2
           exit 1
@@ -129,7 +130,7 @@ else
   exit 1
 fi
 
-if [ "$EMMC" = "yes" ]; then
+if [ "$EMMC" = true ]; then
   case $EMMC_USE in
     false)
       echo "E: writing to eMMC not supported on $(cat /proc/device-tree/model)" >&2
@@ -161,6 +162,7 @@ fi
 
 if [ ! -e "/dev/$BOOTPART" ]; then
   echo "/dev/$BOOTPART doesn't exist" >&2
+  # FIXME: offer to create it
   exit 1
 fi
 
@@ -422,7 +424,7 @@ if [ "$MOUNTROOT" = "/" ]; then
   mount /boot
 fi
 
-if [ "$EMMC" = "yes" ]; then
+if [ "$EMMC" = true ]; then
   if [ "$BOOTPART" = "${DEV_MMC}p1" ]; then
     echo "Your /boot partition is on emmc (/dev/$BOOTPART)." >&2
   else
