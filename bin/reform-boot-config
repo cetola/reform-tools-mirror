@@ -363,6 +363,11 @@ if [ ! -e "$OLDBOOTPART" ]; then
   echo "/boot device $OLDBOOTPART from /etc/fstab in /dev/$ROOTPART doesn't exist" >&2
   exit 1
 fi
+case $OLDBOOTPART in
+  "/dev/${DEV_SD}"*) HUMAN_OLDBOOT="SD-card" ;;
+  "/dev/${DEV_MMC}"*) HUMAN_OLDBOOT="eMMC" ;;
+  *) HUMAN_OLDBOOT="unknown" ;;
+esac
 
 # check if the new boot is still mounted somewhere
 MOUNT_BOOT="$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART")"
@@ -372,7 +377,7 @@ if [ -n "$MOUNT_BOOT" ]; then
   echo "its contents might make the currently running system unbootable."
 
   if [ "$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART")" != "/boot" ]; then
-    echo "W: /dev/$BOOTPART was expected to be mounted at /boot, but was found be" >&2
+    echo "W: /dev/$BOOTPART ($HUMAN_BOOT) was expected to be mounted at /boot, but was found be" >&2
     echo "W: mounted at $(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART")" >&2
   fi
 
@@ -396,21 +401,21 @@ set -- "/dev/$BOOTPART" "$@"
 mount "/dev/$BOOTPART" "$MOUNTROOT/boot"
 
 if [ "$OLDBOOTPART" = "/dev/$BOOTPART" ]; then
-  echo "the /boot partition /dev/$BOOTPART referenced by the rootfs at /dev/$ROOTPART remains the same" >&2
+  echo "the /boot partition /dev/$BOOTPART ($HUMAN_BOOT) referenced by the rootfs at /dev/$ROOTPART remains the same" >&2
 else
   echo "This script will copy the contents from the old /boot partition" >&2
-  echo "$OLDBOOTPART to the new /boot partition $BOOTPART and delete all" >&2
+  echo "$OLDBOOTPART ($HUMAN_OLDBOOT) to the new /boot partition $BOOTPART ($HUMAN_BOOT) and delete all" >&2
   echo "files from the latter that were not present in the former." >&2
   if [ "$FORCE" = true ]; then
     echo "Proceeding without user interaction because of --force" >&2
     response="y"
   else
-    echo "Are you sure that you want to remove the contents of $BOOTPART" >&2
-    printf "and replace it with the contents of %s? [y/N] " "$OLDBOOTPART" >&2
+    echo "Are you sure that you want to remove the contents of $BOOTPART ($HUMAN_BOOT)" >&2
+    printf "and replace it with the contents of %s? [y/N] " "$OLDBOOTPART ($HUMAN_OLDBOOT)" >&2
     read -r response
   fi
   if [ "$response" != "y" ]; then
-    echo "I: Not overwriting the contents of $BOOTPART as requested." >&2
+    echo "I: Not overwriting the contents of $BOOTPART ($HUMAN_BOOT) as requested." >&2
     exit 1
   fi
 
@@ -426,7 +431,7 @@ else
 
   # sanity check
   if ! mountpoint --quiet "$OLDMOUNTBOOT"; then
-    echo "E: expected $OLDBOOTPART mounted on $OLDMOUNTBOOT but nothing mounted there" >&2
+    echo "E: expected $OLDBOOTPART ($HUMAN_OLDBOOT) mounted on $OLDMOUNTBOOT but nothing mounted there" >&2
     exit 1
   fi
 
