@@ -5,7 +5,16 @@ set -eu
 echo "reform-setup-encrypted-nvme got renamed to reform-setup-encrypted-disk" >&2
 echo "use reform-setup-encrypted-disk instead"
 
-if [ "$#" -ne "1" ] || [ "$1" != "--help" ]; then
+if [ "$#" -eq "0" ]; then
+  exit
+fi
+
+if [ "$#" -gt "1" ]; then
+  echo "E: too many arguments" >&2
+  exit 1
+fi
+
+if [ "$1" != "--help" ]; then
   echo "E: unknown argument: $1" >&2
   exit 1
 fi
