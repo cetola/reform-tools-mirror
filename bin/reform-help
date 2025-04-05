@@ -59,6 +59,10 @@ END
   esac
   cat <<'END'
 Set up full disk encryption:       [1msudo reform-setup-encrypted-disk[0m
+Migrate system to a partition:     [1msudo reform-migrate[0m
+Flash latest u-boot:               [1msudo reform-flash-uboot[0m
+Re-initialize eMMC from scratch    [1msudo reform-emmc-bootstrap[0m
+Flash rescue system to eMMC        [1msudo reform-flash-rescue[0m
 Update / install software:         [1msudo apt update[0m
                                    [1mapt search [1;4mkeyword[0m
                                    [1msudo apt install [1;4mpackage[0m
