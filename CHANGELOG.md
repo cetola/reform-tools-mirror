@@ -1,3 +1,42 @@
+1.70 (2025-04-05)
+=================
+
+ * `bin/reform-boot-config`:
+    - set `EMMC` variable default to `false`
+    - create a partition table on the device with future `/boot` if partition
+      does not exist yet
+    - if `/boot` is still mounted somewhere, output what the mountpoint is
+    - do not suggest to reboot if the current system is running from SD-card
+      and configured `/boot` on `eMMC`
+    - explain what the script is not able to do and refer to
+      `reform-emmc-bootstrap`
+    - try to open a LUKS device if there are no partitions on the SSD
+    - more annotations whether a device is the SD-card or eMMC
+    - print extra warning for imx8mq
+    - make `lsblk` failures non-fatal (ignore if the block device does not
+      exist)
+ * `bin/reform-check`:
+    - do not print version of `linux-image-mnt-reform-arm64` if it is not
+      installed
+    - print an error if `linux-image-mnt-reform-arm64` and/or
+      `linux-headers-mnt-reform-arm64` are not installed
+    - print an error if `reform-qcacld2` is not installed with the mntre.com
+      mirror or installed with the reform.debian.net mirror
+    - explain what the effect of `reform2_lpc` not being loaded is
+    - suggest fixing an outdated line in `~/.profile` which attempts to cat
+      `/etc/reform-root-help` or `/etc/reform-help`
+ * `bin/reform-emmc-bootstrap`:
+    - error out if root partition does not have `/dev`, `/sys` or `/proc`
+    - print out where the root filesystem was assumed to be located
+ * `bin/reform-setup-encrypted-disk`: add device short-hands `sd`, `ssd`,
+   `emmc` and `usb`
+ * `bin/reform-setup-encrypted-nvme`: print migration to
+   `reform-setup-encrypted-disk` in all cases
+ * `lpc/reform2_lpc.c`: provide `POWER_SUPPLY_PROP_PRESENT` with a constant
+    value of `1`
+ * `bin/reform-help`: add `reform-migrate`, `reform-flash-uboot`,
+    `reform-emmc-bootstrap` and `reform-flash-rescue`
+
 1.69 (2025-03-10)
 =================
 
