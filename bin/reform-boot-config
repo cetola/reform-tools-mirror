@@ -319,13 +319,18 @@ set --
 trap 'cleanup "$@"' EXIT INT TERM
 
 # check if rootfs is already mounted somewhere that is not /
-MOUNTROOT="$(lsblk --noheadings --output=MOUNTPOINT "/dev/$ROOTPART")"
-if [ "$MOUNTROOT" != "" ] && [ "$MOUNTROOT" != "/" ]; then
-  echo "/dev/$ROOTPART is still mounted on $MOUNTROOT." >&2
-  if ! maybe_umount "/dev/$ROOTPART"; then
-    echo "Please unmount before running this script" >&2
-    exit 1
+if [ -b "/dev/$ROOTPART" ]; then
+  MOUNTROOT="$(lsblk --noheadings --output=MOUNTPOINT "/dev/$ROOTPART" || :)"
+  if [ "$MOUNTROOT" != "" ] && [ "$MOUNTROOT" != "/" ]; then
+    echo "/dev/$ROOTPART is still mounted on $MOUNTROOT." >&2
+    if ! maybe_umount "/dev/$ROOTPART"; then
+      echo "Please unmount before running this script" >&2
+      exit 1
+    fi
+    MOUNTROOT=
   fi
+else
+  # if /dev/$ROOTPART is not a block device, then it can also not be mounted anywhere
   MOUNTROOT=
 fi
 
@@ -370,7 +375,7 @@ case $OLDBOOTPART in
 esac
 
 # check if the new boot is still mounted somewhere
-MOUNT_BOOT="$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART")"
+MOUNT_BOOT="$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART" || :)"
 if [ -n "$MOUNT_BOOT" ]; then
   echo "W: /dev/$BOOTPART ($HUMAN_BOOT) is still mounted on $MOUNT_BOOT, which means that it is" >&2
   echo "probably used by the currently running system and that replacing" >&2
