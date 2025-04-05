@@ -538,6 +538,14 @@ if [ "$EMMC" = true ]; then
       echo "I: Then remove the SD-card." >&2
       echo "I: Lastly, power the system on again." >&2
       echo "I: Power off your MNT Reform by running 'systemctl poweroff'." >&2
+      case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
+        echo "I: WARNING: If you have the DIP switch on your i.MX8MQ set to load u-boot" >&2
+        echo "I:          from SD-card instead of eMMC, you cannot boot the system without" >&2
+        echo "I:          an SD-card inserted. In that case, either:" >&2
+        echo "I:            a) mv /boot/boot.scr /boot/boot.scr.bak" >&2
+        echo "I:            b) or put in a different SD-card with u-boot but without /boot/boot.scr" >&2
+        ;;
+      esac
       ;;
     *)
       echo "I: Reboot your MNT Reform by running 'systemctl reboot'." >&2
