@@ -253,6 +253,9 @@ case $disk_label in
   unknown)
     echo "I: no partition table found trying to open LUKS device" >&2
     if ! is_current_root /dev/reformvg/root; then
+      if [ "$(lsblk --nodeps --noheadings --output=FSTYPE "/dev/${DEV_SSD}")" != "crypto_LUKS" ]; then
+        echo "W: SSD (/dev/${DEV_SSD}) does not look like a LUKS device" >&2
+      fi
       cryptsetup luksOpen "/dev/${DEV_SSD}" reform_crypt
       vgchange -ay reformvg
     fi
