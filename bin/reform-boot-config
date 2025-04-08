@@ -406,7 +406,7 @@ fi
 
 # check that the new mountpoint for /boot is empty
 if mountpoint --quiet "$MOUNTROOT/boot"; then
-  echo "Something is still mounted on $MOUNTROOT/boot." >&2
+  echo "Something ($(findmnt --noheadings --evaluate --mountpoint "$MOUNTROOT/boot" --output SOURCE)) is still mounted on $MOUNTROOT/boot." >&2
   if ! maybe_umount "$MOUNTROOT/boot"; then
     echo "Please unmount before running this script" >&2
     exit 1
