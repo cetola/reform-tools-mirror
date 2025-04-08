@@ -555,7 +555,7 @@ if [ "$EMMC" = true ]; then
   # If the current system runs on SD-card and the user set up /boot on eMMC
   # then they need to remove the SD-card before booting again or otherwise
   # u-boot will prefer /boot from this system.
-  case $(findmnt --noheadings --evaluate --mountpoint /boot --output SOURCE) in
+  case $OLDBOOTPART in
     "/dev/${DEV_SD}"*)
       echo "I: u-boot will prefer the first partition on SD-card over the first partition on eMMC" >&2
       echo "I: Your current system has its /boot mounted from SD-card." >&2
