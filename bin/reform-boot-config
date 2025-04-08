@@ -541,6 +541,15 @@ if [ "$MOUNTROOT" = "/" ]; then
   mount /boot
 fi
 
+# Maybe the human platform name should be part of the machine/*.conf if it is
+# used more than just here.
+case "$(cat /proc/device-tree/model)" in
+  "MNT Pocket Reform with "*) PLATFORM_HUMAN="MNT Pocket Reform" ;;
+  "MNT Reform Next with "*) PLATFORM_HUMAN="MNT Reform Next" ;;
+  "MNT Reform 2" | "MNT Reform 2 HDMI") PLATFORM_HUMAN="Reform 2" ;;
+  "MNT "*) PLATFORM_HUMAN="MNT Reform (unknown)" ;;
+esac
+
 if [ "$EMMC" = true ]; then
   echo "Your /boot partition is on emmc (/dev/$BOOTPART)." >&2
   # If the current system runs on SD-card and the user set up /boot on eMMC
@@ -554,7 +563,7 @@ if [ "$EMMC" = true ]; then
       echo "I: Instead of just rebooting, power off the system." >&2
       echo "I: Then remove the SD-card." >&2
       echo "I: Lastly, power the system on again." >&2
-      echo "I: Power off your MNT Reform by running 'systemctl poweroff'." >&2
+      echo "I: Power off your ${PLATFORM_HUMAN} by running 'systemctl poweroff'." >&2
       case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
         echo "I: WARNING: If you have the DIP switch on your i.MX8MQ set to load u-boot" >&2
         echo "I:          from SD-card instead of eMMC, you cannot boot the system without" >&2
@@ -565,10 +574,10 @@ if [ "$EMMC" = true ]; then
       esac
       ;;
     *)
-      echo "I: Reboot your MNT Reform by running 'systemctl reboot'." >&2
+      echo "I: Reboot your ${PLATFORM_HUMAN} by running 'systemctl reboot'." >&2
       ;;
   esac
 else
   echo "Your /boot partition is on your SD-Card (/dev/$BOOTPART)." >&2
-  echo "I: Reboot your MNT Reform by running 'systemctl reboot'." >&2
+  echo "I: Reboot your ${PLATFORM_HUMAN} by running 'systemctl reboot'." >&2
 fi
