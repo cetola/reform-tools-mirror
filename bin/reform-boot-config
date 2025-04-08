@@ -355,6 +355,10 @@ fi
 
 # mount the desired root partition somewhere if it isn't mounted yet
 if [ "$MOUNTROOT" = "" ]; then
+  if [ ! -e "/dev/$ROOTPART" ]; then
+    echo "E: root partition (/dev/$ROOTPART) does not exist" >&2
+    exit 1
+  fi
   MOUNTROOT="$(mktemp --tmpdir --directory reform-boot-config.XXXXXXXXXX)"
   set -- "/dev/$ROOTPART" "$MOUNTROOT" "$@"
   mount "/dev/$ROOTPART" "$MOUNTROOT"
