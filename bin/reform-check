@@ -146,7 +146,7 @@ fi
 
 if [ -z "$(apt-get indextargets)" ] && [ "$OFFLINE" != "yes" ]; then
   echo "E: reform-check needs a populated apt cache for some of its operation." >&2
-  echo "E: re-run with --offline (disabling some checks) or choose to run apt-update now." >&2
+  echo "E: re-run with --offline (disabling some checks) or choose to run 'apt update' now." >&2
   printf "Should reform-check run 'apt update' for you? [y/N]" >&2
   read -r response
   if [ "$response" != "y" ]; then
@@ -252,7 +252,9 @@ for META in reform-desktop-full reform-desktop-minimal; do
   fi
   for REL in $RELATIONS; do
     for PKG in $(dpkg-query --show --showformat '${'"$REL"'}' "$META"); do
-      echo "W: $REL of $META is not installed: $PKG" >&2
+      if ! dpkg-query --showformat '${db:Status-Status}\n' --show "$PKG" 2>/dev/null | grep -q '^installed$'; then
+        echo "W: $REL of $META is not installed: $PKG" >&2
+      fi
     done
   done
 done
@@ -568,10 +570,10 @@ fi
 
 case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
   if [ ! -e /etc/u-boot-menu/conf.d ]; then
-    echo "W: /etc/u-boot-menu/conf.d does not exist -- create it manually or by re-running reform-display-config" >&2
+    echo "W: /etc/u-boot-menu/conf.d does not exist -- create it by running reform-display-config" >&2
   fi
   if [ ! -e /etc/u-boot-menu/conf.d/reform.conf ]; then
-    echo "W: /etc/u-boot-menu/conf.d does not exist -- create it by re-running reform-display-config" >&2
+    echo "W: /etc/u-boot-menu/conf.d/reform.conf does not exist -- create it by running reform-display-config" >&2
   else
     case "$(cat /proc/device-tree/model)" in
       "MNT Reform 2")
