@@ -35,6 +35,7 @@ usage() {
   echo "" >&2
   echo "Options:" >&2
   echo "      --emmc Record boot preference in /boot partition on eMMC instead of SD-card." >&2
+  echo "      --no-copy-old-boot Do not copy contents from old /boot partition to new /boot." >&2
   echo "" >&2
   echo "Instead of using the short-hands sd, ssd, usb or emmc," >&2
   echo "you can choose another root partition by passing" >&2
@@ -87,6 +88,7 @@ maybe_umount() {
 
 FORCE=false
 EMMC=false
+COPY_OLDBOOT=true
 while getopts :h-: OPTCHAR; do
   case "$OPTCHAR" in
     h)
@@ -101,6 +103,7 @@ while getopts :h-: OPTCHAR; do
           ;;
         force) FORCE=true ;;
         emmc) EMMC=true ;;
+        no-copy-old-boot) COPY_OLDBOOT=false ;;
         *)
           echo "E: unrecognized option: --$OPTARG" >&2
           exit 1
@@ -369,23 +372,6 @@ if [ ! -d "$MOUNTROOT/boot" ]; then
   exit 1
 fi
 
-# find the device that was mounted as /boot according to the /etc/fstab in the
-# given rootfs
-OLDBOOTPART="$(LIBMOUNT_FSTAB="$MOUNTROOT/etc/fstab" findmnt --fstab --noheadings --evaluate --mountpoint /boot --output SOURCE || :)"
-if [ -z "$OLDBOOTPART" ]; then
-  echo "cannot find /boot device referenced by /etc/fstab in rootfs at /dev/$ROOTPART" >&2
-  exit 1
-fi
-if [ ! -e "$OLDBOOTPART" ]; then
-  echo "/boot device $OLDBOOTPART from /etc/fstab in /dev/$ROOTPART doesn't exist" >&2
-  exit 1
-fi
-case $OLDBOOTPART in
-  "/dev/${DEV_SD}"*) HUMAN_OLDBOOT="SD-card" ;;
-  "/dev/${DEV_MMC}"*) HUMAN_OLDBOOT="eMMC" ;;
-  *) HUMAN_OLDBOOT="unknown" ;;
-esac
-
 # check if the new boot is still mounted somewhere
 MOUNT_BOOT="$(lsblk --noheadings --output=MOUNTPOINT "/dev/$BOOTPART" || :)"
 if [ -n "$MOUNT_BOOT" ]; then
@@ -417,46 +403,65 @@ fi
 set -- "/dev/$BOOTPART" "$@"
 mount "/dev/$BOOTPART" "$MOUNTROOT/boot"
 
-if [ "$OLDBOOTPART" = "/dev/$BOOTPART" ]; then
-  echo "the /boot partition /dev/$BOOTPART ($HUMAN_BOOT) referenced by the rootfs at /dev/$ROOTPART remains the same" >&2
-else
-  echo "This script will copy the contents from the old /boot partition" >&2
-  echo "$OLDBOOTPART ($HUMAN_OLDBOOT) to the new /boot partition $BOOTPART ($HUMAN_BOOT) and delete all" >&2
-  echo "files from the latter that were not present in the former." >&2
-  if [ "$FORCE" = true ]; then
-    echo "Proceeding without user interaction because of --force" >&2
-    response="y"
+if [ "$COPY_OLDBOOT" = true ]; then
+  # find the device that was mounted as /boot according to the /etc/fstab in the
+  # given rootfs
+  OLDBOOTPART="$(LIBMOUNT_FSTAB="$MOUNTROOT/etc/fstab" findmnt --fstab --noheadings --evaluate --mountpoint /boot --output SOURCE || :)"
+  if [ -z "$OLDBOOTPART" ]; then
+    echo "cannot find /boot device referenced by /etc/fstab in rootfs at /dev/$ROOTPART" >&2
+    exit 1
+  fi
+  if [ ! -e "$OLDBOOTPART" ]; then
+    echo "/boot device $OLDBOOTPART from /etc/fstab in /dev/$ROOTPART doesn't exist" >&2
+    exit 1
+  fi
+  case $OLDBOOTPART in
+    "/dev/${DEV_SD}"*) HUMAN_OLDBOOT="SD-card" ;;
+    "/dev/${DEV_MMC}"*) HUMAN_OLDBOOT="eMMC" ;;
+    *) HUMAN_OLDBOOT="unknown" ;;
+  esac
+
+  if [ "$OLDBOOTPART" = "/dev/$BOOTPART" ]; then
+    echo "the /boot partition /dev/$BOOTPART ($HUMAN_BOOT) referenced by the rootfs at /dev/$ROOTPART remains the same" >&2
   else
-    echo "Are you sure that you want to remove the contents of $BOOTPART ($HUMAN_BOOT)" >&2
-    printf "and replace it with the contents of %s? [y/N] " "$OLDBOOTPART ($HUMAN_OLDBOOT)" >&2
-    read -r response
-  fi
-  if [ "$response" != "y" ]; then
-    echo "I: Not overwriting the contents of $BOOTPART ($HUMAN_BOOT) as requested." >&2
-    exit 1
-  fi
+    echo "This script will copy the contents from the old /boot partition" >&2
+    echo "$OLDBOOTPART ($HUMAN_OLDBOOT) to the new /boot partition $BOOTPART ($HUMAN_BOOT) and delete all" >&2
+    echo "files from the latter that were not present in the former." >&2
+    if [ "$FORCE" = true ]; then
+      echo "Proceeding without user interaction because of --force" >&2
+      response="y"
+    else
+      echo "Are you sure that you want to remove the contents of $BOOTPART ($HUMAN_BOOT)" >&2
+      printf "and replace it with the contents of %s? [y/N] " "$OLDBOOTPART ($HUMAN_OLDBOOT)" >&2
+      read -r response
+    fi
+    if [ "$response" != "y" ]; then
+      echo "I: Not overwriting the contents of $BOOTPART ($HUMAN_BOOT) as requested." >&2
+      exit 1
+    fi
 
-  # copy the contents of the old /boot to the new /boot
-  OLDMOUNTBOOT="$(lsblk --nodeps --noheadings --output=MOUNTPOINT "$OLDBOOTPART")"
-  needumount="no"
-  if [ "$OLDMOUNTBOOT" = "" ]; then
-    OLDMOUNTBOOT="$(mktemp --tmpdir --directory reform-boot-config.XXXXXXXXXX)"
-    set -- "$OLDBOOTPART" "$OLDMOUNTBOOT" "$@"
-    mount "$OLDBOOTPART" "$OLDMOUNTBOOT"
-    needumount="yes"
-  fi
+    # copy the contents of the old /boot to the new /boot
+    OLDMOUNTBOOT="$(lsblk --nodeps --noheadings --output=MOUNTPOINT "$OLDBOOTPART")"
+    needumount="no"
+    if [ "$OLDMOUNTBOOT" = "" ]; then
+      OLDMOUNTBOOT="$(mktemp --tmpdir --directory reform-boot-config.XXXXXXXXXX)"
+      set -- "$OLDBOOTPART" "$OLDMOUNTBOOT" "$@"
+      mount "$OLDBOOTPART" "$OLDMOUNTBOOT"
+      needumount="yes"
+    fi
 
-  # sanity check
-  if ! mountpoint --quiet "$OLDMOUNTBOOT"; then
-    echo "E: expected $OLDBOOTPART ($HUMAN_OLDBOOT) mounted on $OLDMOUNTBOOT but nothing mounted there" >&2
-    exit 1
-  fi
+    # sanity check
+    if ! mountpoint --quiet "$OLDMOUNTBOOT"; then
+      echo "E: expected $OLDBOOTPART ($HUMAN_OLDBOOT) mounted on $OLDMOUNTBOOT but nothing mounted there" >&2
+      exit 1
+    fi
 
-  rsync --archive --one-file-system --hard-links --acls --xattrs --whole-file \
-    --sparse --numeric-ids --delete-delay "$OLDMOUNTBOOT/" "$MOUNTROOT/boot"
-  if [ "$needumount" = "yes" ]; then
-    [ "$1" = "$OLDBOOTPART" ] && shift && umount "$OLDBOOTPART"
-    [ "$1" = "$OLDMOUNTBOOT" ] && shift && rmdir "$OLDMOUNTBOOT"
+    rsync --archive --one-file-system --hard-links --acls --xattrs --whole-file \
+      --sparse --numeric-ids --delete-delay "$OLDMOUNTBOOT/" "$MOUNTROOT/boot"
+    if [ "$needumount" = "yes" ]; then
+      [ "$1" = "$OLDBOOTPART" ] && shift && umount "$OLDBOOTPART"
+      [ "$1" = "$OLDMOUNTBOOT" ] && shift && rmdir "$OLDMOUNTBOOT"
+    fi
   fi
 fi
 
@@ -550,7 +555,7 @@ case "$(cat /proc/device-tree/model)" in
   "MNT "*) PLATFORM_HUMAN="MNT Reform (unknown)" ;;
 esac
 
-if [ "$EMMC" = true ]; then
+if [ "$EMMC" = true ] && [ -n "${OLDBOOTPART-}" ]; then
   echo "Your /boot partition is on emmc (/dev/$BOOTPART)." >&2
   # If the current system runs on SD-card and the user set up /boot on eMMC
   # then they need to remove the SD-card before booting again or otherwise

@@ -185,7 +185,11 @@ e2label "/dev/${DEV_MMC}p2" reformemmcroot
 # configured to use the rootfs on the SD-Card but we want the initramfs on eMMC
 # to boot the rootfs on eMMC and not the rootfs from SD-Card.  Use
 # reform-boot-config to update the /etc/fstab and initramfs to use the eMMC
-reform-boot-config --emmc emmc
+#
+# We use --no-copy-old-boot because by flashing the system image, the new /boot
+# partition already has the correct contents and we don't want to use the /boot
+# partition of the current system as that one might be wildly different.
+reform-boot-config --no-copy-old-boot --emmc emmc
 
 case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
   echo "If the SoM dip switch is turned off and no SD-Card is present, your" >&2
