@@ -172,7 +172,7 @@ if command -v bmaptool >/dev/null 2>&1; then
     https://reform.debian.net/images/*)
       # force gpg signature verification when downloading from reform.d.n
       bmaptool copy \
-        --fingerprint 945854E8A2FCD4B178C15AB9F2CBA5C78FBD83E1 \
+        --fingerprint 3AC6EB840FA5CE3FF31BAD80EF93221F8A44FEB2 \
         --keyring /usr/share/keyrings/debian-keyring.gpg \
         "$URL" "/dev/$DEV_MMC"
       ;;
