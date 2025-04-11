@@ -142,12 +142,13 @@ echo "Downloading $URL..."
 
 # flash with bmaptool if available and use dd otherwise
 if command -v bmaptool >/dev/null 2>&1; then
-  # force gpg signature verification when downloading from reform.d.n
   case $URL in
     https://reform.debian.net/images/*)
-      # FIXME: use --keyring and --fingerprint options from
-      # https://github.com/yoctoproject/bmaptool/pull/32
-      bmaptool copy "$URL" "/dev/$DEV_MMC"
+      # force gpg signature verification when downloading from reform.d.n
+      bmaptool copy \
+        --fingerprint 945854E8A2FCD4B178C15AB9F2CBA5C78FBD83E1 \
+        --keyring /usr/share/keyrings/debian-keyring.gpg \
+        "$URL" "/dev/$DEV_MMC"
       ;;
     *) bmaptool copy "$URL" "/dev/$DEV_MMC" ;;
   esac
