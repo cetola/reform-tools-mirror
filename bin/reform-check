@@ -252,6 +252,7 @@ for META in reform-desktop-full reform-desktop-minimal; do
   fi
   for REL in $RELATIONS; do
     for PKG in $(dpkg-query --show --showformat '${'"$REL"'}' "$META"); do
+      PKG="${PKG%%,}" # strip potentially trailing comma
       if ! dpkg-query --showformat '${db:Status-Status}\n' --show "$PKG" 2>/dev/null | grep -q '^installed$'; then
         echo "W: $REL of $META is not installed: $PKG" >&2
       fi
