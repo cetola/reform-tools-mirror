@@ -1,3 +1,24 @@
+1.71 (2025-04-11)
+=================
+
+ * `bin/reform-boot-config`:
+    - use `lsblk` to check whether partition is a LUKS device
+    - check whether block device exists before mounting
+    - print what is still mounted on `/boot`
+    - print the name of the platform instead of calling everything 'MNT Reform'
+    - use old fstab entry to decide where the old `/boot` was mounted from
+      instead of `findmnt` output
+    - add `--no-copy-old-boot` switch for `reform-flash-rescue`
+ * `bin/reform-check`:
+    - check meta-packages instead of carrying a long list of dependencies
+    - small cosmetic fixes
+ * `bin/reform-flash-rescue`:
+    - use `--keyring` and `--fingerprint` for `bmaptool` when copying from
+      reform.debian.net
+    - add `--mirror` argument
+ * `bin/reform-emmc-bootstrap`: use `lsblk` to check whether partition is a
+    LUKS device
+
 1.70 (2025-04-05)
 =================
 
