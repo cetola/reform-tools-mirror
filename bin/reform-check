@@ -226,23 +226,6 @@ if [ -e "/etc/flash-kernel/machine" ] && [ -e "/proc/device-tree/model" ] && [ "
   echo "E: contents of /etc/flash-kernel/machine: $(cat /etc/flash-kernel/machine)" >&2
 fi
 
-PKGSGUI="xwayland xterm sway fonts-inter fonts-noto-color-emoji waybar swayidle swaylock mesa-utils lxpolkit wayland-protocols wofi wireplumber papirus-icon-theme libglib2.0-bin gsettings-desktop-schemas gnome-disk-utility gnome-themes-extra-data gnome-icon-theme gnome-settings-daemon gnome-system-monitor grim slurp gedit evince mpv sxiv gvfs-backends unicode-data engrampa neverball minetest qt5ct kde-style-breeze dunst pasystray wev wf-recorder wayvnc network-manager-gnome blueman pavucontrol thunar"
-case "$MIRROR" in
-  mntre.com) PKGSGUI="$PKGSGUI wayfire reform-firedecor firefox tuigreet" ;;
-  reform.debian.net) PKGSGUI="$PKGSGUI firefox-esr" ;;
-esac
-PKGSTOOLS="bmap-tools brightnessctl fonts-font-awesome fonts-jetbrains-mono foot gir1.2-ayatanaappindicator3-0.1 gir1.2-gdesktopenums-3.0 gir1.2-gdkpixbuf-2.0 gir1.2-glib-2.0 gir1.2-gtk-3.0 gir1.2-gtklayershell-0.1 gir1.2-notify-0.7 gnome-system-monitor ircii pavucontrol pulseaudio-utils python3 python3-gi python3-usb1 thunar x11-xserver-utils"
-PKGSNET="iproute2 iptables inetutils-ping elinks isc-dhcp-client netcat-traditional net-tools network-manager nfacct ntpsec ntpsec-ntpdate rsync telnet traceroute wpasupplicant curl wget w3m rfkill ifupdown netbase openssh-client firmware-realtek wireless-regdb wavemon iw"
-case "$MIRROR" in
-  mntre.com) PKGSNET="$PKGSNET reform-qcacld2 firmware-mediatek" ;;
-  reform.debian.net) PKGSNET="$PKGSNET ezurio-qcacld-2.0-dkms" ;;
-esac
-PKGSADMIN="apt apt-utils apt-listbugs apt-file cron cryptsetup lvm2 dbus-bin e2fsprogs fbset init-system-helpers ncdu parted pciutils procps sudo systemd systemd-sysv tmux u-boot-tools screen greetd"
-PKGSUTILS="busybox console-data console-setup cpio file flash-kernel gnupg gpgv htop kbd lm-sensors readline-common usbutils xdg-utils bsdmainutils less nano micro vim alsa-utils dosfstools python3-psutil unzip nvme-cli fdisk lshw hdparm"
-case "$MIRROR" in
-  mntre.com) PKGSUTILS="$PKGSUTILS reform-handbook pocket-reform-handbook picotool" ;;
-esac
-PKGSMISC="brightnessctl brightness-udev ca-certificates debian-archive-keyring dialog gpm ncurses-term locales bash-completion man-db cryptsetup-initramfs reform-tools reform-branding gpiod firmware-misc-nonfree firmware-atheros zstd linux-image-mnt-reform-arm64 linux-headers-mnt-reform-arm64"
 case "$MIRROR" in
   mntre.com) aptprefcontent="Package: *\nPin: release n=reform, l=reform\nPin-Priority: 990\n" ;;
   reform.debian.net) aptprefcontent="Package: *\nPin: origin \"reform.debian.net\"\nPin-Priority: 999\n" ;;
@@ -260,15 +243,19 @@ else
   fi
 fi
 
-notinstalled=
-for package in $PKGSGUI $PKGSTOOLS $PKGSNET $PKGSADMIN $PKGSUTILS $PKGSMISC; do
-  if ! dpkg-query --showformat '${db:Status-Status}\n' --show "$package" 2>/dev/null | grep -q '^installed$'; then
-    notinstalled="$notinstalled $package"
+for META in reform-desktop-full reform-desktop-minimal; do
+  # if meta package is installed, we don't need to check its Depends
+  RELATIONS="Recommends Suggests"
+  if ! dpkg-query --showformat '${db:Status-Status}\n' --show "$META" 2>/dev/null | grep -q '^installed$'; then
+    echo "W: MNT Reform Desktop meta-package is not installed: $META" >&2
+    RELATIONS="Depends $RELATIONS"
   fi
+  for REL in $RELATIONS; do
+    for PKG in $(dpkg-query --show --showformat '${'"$REL"'}' "$META"); do
+      echo "W: $REL of $META is not installed: $PKG" >&2
+    done
+  done
 done
-if [ -n "$notinstalled" ]; then
-  echo "I: not installed: $(echo "$notinstalled" | tr " " "\n" | sort | tr "\n" " ")" >&2
-fi
 
 if [ -z "$(findmnt --fstab --noheadings --evaluate --mountpoint / --output SOURCE)" ]; then
   echo "E: your /etc/fstab does not have an entry for /" >&2
