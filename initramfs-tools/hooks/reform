@@ -40,6 +40,7 @@ case $MACHINE in
     copy_exec /usr/bin/dmesg
     ;;
   "MNT Reform 2 with RCORE RK3588 Module") : ;;
+  "MNT Reform 2 with RCORE-DSI RK3588 Module") : ;;
   "MNT Pocket Reform with i.MX8MP Module") : ;;
   "MNT Pocket Reform with BPI-CM4 Module") : ;;
   "MNT Pocket Reform with RCORE RK3588 Module") : ;;

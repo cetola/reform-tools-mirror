@@ -186,6 +186,10 @@ case "$(cat /proc/device-tree/model)" in
     init_rk3588
     init_wm8960
     ;;
+  "MNT Reform 2 with RCORE-DSI RK3588 Module")
+    init_rk3588
+    init_wm8960
+    ;;
   "MNT Pocket Reform with RCORE RK3588 Module")
     init_rk3588
     init_tlv320aic3100
