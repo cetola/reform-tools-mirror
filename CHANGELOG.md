@@ -1,3 +1,12 @@
+1.72 (2025-05-07)
+=================
+
+ * machines/MNT * with RCORE RK3588 Module.conf: update to u-boot 2025-05-06
+ * machines: add file for reform2 rk3588 variant with dsi display
+ * bin/reform-check: use apt-cache instead of dpkg-query
+ * bin/reform-hw-setup & initramfs-tools/hooks/reform:
+   add MNT Reform 2 with RCORE-DSI RK3588 Module
+
 1.71 (2025-04-11)
 =================
 
