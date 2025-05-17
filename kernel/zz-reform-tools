@@ -14,6 +14,14 @@ version="$1"
 # shellcheck disable=SC2034
 image_path="$2"
 
+# linux-run-hooks from src:linux-base runs run-parts with --report which only
+# prints the name of the scripts it runs *if* the script in question produces
+# any output. Scripts that do not produce any output do not get an indication
+# by run-parts that they got run. So we print early to make sure that we are
+# able to easily see if this script was run or not during a given installation.
+echo "I: Now running: $0 $*" >&2
+echo "I: with DEB_MAINT_PARAMS=$DEB_MAINT_PARAMS" >&2
+
 # shellcheck disable=SC2086
 set -- $DEB_MAINT_PARAMS
 
@@ -43,6 +51,7 @@ install_dtbs() {
       echo "W: irregular dtb path: $dtb" >&2
     fi
     mkdir -p "/boot/dtbs/$version/$(dirname "$DTBPATH")"
+    echo "I: copying $dtb to /boot/dtbs/$version/$DTBPATH" >&2
     cp "$dtb" "/boot/dtbs/$version/$DTBPATH"
   done
 }
