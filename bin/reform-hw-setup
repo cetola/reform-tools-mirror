@@ -153,13 +153,14 @@ case "$(cat /proc/device-tree/model)" in
   "MNT Reform 2 with LS1028A Module")
     # Workaround for a DWC3 USB Controller regression
 
-    # Assert USB hub reset
-    gpioset 2 13=0
+    # Assert USB hub reset while gpioset command is running.
+    setpriv --pdeathsig TERM gpioset -c 2 -l 13=active &
+    GPIOSET_PID=$!
     # Reload DWC3 module
     rmmod dwc3
     modprobe dwc3
-    # Deassert USB hub reset
-    gpioset 2 13=1
+    # Deassert USB hub reset by stopping gpioset command.
+    kill $GPIOSET_PID
 
     # Select "ondemand" CPU frequency scaling governor
     echo ondemand >/sys/devices/system/cpu/cpufreq/policy0/scaling_governor
