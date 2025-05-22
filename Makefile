@@ -32,6 +32,7 @@ man/%.1: bin/%
 		emmc-bootstrap) echo "set up /boot on emmc for / on nvme" ;;  \
 		flash-rescue)   echo "flash rescue image to eMMC" ;;          \
 		flash-uboot)    echo "download and flash u-boot" ;;           \
+		gnome-config)   echo "apply default config to GNOME" ;;       \
 		handbook)       echo "show Reform Handbook" ;;                \
 		help)           echo "help with MNT Reform" ;;                \
 		hw-setup)       echo "perform hardware tweaks" ;;             \
