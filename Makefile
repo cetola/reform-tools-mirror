@@ -91,6 +91,7 @@ install: $(MAN1)
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/glib-2.0/schemas schemas/20_reform.gschema.override
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/backgrounds
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/backgrounds share/backgrounds/reform-mountains.jpg
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/backgrounds share/backgrounds/mnt-reform-next-y2k.jpg
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/systemd/sleep.conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/systemd/sleep.conf.d systemd/reform-sleep.conf
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/systemd/system
