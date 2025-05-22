@@ -21,3 +21,8 @@ picture-options = 'zoom'
 picture-uri = 'file:///usr/share/backgrounds/reform-mountains.jpg'
 primary-color = '#000000'
 picture-opacity = 100
+
+# disable suspend
+[org.gnome.desktop.session]
+idle-delay = 0
+
