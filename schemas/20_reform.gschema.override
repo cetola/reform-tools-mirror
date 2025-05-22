@@ -6,10 +6,9 @@
 # override user choices every time sway starts unless the user changes the
 # sway config itself.
 [org.gnome.desktop.interface]
-icon-theme = 'Papirus-Dark'
+icon-theme = 'Adwaita'
 font-name = 'Inter Medium 11'
 monospace-font-name = 'JetBrains Mono 11'
-gtk-theme = 'Adwaita-dark'
 cursor-theme = 'Adwaita'
 color-scheme = 'prefer-dark'
 
@@ -18,11 +17,7 @@ scheme = 'cobalt'
 
 [org.gnome.desktop.background]
 picture-options = 'zoom'
-picture-uri = 'file:///usr/share/backgrounds/reform-mountains.jpg'
+picture-uri = 'file:///usr/share/backgrounds/mnt-reform-next-y2k.jpg'
 primary-color = '#000000'
 picture-opacity = 100
-
-# disable suspend
-[org.gnome.desktop.session]
-idle-delay = 0
 
