@@ -22,9 +22,6 @@ Some useful commands to explore the system:
 Learn more about a command:        [1mman[0m [1;4mname-of-command[0m
 Move around:                       [1mls[0m, [1mcd[0m, [1mcd ..[0m
 
-Start a graphical environment:     [1mwayfire[0m (overlapping windows, traditional)
-                                   [1msway[0m (tiling windows, advanced)
-
 See all running processes:         [1mhtop[0m
 See system services:               [1msystemctl[0m
 Analyze disk usage:                [1mncdu /[0m
@@ -129,17 +126,17 @@ Useful keyboard shortcuts ([1mSUPER[0m is the MNT logo key):
   To move the active window to a workspace, press the same
   combination, but together with [1mSHIFT[0m.
 
-Only on wayfire:
+Only on GNOME:
 
   [1mSUPER ←/→[0m      Tile window to left or right
   [1mSUPER ↑/↓[0m      (Un)maximize window
-  [1mSUPER TAB[0m      Overview of all windows
-  [1mALT TAB[0m        Cycle through windows
+  [1mSUPER[0m          Overview of all windows
+  [1mSUPER TAB[0m      Cycle through all windows
+  [1mALT TAB[0m        Cycle through app's windows
 
-Customize the sway or wayfire configuration:
+Customize the sway configuration:
 
   [1mmicro ~/.config/sway/config[0m
-  [1mmicro ~/.config/wayfire/config[0m
 
 To learn more about the command line, enter: [1mreform-help[0m
 END
