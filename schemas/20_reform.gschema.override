@@ -8,16 +8,117 @@
 [org.gnome.desktop.interface]
 icon-theme = 'Adwaita'
 font-name = 'Inter Medium 11'
-monospace-font-name = 'JetBrains Mono 11'
+monospace-font-name = 'JetBrains Mono 12'
+gtk-theme = 'Adwaita'
 cursor-theme = 'Adwaita'
 color-scheme = 'prefer-dark'
+show-battery-percentage = true
 
 [org.gnome.gedit.preferences.editor]
-scheme = 'cobalt'
+style-scheme-for-dark-theme-variant = 'cobalt'
 
 [org.gnome.desktop.background]
 picture-options = 'zoom'
 picture-uri = 'file:///usr/share/backgrounds/mnt-reform-next-y2k.jpg'
+picture-uri-dark = 'file:///usr/share/backgrounds/mnt-reform-next-y2k.jpg'
 primary-color = '#000000'
 picture-opacity = 100
 
+# this is hogging Super+Escape by default
+[org.gnome.mutter.wayland.keybindings]
+restore-shortcuts = @as []
+
+[org.gnome.settings-daemon.plugins.media-keys]
+help = @as []
+keyboard-brightness-down-static = @as []
+keyboard-brightness-up-static = @as []
+screen-brightness-down-static = ['XF86MonBrightnessDown', '<Super>F1']
+screen-brightness-up-static = ['XF86MonBrightnessUp', '<Super>F2']
+custom-keybindings = ['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0']
+
+[org.gnome.settings-daemon.plugins.media-keys.cccustom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0]
+name = 'Launch Terminal'
+command = 'x-terminal-emulator'
+binding = '<Super>Return'
+
+# these are hogging super+numbers / super+shift numbers by default
+[org.gnome.shell.keybindings]
+switch-to-application-1 = @as []
+switch-to-application-2 = @as []
+switch-to-application-3 = @as []
+switch-to-application-4 = @as []
+switch-to-application-5 = @as []
+switch-to-application-6 = @as []
+switch-to-application-7 = @as []
+switch-to-application-8 = @as []
+switch-to-application-9 = @as []
+open-new-window-application-1 = @as []
+open-new-window-application-2 = @as []
+open-new-window-application-3 = @as []
+open-new-window-application-4 = @as []
+open-new-window-application-5 = @as []
+open-new-window-application-6 = @as []
+open-new-window-application-7 = @as []
+open-new-window-application-8 = @as []
+open-new-window-application-9 = @as []
+screenshot = ['<Shift><Super>s']
+show-screenshot-ui = ['<Shift><Super>x']
+show-screen-recording-ui = ['<Shift><Super>r']
+
+## window actions
+[org.gnome.desktop.wm.keybindings]
+toggle-fullscreen = ['<Super>f']
+close = ['<Super>Escape']
+maximize = ['<Super>Up']
+unmaximize = ['<Super>Down']
+switch-applications = ['<Super>Tab']
+switch-applications-backward = ['<Super><Shift>Tab']
+switch-group = ['<Alt>Tab']
+switch-group-backward = ['<Alt><Shift>Tab']
+switch-to-workspace-1 = ['<Super>1']
+switch-to-workspace-10 = ['<Super>0']
+switch-to-workspace-2 = ['<Super>2']
+switch-to-workspace-3 = ['<Super>3']
+switch-to-workspace-4 = ['<Super>4']
+switch-to-workspace-5 = ['<Super>5']
+switch-to-workspace-6 = ['<Super>6']
+switch-to-workspace-7 = ['<Super>7']
+switch-to-workspace-8 = ['<Super>8']
+switch-to-workspace-9 = ['<Super>9']
+move-to-workspace-1 = ['<Super><Shift>1']
+move-to-workspace-10 = ['<Super><Shift>0']
+move-to-workspace-2 = ['<Super><Shift>2']
+move-to-workspace-3 = ['<Super><Shift>3']
+move-to-workspace-4 = ['<Super><Shift>4']
+move-to-workspace-5 = ['<Super><Shift>5']
+move-to-workspace-6 = ['<Super><Shift>6']
+move-to-workspace-7 = ['<Super><Shift>7']
+move-to-workspace-8 = ['<Super><Shift>8']
+move-to-workspace-9 = ['<Super><Shift>9']
+
+## window tweaks (more buttons, move+resize with super+drag)
+[org.gnome.desktop.wm.preferences]
+action-double-click-titlebar = 'toggle-maximize'
+button-layout = 'appmenu:minimize,maximize,close'
+mouse-button-modifier = '<Super>'
+resize-with-right-button = true
+
+## extensions
+[org.gnome.shell]
+enabled-extensions = ['dash-to-dock@micxgx.gmail.com']
+
+[org.gnome.shell.extensions.dash-to-dock]
+hot-keys = false
+disable-overview-on-startup = true
+
+## disable standby (the GDM part is set in /etc/gdm3/greeter.dconf-defaults)
+[org.gnome.settings-daemon.plugins.power]
+sleep-inactive-ac-type = 'nothing'
+sleep-inactive-battery-type = 'nothing'
+power-button-action = 'interactive'
+
+## disable automatic downloads consuming bandwidth and noisy notifications about updates
+[org.gnome.software]
+allow-updates = false
+download-updates = false
+download-updates-notify = false
