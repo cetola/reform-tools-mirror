@@ -118,6 +118,36 @@ if [ "$(id -u)" -ne 0 ]; then
     echo "E: Consider simply deleting that offending last line of your ~/.profile." >&2
   fi
 
+  python3 - /usr/share/glib-2.0/schemas/20_reform.gschema.override <<'END'
+import gi
+from gi.repository import GLib, Gio
+import sys
+
+kf = GLib.KeyFile.new()
+kf.load_from_file(sys.argv[1], GLib.KeyFileFlags.NONE)
+source = Gio.SettingsSchemaSource.get_default()
+
+suggestions = []
+for group in kf.get_groups()[0]:
+    if not source.lookup(group, False):
+        print(f"N: schema {group} does not exist")
+        continue
+    settings = Gio.Settings(schema_id=group)
+    for key in kf.get_keys(group)[0]:
+        if not settings.get_property("settings_schema").has_key(key):
+            print(f"N: {group} has no setting called {key}")
+            continue
+        if settings.get_user_value(key):
+            print(f"I: {group} {key} was changed")
+            print(f"I:    default value: {kf.get_value(group, key)}")
+            print(f"I:    current value: {settings.get_user_value(key)}")
+            suggestions.append(f"gsettings reset {group} {key}")
+if not suggestions:
+    exit(1)
+print("I: the following commands return the respective settings to their defaults")
+print("    " + "\n    ".join(suggestions))
+END
+
   for path in $(cd /etc/skel && find . -type f); do
     if [ ! -e "$HOME/$path" ]; then
       echo "W: $path doesn't exist in current \$HOME" >&2
