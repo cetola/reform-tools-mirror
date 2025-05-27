@@ -49,7 +49,7 @@ nth_arg() {
 }
 
 OFFLINE=
-MIRROR="mntre.com"
+MIRROR=
 
 while getopts :h-: OPTCHAR; do
   case "$OPTCHAR" in
@@ -102,7 +102,7 @@ if [ "$#" -gt 0 ]; then
   exit 1
 fi
 
-if [ "$MIRROR" != "mntre.com" ] && [ "$MIRROR" != "reform.debian.net" ]; then
+if [ -n "$MIRROR" ] && [ "$MIRROR" != "mntre.com" ] && [ "$MIRROR" != "reform.debian.net" ]; then
   echo "E: invalid value for --mirror: $MIRROR -- only mntre.com and reform.debian.net are supported" >&2
   exit 1
 fi
