@@ -17,6 +17,9 @@ show-battery-percentage = true
 [org.gnome.gedit.preferences.editor]
 style-scheme-for-dark-theme-variant = 'cobalt'
 
+[org.gnome.TextEditor]
+style-scheme = 'cobalt'
+
 [org.gnome.desktop.background]
 picture-options = 'zoom'
 picture-uri = 'file:///usr/share/backgrounds/mnt-reform-next-y2k.jpg'
