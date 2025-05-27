@@ -39,11 +39,6 @@ screen-brightness-down-static = ['XF86MonBrightnessDown', '<Super>F1']
 screen-brightness-up-static = ['XF86MonBrightnessUp', '<Super>F2']
 custom-keybindings = ['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/']
 
-[org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/]
-name = 'Launch Terminal'
-command = 'x-terminal-emulator'
-binding = '<Super>Return'
-
 # these are hogging super+numbers / super+shift numbers by default
 [org.gnome.shell.keybindings]
 switch-to-application-1 = @as []
