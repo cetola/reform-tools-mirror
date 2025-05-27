@@ -606,14 +606,17 @@ else
       echo "E: add the following line to your /etc/apt/sources.list to fix this" >&2
       echo "deb [arch=arm64 trusted=yes] https://mntre.com/reform-debian-repo reform main" >&2
     fi
-    case "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://reform.debian.net/debian/' --format '$(RELEASE)')" in
-      bookworm*) echo "E: you have the reform.debian.net repository enabled while also using the mntre.com mirror. Consider choosing one or the other but not both." >&2 ;;
-    esac
+    if [ -n "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://reform.debian.net/debian/' --format '$(RELEASE)')" ]; then
+      echo "E: you have the reform.debian.net repository enabled while also using the mntre.com mirror. Consider choosing one or the other but not both." >&2
+    fi
     ;;
   reform.debian.net)
-    case "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://reform.debian.net/debian/' --format '$(RELEASE)')" in
+    release="$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://reform.debian.net/debian/' --format '$(RELEASE)')"
+    case "$release" in
+      "") echo "E: unable to obtain release name for reform.debian.net repository" >&2 ;;
       bookworm*) : ;;
-      *) echo "E: the reform.debian.net repository is not known to apt" >&2 ;;
+      trixie*) : ;;
+      *) echo "E: unknown reform.debian.net repository release name: $release" >&2 ;;
     esac
     if [ "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://mntre.com/reform-debian-repo/' --format '$(RELEASE)')" = reform ]; then
       echo "E: you have the mntre.com repository enabled while also using the reform.debian.net mirror. Consider choosing one or the other but not both." >&2
