@@ -112,10 +112,10 @@ if [ "$(id -u)" -ne 0 ]; then
   # shellcheck disable=SC2016
   if grep --silent -F 'if [ $(whoami) == "root" ]; then cat /etc/reform-root-help; elif [ -z $WAYLAND_DISPLAY ]; then cat /etc/reform-help; fi' ~/.profile \
     || grep --silent -F 'if [ $(whoami) = "root" ]; then cat /etc/reform-root-help; elif [ -z $WAYLAND_DISPLAY ]; then cat /etc/reform-help; fi' ~/.profile \
-    || grep --silent -F 'if [ "$(whoami)" = "root" ]; then cat /etc/reform-root-help; elif [ -z "$WAYLAND_DISPLAY" ]; then cat /etc/reform-help; fi' ~/.profile; then
-    echo "E: Your ~/.profile contains an outdated line that attempts to print /etc/reform-root-help or /etc/reform-help." >&2
-    echo "E: Consider replacing it with this version:" >&2
-    echo 'if [ "$(whoami)" = "root" ]; then reform-help --root; elif [ -z "$WAYLAND_DISPLAY" ]; then reform-help; fi' >&2
+    || grep --silent -F 'if [ "$(whoami)" = "root" ]; then cat /etc/reform-root-help; elif [ -z "$WAYLAND_DISPLAY" ]; then cat /etc/reform-help; fi' ~/.profile \
+    || grep --silent -F 'if [ "$(whoami)" = "root" ]; then reform-help --root; elif [ -z "$WAYLAND_DISPLAY" ]; then reform-help; fi' ~/.profile; then
+    echo "E: Your ~/.profile contains an outdated line that attempts to print /etc/reform-help or run reform-help." >&2
+    echo "E: Consider simply deleting that offending last line of your ~/.profile." >&2
   fi
 
   for path in $(cd /etc/skel && find . -type f); do
@@ -366,11 +366,14 @@ if [ ! -e /etc/skel/.profile ]; then
   echo "E: /etc/skel/.profile doesn't exist" >&2
   echo "E: install the package bash to create it" >&2
 else
+  # check several versions of ~/.profile that older versions of reform-system-image placed into /etc/skel
   # shellcheck disable=SC2016
-  skelprofilecontent='if [ "$(whoami)" = "root" ]; then reform-help --root; elif [ -z "$WAYLAND_DISPLAY" ]; then reform-help; fi'
-  if [ "$(tail -1 /etc/skel/.profile)" != "$skelprofilecontent" ]; then
-    echo "E: unexpected last line in /etc/skel/.profile, should be:" >&2
-    echo "$skelprofilecontent" >&2
+  if grep --silent -F 'if [ $(whoami) == "root" ]; then cat /etc/reform-root-help; elif [ -z $WAYLAND_DISPLAY ]; then cat /etc/reform-help; fi' /etc/skel/.profile \
+    || grep --silent -F 'if [ $(whoami) = "root" ]; then cat /etc/reform-root-help; elif [ -z $WAYLAND_DISPLAY ]; then cat /etc/reform-help; fi' /etc/skel/.profile \
+    || grep --silent -F 'if [ "$(whoami)" = "root" ]; then cat /etc/reform-root-help; elif [ -z "$WAYLAND_DISPLAY" ]; then cat /etc/reform-help; fi' /etc/skel/.profile \
+    || grep --silent -F 'if [ "$(whoami)" = "root" ]; then reform-help --root; elif [ -z "$WAYLAND_DISPLAY" ]; then reform-help; fi' /etc/skel/.profile; then
+    echo "E: Your /etc/skel/.profile contains an outdated line that attempts to print /etc/reform-help or run reform-help." >&2
+    echo "E: Consider simply deleting that offending last line of your /etc/skel/.profile." >&2
   fi
 fi
 
