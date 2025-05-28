@@ -39,6 +39,16 @@ screen-brightness-down-static = ['XF86MonBrightnessDown', '<Super>F1']
 screen-brightness-up-static = ['XF86MonBrightnessUp', '<Super>F2']
 custom-keybindings = ['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/']
 
+# /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/
+# can be populated via gsettings like so:
+# gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ name 'Launch Terminal'
+# gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ command 'x-terminal-emulator'
+# gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ binding '<Super>Return'
+# The syntax with the colon indicates a relocatable schema. Unfortunately,
+# relocatable schemas are not supported by gschema override files. To
+# initialize the user's dconf database with the custom keybinding, we have to
+# use /etc/dconf/db/local.d/reform
+
 # these are hogging super+numbers / super+shift numbers by default
 [org.gnome.shell.keybindings]
 switch-to-application-1 = @as []
