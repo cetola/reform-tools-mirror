@@ -1,3 +1,17 @@
+1.73 (2025-05-28)
+=================
+
+ * kernel/zz-reform-tools: always print something to STDERR
+ * bin/reform-hw-setup: Fix gpioset in LS1028a section
+ * bin/reform-check:
+    - fix --mirror auto-detection
+    - add support for trixie
+    - diff gsettings configuration
+ * reform-help: exchange wayfire for GNOME
+ * new background image mnt-reform-next-y2k.jpg
+ * gnome and gdm customization via gschema overrides and dconf
+ * u-boot-menu/reform.conf: disable u-boot-menu selection
+
 1.72 (2025-05-07)
 =================
 
