@@ -120,3 +120,7 @@ lint:
 	black --check --diff bin/reform-compstat libexec/reform-tools/reform-tray.py libexec/reform-tools/reform-wallpaper.py
 	black --line-length 120 --check --diff bin/reform-mcu-tool
 	shellcheck bin/* kernel/* initramfs-tools/*/* flash-kernel/*/*
+
+test:
+	# check the validity of gschema overrides
+	glib-compile-schemas --dry-run --strict schemas

@@ -1,0 +1,6 @@
+<!--
+This is a dummy placeholder file and only here to
+convince glib-compile-schemas to not skip processing
+this directory. This file does not get installed.
+-->
+<schemalist></schemalist>
