@@ -18,50 +18,29 @@
 #include <linux/backlight.h>
 #include <linux/version.h>
 
-/* abs_diff was only added to math.h in linux 6.6 */
-#ifndef abs_diff
-#define abs_diff(a, b)                                 \
-	({                                             \
-		typeof(a) __a = (a);                   \
-		typeof(b) __b = (b);                   \
-		(void)(&__a == &__b);                  \
-		__a > __b ? (__a - __b) : (__b - __a); \
-	})
-#endif
-
 static int lpc_probe(struct spi_device *spi);
 static void lpc_remove(struct spi_device *spi);
 static void lpc_power_off(void);
-static ssize_t show_status(struct device *dev, struct device_attribute *attr,
-			   char *buf);
-static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
-			  char *buf);
-static ssize_t show_firmware(struct device *dev, struct device_attribute *attr,
-			     char *buf);
-static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
-			     char *buf);
-static ssize_t show_uart(struct device *dev, struct device_attribute *attr,
-			     char *buf);
-static ssize_t store_uart(struct device *dev, struct device_attribute *attr,
-			     const char *buf, size_t count);
-static ssize_t lpc_command(struct device *dev, char command, uint8_t arg1,
-			   uint8_t *response);
-static int get_bat_property(struct power_supply *psy,
-			    enum power_supply_property psp,
+static ssize_t show_status(struct device *dev, struct device_attribute *attr, char *buf);
+static ssize_t show_cells(struct device *dev, struct device_attribute *attr, char *buf);
+static ssize_t show_firmware(struct device *dev, struct device_attribute *attr, char *buf);
+static ssize_t show_capacity(struct device *dev, struct device_attribute *attr, char *buf);
+static ssize_t show_uart(struct device *dev, struct device_attribute *attr, char *buf);
+static ssize_t store_uart(struct device *dev, struct device_attribute *attr, const char *buf, size_t count);
+static ssize_t lpc_command(struct device *dev, char command, uint8_t arg1, uint8_t *response);
+static int get_bat_property(struct power_supply *psy, enum power_supply_property psp,
 			    union power_supply_propval *val);
 
-#define VOL_JUMP 1000000
-#define CAP_JUMP 1000000
-#define CUR_JUMP 1000000
+#define MNTRE_LPC_API_UNKNOWN 0
+#define MNTRE_LPC_API_1 1
+#define MNTRE_LPC_API_2 2
 
 typedef struct lpc_driver_data {
 	struct spi_device *spi;
 	struct power_supply *bat;
 	struct mutex lock;
-	int last_batt_cap;
-	int last_batt_vol;
-	int last_batt_cur;
 	struct backlight_device *backlight;
+	uint32_t api_version;
 } lpc_driver_data;
 
 static DEVICE_ATTR(status, 0444, show_status, NULL);
@@ -103,14 +82,12 @@ static struct power_supply_config psy_cfg = {};
 
 static struct device *poweroff_device;
 
-static int bl_get_brightness(struct backlight_device *bl)
-{
+static int bl_get_brightness(struct backlight_device *bl) {
 	u16 brightness = bl->props.brightness;
 	return brightness & 0x7f;
 }
 
-static int bl_update_status(struct backlight_device *bl)
-{
+static int bl_update_status(struct backlight_device *bl) {
 	struct lpc_driver_data *data =
 		(struct lpc_driver_data *)bl_get_data(bl);
 	uint8_t buffer[8];
@@ -123,9 +100,7 @@ static const struct backlight_ops lpc_bl_ops = {
 	.get_brightness = bl_get_brightness,
 };
 
-static struct backlight_device *lpc_create_backlight(struct device *dev,
-						     void *data)
-{
+static struct backlight_device *lpc_create_backlight(struct device *dev, void *data) {
 	struct backlight_properties props;
 
 	memset(&props, 0, sizeof(props));
@@ -139,6 +114,25 @@ static struct backlight_device *lpc_create_backlight(struct device *dev,
 }
 
 int (*__mnt_pocket_reform_get_panel_version)(void);
+
+static uint32_t lpc_get_api_version(struct device *dev) {
+	int ret;
+	uint32_t version;
+	uint8_t str[9];
+
+	ret = lpc_command(dev, 'f', 2, str);
+	if (ret) return MNTRE_LPC_API_UNKNOWN;
+
+	ret = kstrtou32(str, 10, &version);
+	dev_info(dev, "version: %u (%s)\n", version, str);
+
+	if (version > 20200000 && version < 20250526) {
+		return MNTRE_LPC_API_1;
+	} else if (version >= 20250526 && version <= 30000101) {
+		return MNTRE_LPC_API_2;
+	}
+	return MNTRE_LPC_API_UNKNOWN;
+}
 
 static int lpc_probe(struct spi_device *spi)
 {
@@ -194,7 +188,8 @@ static int lpc_probe(struct spi_device *spi)
 		return PTR_ERR(data->bat);
 	}
 
-	// this overwrites something else that has already claimed pm_power_off on reform2 but it'll do for now
+	/* FIXME: this overwrites something else that has already claimed pm_power_off
+	   on reform2 but it'll do for now */
 	poweroff_device = &spi->dev;
 	pm_power_off = lpc_power_off;
 
@@ -213,6 +208,8 @@ static int lpc_probe(struct spi_device *spi)
 			dev_err(&spi->dev, "lpc_create_backlight failed\n");
 		}
 	}
+
+	data->api_version = lpc_get_api_version(&spi->dev);
 
 	return ret;
 }
@@ -239,16 +236,25 @@ static void lpc_remove(struct spi_device *spi)
 
 static ssize_t lpc_command(struct device *dev, char command, uint8_t arg1, uint8_t *response)
 {
+	int ret = 0;
 	struct lpc_driver_data *data = (struct lpc_driver_data *)dev_get_drvdata(dev);
+
+	int delays[3] = {20, 20, 20};
+	if (data->api_version == 2) {
+		/* newer LPC firmware doesn't need huge delays */
+		/* FIXME: figure out why delays are still needed */
+		delays[0] = 2;
+		delays[1] = 1;
+		delays[2] = 0;
+	}
+
 	uint8_t cmd[4] = {
 		0xb5, command, arg1, 0x0
 	};
-	int ret = 0;
 
 	mutex_lock(&data->lock);
 
-	// FIXME: garbage readback happens sometimes if there's not enough delay here. why?
-	msleep(2);
+	msleep(delays[0]);
 	ret = spi_write(data->spi, cmd, 4);
 	if (ret) {
 		dev_err(dev, "lpc_command: %c/%d spi_write failed\n", command, arg1);
@@ -256,12 +262,12 @@ static ssize_t lpc_command(struct device *dev, char command, uint8_t arg1, uint8
 		return ret;
 	}
 
-	// (and here)
-	msleep(1);
+	msleep(delays[1]);
 	ret = spi_read(data->spi, response, 8);
 	if (ret) {
 		dev_err(dev, "lpc_command: %c/%d spi_read failed\n", command, arg1);
 	}
+	msleep(delays[2]);
 
 	mutex_unlock(&data->lock);
 	return ret;
@@ -291,6 +297,8 @@ static ssize_t show_status(struct device *dev, struct device_attribute *attr, ch
 	int16_t amps;
 	uint8_t percentage;
 	uint8_t status;
+	struct lpc_driver_data *data;
+	data = (struct lpc_driver_data *)dev_get_drvdata(dev);
 
 	ret = lpc_command(dev, 'q', 0, buffer);
 	if (ret) return 0;
@@ -300,9 +308,9 @@ static ssize_t show_status(struct device *dev, struct device_attribute *attr, ch
 	percentage = buffer[4];
 	status = buffer[5];
 
-	return snprintf(buf, PAGE_SIZE, "%d.%d %d.%d %2d%% %d", voltage / 1000,
+	return snprintf(buf, PAGE_SIZE, "%d.%dV %d.%dA %2d%% [status=%d] [API=%d]\n", voltage / 1000,
 			voltage % 1000, amps / 1000, abs(amps % 1000),
-			percentage, status);
+			percentage, status, data->api_version);
 
 	return snprintf(buf, PAGE_SIZE, "ok\n");
 }
@@ -325,7 +333,7 @@ static ssize_t show_cells(struct device *dev, struct device_attribute *attr, cha
 	}
 
 	ret = snprintf(buf, PAGE_SIZE,
-		       "%d.%d %d.%d %d.%d %d.%d %d.%d %d.%d %d.%d %d.%d",
+		       "%d.%d %d.%d %d.%d %d.%d %d.%d %d.%d %d.%d %d.%d\n",
 		       cells[0], cells[1], cells[2], cells[3],
 		       cells[4], cells[5], cells[6], cells[7],
 		       cells[8], cells[9], cells[10], cells[11],
@@ -348,7 +356,7 @@ static ssize_t show_firmware(struct device *dev, struct device_attribute *attr, 
 	ret = lpc_command(dev, 'f', 2, str3);
 	if (ret) return 0;
 
-	return snprintf(buf, PAGE_SIZE, "%s %s %s", str1, str2, str3);
+	return snprintf(buf, PAGE_SIZE, "%s %s %s\n", str1, str2, str3);
 }
 
 static ssize_t show_capacity(struct device *dev, struct device_attribute *attr, char *buf)
@@ -361,7 +369,7 @@ static ssize_t show_capacity(struct device *dev, struct device_attribute *attr, 
 	cap_min_mah = buffer[2] | (buffer[3] << 8);
 	cap_max_mah = buffer[4] | (buffer[5] << 8);
 
-	return snprintf(buf, PAGE_SIZE, "%d %d %d", cap_acc_mah, cap_min_mah, cap_max_mah);
+	return snprintf(buf, PAGE_SIZE, "[acc=%dmAh] [min=%dmAh] [max=%dmAh]\n", cap_acc_mah, cap_min_mah, cap_max_mah);
 }
 
 static void lpc_power_off(void)
@@ -378,10 +386,10 @@ static int get_bat_property(struct power_supply *psy,
 	uint8_t buffer[8];
 	struct lpc_driver_data *data;
 	struct device *dev;
-	int16_t amp;
+	int amp, volt;
 
 	data = (struct lpc_driver_data *)power_supply_get_drvdata(psy);
-	dev = &(data->spi->dev);
+	dev = &data->spi->dev;
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -412,8 +420,8 @@ static int get_bat_property(struct power_supply *psy,
 		ret = lpc_command(dev, 'q', 0, buffer);
 		if (ret) return -EBUSY;
 
-		int volt = (buffer[0] | buffer[1] << 8);
-		if (val->intval < 5 || val->intval >= 40) return -EBUSY;
+		volt = (buffer[0] | buffer[1] << 8);
+		if (volt < 5 || volt >= 40) return -EBUSY;
 
 		val->intval = volt * 1000;
 		break;
@@ -424,7 +432,7 @@ static int get_bat_property(struct power_supply *psy,
 		if (ret) return -EBUSY;
 
 		amp = (int16_t)buffer[2] | ((int16_t)buffer[3] << 8);
-		if (val->intval < -20 || val->intval >= 20) return -EBUSY;
+		if (amp < -20 || amp >= 20) return -EBUSY;
 
 		/* negative current, battery is charging
 		   reporting a negative value is out of spec */
@@ -457,7 +465,6 @@ static int get_bat_property(struct power_supply *psy,
 		if (ret) return -EBUSY;
 
 		val->intval = (buffer[0] | buffer[1] << 8) * 1000;
-		data->last_batt_cap = val->intval;
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_EMPTY:
