@@ -386,7 +386,7 @@ static int get_bat_property(struct power_supply *psy,
 	uint8_t buffer[8];
 	struct lpc_driver_data *data;
 	struct device *dev;
-	int amp, volt;
+	int milliamp, millivolt;
 
 	data = (struct lpc_driver_data *)power_supply_get_drvdata(psy);
 	dev = &data->spi->dev;
@@ -397,10 +397,11 @@ static int get_bat_property(struct power_supply *psy,
 		ret = lpc_command(dev, 'q', 0, buffer);
 		if (ret) return -EBUSY;
 
-		amp = (int16_t)buffer[2] | ((int16_t)buffer[3] << 8);
-		if (amp < 0) {
+		int16_t ma16 = ((int16_t)buffer[2] | ((int16_t)buffer[3] << 8));
+		milliamp = (int)ma16;
+		if (milliamp < 0) {
 			val->intval = POWER_SUPPLY_STATUS_CHARGING;
-		} else if (amp == 0) {
+		} else if (milliamp <= 100) {
 			if (buffer[4] == 100) {
 				val->intval = POWER_SUPPLY_STATUS_FULL;
 			} else {
@@ -416,28 +417,27 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-		/* FIXME why isn't the LPC responding with milliamps? */
 		ret = lpc_command(dev, 'q', 0, buffer);
 		if (ret) return -EBUSY;
 
-		volt = (buffer[0] | buffer[1] << 8);
-		if (volt < 5 || volt >= 40) return -EBUSY;
+		millivolt = (buffer[0] | buffer[1] << 8);
+		if (millivolt < 5000 || millivolt >= 40000) return -EBUSY;
 
-		val->intval = volt * 1000;
+		val->intval = millivolt * 1000;
 		break;
 
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
-		/* FIXME why isn't the LPC responding with millivolts? */
 		ret = lpc_command(dev, 'q', 0, buffer);
 		if (ret) return -EBUSY;
 
-		amp = (int16_t)buffer[2] | ((int16_t)buffer[3] << 8);
-		if (amp < -20 || amp >= 20) return -EBUSY;
+		ma16 = (int16_t)buffer[2] | ((int16_t)buffer[3] << 8);
+		milliamp = (int)ma16;
+		if (milliamp < -20000 || milliamp >= 20000) return -EBUSY;
 
 		/* negative current, battery is charging
 		   reporting a negative value is out of spec */
-		if (amp < 0) amp = 0;
-		val->intval = amp * 1000;
+		if (milliamp < 0) milliamp = 0;
+		val->intval = milliamp * 1000;
 
 		break;
 
@@ -456,8 +456,8 @@ static int get_bat_property(struct power_supply *psy,
 		ret = lpc_command(dev, 'c', 0, buffer);
 		if (ret) return -EBUSY;
 
-		int amp_hours = (buffer[4] | buffer[5] << 8);
-		val->intval = amp_hours * 1000;
+		int milliamp_hours = (buffer[4] | buffer[5] << 8);
+		val->intval = milliamp_hours * 1000;
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
