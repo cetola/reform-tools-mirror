@@ -14,18 +14,25 @@ cursor-theme = 'Adwaita'
 color-scheme = 'prefer-dark'
 show-battery-percentage = true
 
-[org.gnome.gedit.preferences.editor]
-style-scheme-for-dark-theme-variant = 'cobalt'
-
-[org.gnome.TextEditor]
-style-scheme = 'cobalt'
-
 [org.gnome.desktop.background]
 picture-options = 'zoom'
 picture-uri = 'file:///usr/share/backgrounds/mnt-reform-next-y2k.jpg'
 picture-uri-dark = 'file:///usr/share/backgrounds/mnt-reform-next-y2k.jpg'
 primary-color = '#000000'
 picture-opacity = 100
+
+# disable "Automatic Screen Blank"
+[org.gnome.desktop.session]
+idle-delay = 0
+
+# Show the accessibility menu by default
+[org.gnome.desktop.a11y]
+always-show-universal-access-status = true
+
+# Make EURkey layout and compose work
+[org.gnome.desktop.input-sources]
+show-all-sources = true
+xkb-options = ['compose:rctrl', 'lv3:ralt_alt']
 
 # this is hogging Super+Escape by default
 [org.gnome.mutter.wayland.keybindings]
