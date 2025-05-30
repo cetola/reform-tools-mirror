@@ -242,9 +242,9 @@ static ssize_t lpc_command(struct device *dev, char command, uint8_t arg1, uint8
 	int delays[3] = {20, 20, 20};
 	if (data->api_version == 2) {
 		/* newer LPC firmware doesn't need huge delays */
-		/* FIXME: figure out why delays are still needed */
+		/* because the response time is minimized */
 		delays[0] = 2;
-		delays[1] = 1;
+		delays[1] = 3;
 		delays[2] = 0;
 	}
 
