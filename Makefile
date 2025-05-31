@@ -91,7 +91,7 @@ install: $(MAN1)
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/glib-2.0/schemas
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/glib-2.0/schemas schemas/20_reform.gschema.override
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/gdm/dconf
-	$(INSTALL)     -t $(DESTDIR)$(datadir)/gdm/dconf share/gdm/dconf/95-mnt-reform-settings
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/gdm/dconf share/gdm/dconf/95-mnt-reform-settings
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/backgrounds
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/backgrounds share/backgrounds/reform-mountains.jpg
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/backgrounds share/backgrounds/mnt-reform-next-y2k.jpg
