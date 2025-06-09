@@ -4,5 +4,6 @@ build:
   script: |
     set -x
     apt-get update -o Acquire::AllowReleaseInfoChange=true -o quiet::ReleaseInfoChange=true
-    apt-get --no-install-recommends --yes install make clang-format black shfmt shellcheck
+    apt-get --no-install-recommends --yes install make clang-format black shfmt shellcheck libglib2.0-bin
     make lint
+    make test
