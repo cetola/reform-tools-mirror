@@ -262,7 +262,7 @@ static ssize_t lpc_command(struct device *dev, char command, uint8_t arg1,
 	struct lpc_driver_data *data =
 		(struct lpc_driver_data *)dev_get_drvdata(dev);
 
-	int delays[3] = { 20, 20, 20 };
+	int delays[3] = { 50, 50, 50 };
 	if (data->api_version == 2) {
 		/* newer LPC firmware doesn't need huge delays */
 		/* because the response time is minimized */
