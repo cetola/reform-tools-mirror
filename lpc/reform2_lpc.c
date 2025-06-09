@@ -490,8 +490,13 @@ static int get_bat_property(struct power_supply *psy,
 		if (ret)
 			return -EBUSY;
 
+		/* don't trigger upower emergency shutdown in case
+		 * of faulty data
+		 * (normally happens at 5% or less) */
 		int gauge = buffer[4];
-		if (gauge < 1 || gauge > 100)
+		if (gauge < 6)
+			gauge = 6;
+		if (gauge > 100)
 			return -EBUSY;
 
 		val->intval = gauge;
