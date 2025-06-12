@@ -1,3 +1,14 @@
+1.74 (2025-06-12)
+=================
+
+ * no longer set loglevel=3 now that tuigreet is no longer the default
+ * lpc:
+    - bump speed by 10x
+    - simplify error handling
+    - add uart command support
+    - detect api version
+    - clamp gauge to 6%-100% to prevent upower actions
+
 1.73 (2025-05-28)
 =================
 
