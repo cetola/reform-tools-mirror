@@ -107,6 +107,9 @@ install: $(MAN1)
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/sddm/sddm.conf.d sddm/10-wayland.conf
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/man/man1
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/man/man1 $(MAN1)
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/ucm2/conf.d/rk3588-tlv320ai/rk3588-tlv320aic3100
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/ucm2/conf.d/rk3588-tlv320ai/rk3588-tlv320aic3100 share/ucm2/conf.d/rk3588-tlv320ai/rk3588-tlv320aic3100/rk3588-tlv320aic3100.conf
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/ucm2/conf.d/rk3588-tlv320ai/rk3588-tlv320aic3100 share/ucm2/conf.d/rk3588-tlv320ai/rk3588-tlv320aic3100/HiFi.conf
 
 .PHONY: clean
 clean:
