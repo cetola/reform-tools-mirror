@@ -34,6 +34,7 @@ man/%.1: bin/%
 		flash-uboot)    echo "download and flash u-boot" ;;           \
 		gnome-config)   echo "apply default config to GNOME" ;;       \
 		handbook)       echo "show Reform Handbook" ;;                \
+		pocket-reform-handbook) echo "show Pocket Reform Handbook" ;; \
 		help)           echo "help with MNT Reform" ;;                \
 		hw-setup)       echo "perform hardware tweaks" ;;             \
 		migrate)        echo "copy rootfs to device" ;;               \

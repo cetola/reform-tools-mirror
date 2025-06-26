@@ -1,0 +1,33 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2023 Lukas F. Hartmann <lukas@mntre.com>
+# Copyright 2024 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
+set -eu
+
+usage() {
+  echo "Open the MNT Pocket Reform handbook in a browser" >&2
+  echo >&2
+  echo "Usage: $0 [--help]" >&2
+  echo >&2
+  echo "Options:" >&2
+  echo "  --help           Display this help and exit." >&2
+}
+
+if [ $# -gt 0 ]; then
+  if [ "$1" != "--help" ]; then
+    echo "E: too many arguments" >&2
+    usage
+    exit 1
+  fi
+  usage
+  exit 0
+fi
+
+if [ -z ${DISPLAY+x} ]; then
+  # not running under X/wayland
+  set -- elinks
+else
+  set -- xdg-open
+fi
+set -- "$@" /usr/share/doc/pocket-reform-handbook/html/index.html
+exec "$@"
