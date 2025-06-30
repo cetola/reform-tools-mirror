@@ -17,10 +17,26 @@
 #include <linux/of.h>
 #include <linux/backlight.h>
 #include <linux/version.h>
+#include <linux/reboot.h>
+
+#define MNTRE_LPC_API_UNKNOWN 0
+#define MNTRE_LPC_API_1 1
+#define MNTRE_LPC_API_2 2
+
+/* array size for lpc response buffers */
+#define LPC_RES_SZ 9
+
+typedef struct lpc_driver_data {
+	struct spi_device *spi;
+	struct power_supply *bat;
+	struct mutex lock;
+	struct backlight_device *backlight;
+	uint32_t api_version;
+} lpc_driver_data;
 
 static int lpc_probe(struct spi_device *spi);
 static void lpc_remove(struct spi_device *spi);
-static void lpc_power_off(void);
+static int lpc_power_off(struct sys_off_data* data);
 static ssize_t show_status(struct device *dev, struct device_attribute *attr,
 			   char *buf);
 static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
@@ -33,23 +49,11 @@ static ssize_t show_uart(struct device *dev, struct device_attribute *attr,
 			 char *buf);
 static ssize_t store_uart(struct device *dev, struct device_attribute *attr,
 			  const char *buf, size_t count);
-static ssize_t lpc_command(struct device *dev, char command, uint8_t arg1,
+static ssize_t lpc_command(struct lpc_driver_data *lpc, char command, uint8_t arg1,
 			   uint8_t *response);
 static int get_bat_property(struct power_supply *psy,
 			    enum power_supply_property psp,
 			    union power_supply_propval *val);
-
-#define MNTRE_LPC_API_UNKNOWN 0
-#define MNTRE_LPC_API_1 1
-#define MNTRE_LPC_API_2 2
-
-typedef struct lpc_driver_data {
-	struct spi_device *spi;
-	struct power_supply *bat;
-	struct mutex lock;
-	struct backlight_device *backlight;
-	uint32_t api_version;
-} lpc_driver_data;
 
 static DEVICE_ATTR(status, 0444, show_status, NULL);
 static DEVICE_ATTR(cells, 0444, show_cells, NULL);
@@ -88,8 +92,6 @@ static struct power_supply_desc bat_desc = {
 
 static struct power_supply_config psy_cfg = {};
 
-static struct device *poweroff_device;
-
 static int bl_get_brightness(struct backlight_device *bl)
 {
 	u16 brightness = bl->props.brightness;
@@ -98,10 +100,10 @@ static int bl_get_brightness(struct backlight_device *bl)
 
 static int bl_update_status(struct backlight_device *bl)
 {
-	struct lpc_driver_data *data =
+	struct lpc_driver_data *lpc =
 		(struct lpc_driver_data *)bl_get_data(bl);
-	uint8_t buffer[8];
-	lpc_command(&data->spi->dev, 'b', bl->props.brightness, buffer);
+	uint8_t buffer[LPC_RES_SZ];
+	lpc_command(lpc, 'b', bl->props.brightness, buffer);
 	return 0;
 }
 
@@ -131,9 +133,10 @@ static uint32_t lpc_get_api_version(struct device *dev)
 {
 	int ret;
 	uint32_t version;
-	uint8_t str[9];
+	uint8_t str[LPC_RES_SZ];
+	struct lpc_driver_data *lpc = (struct lpc_driver_data *)dev_get_drvdata(dev);
 
-	ret = lpc_command(dev, 'f', 2, str);
+	ret = lpc_command(lpc, 'f', 2, str);
 	if (ret)
 		return MNTRE_LPC_API_UNKNOWN;
 
@@ -163,9 +166,9 @@ static int lpc_probe(struct spi_device *spi)
 		return -ENODEV;
 	}
 
-	data = kzalloc(sizeof(struct lpc_driver_data), GFP_KERNEL);
+	data = devm_kzalloc(&spi->dev, sizeof(struct lpc_driver_data), GFP_KERNEL);
 	if (data == NULL) {
-		dev_err(&spi->dev, "kzalloc failed\n");
+		dev_err(&spi->dev, "devm_kzalloc failed\n");
 		return -ENOMEM;
 	}
 
@@ -195,22 +198,20 @@ static int lpc_probe(struct spi_device *spi)
 
 	psy_cfg.of_node = spi->dev.of_node;
 	psy_cfg.drv_data = data;
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
-	psy_cfg.no_wakeup_source = true;
-	data->bat = power_supply_register(&spi->dev, &bat_desc, &psy_cfg);
-#else
-	data->bat = power_supply_register_no_ws(&spi->dev, &bat_desc, &psy_cfg);
-#endif
+	data->bat = devm_power_supply_register(&spi->dev, &bat_desc, &psy_cfg);
 	if (IS_ERR(data->bat)) {
-		dev_err(&spi->dev, "power_supply_register_no_ws failed\n");
+		dev_err(&spi->dev, "dev_power_supply_register failed\n");
 		return PTR_ERR(data->bat);
 	}
 
-	/* FIXME: this overwrites something else that has already claimed pm_power_off
-	   on reform2 but it'll do for now */
-	poweroff_device = &spi->dev;
-	pm_power_off = lpc_power_off;
+	/* register lpc as poweroff handler */
+	ret = devm_register_sys_off_handler(&spi->dev, SYS_OFF_MODE_POWER_OFF_PREPARE, 
+			SYS_OFF_PRIO_FIRMWARE, lpc_power_off, data);
+	if (ret)
+	{
+		dev_err(&spi->dev, "devm_register_sys_off_handler failed\n");
+		return ret;
+	}
 
 	/* for MNT Pocket Reform with Display Version 2, the
 	   system controller has to control the backlight
@@ -232,38 +233,31 @@ static int lpc_probe(struct spi_device *spi)
 
 	data->api_version = lpc_get_api_version(&spi->dev);
 
+	spi_controller_get(spi->controller);
+
 	return ret;
 }
 
 static void lpc_remove(struct spi_device *spi)
 {
-	struct lpc_driver_data *data =
-		(struct lpc_driver_data *)spi_get_drvdata(spi);
-
 	device_remove_file(&spi->dev, &dev_attr_status);
 	device_remove_file(&spi->dev, &dev_attr_firmware);
 	device_remove_file(&spi->dev, &dev_attr_cells);
 	device_remove_file(&spi->dev, &dev_attr_capacity);
 	device_remove_file(&spi->dev, &dev_attr_uart);
 
-	power_supply_unregister(data->bat);
-
-	if (pm_power_off == &lpc_power_off) {
-		pm_power_off = NULL;
-	}
-
-	kfree(data);
+	//spi_controller_put(spi->controller);
 }
 
-static ssize_t lpc_command(struct device *dev, char command, uint8_t arg1,
+/* response[] has to have a size of at least 8 bytes! */
+static ssize_t lpc_command(struct lpc_driver_data *lpc, char command, uint8_t arg1,
 			   uint8_t *response)
 {
 	int ret = 0;
-	struct lpc_driver_data *data =
-		(struct lpc_driver_data *)dev_get_drvdata(dev);
+	memset(response, 0, LPC_RES_SZ);
 
 	int delays[3] = { 50, 50, 50 };
-	if (data->api_version == 2) {
+	if (lpc->api_version == 2) {
 		/* newer LPC firmware doesn't need huge delays */
 		/* because the response time is minimized */
 		delays[0] = 2;
@@ -273,26 +267,26 @@ static ssize_t lpc_command(struct device *dev, char command, uint8_t arg1,
 
 	uint8_t cmd[4] = { 0xb5, command, arg1, 0x0 };
 
-	mutex_lock(&data->lock);
+	mutex_lock(&lpc->lock);
 
 	msleep(delays[0]);
-	ret = spi_write(data->spi, cmd, 4);
+	ret = spi_write(lpc->spi, cmd, 4);
 	if (ret) {
-		dev_err(dev, "lpc_command: %c/%d spi_write failed\n", command,
+		dev_err(&lpc->spi->dev, "lpc_command: %c/%d spi_write failed\n", command,
 			arg1);
-		mutex_unlock(&data->lock);
+		mutex_unlock(&lpc->lock);
 		return ret;
 	}
 
 	msleep(delays[1]);
-	ret = spi_read(data->spi, response, 8);
+	ret = spi_read(lpc->spi, response, 8);
 	if (ret) {
-		dev_err(dev, "lpc_command: %c/%d spi_read failed\n", command,
+		dev_err(&lpc->spi->dev, "lpc_command: %c/%d spi_read failed\n", command,
 			arg1);
 	}
 	msleep(delays[2]);
 
-	mutex_unlock(&data->lock);
+	mutex_unlock(&lpc->lock);
 	return ret;
 }
 
@@ -307,9 +301,10 @@ static ssize_t show_uart(struct device *dev, struct device_attribute *attr,
 static ssize_t store_uart(struct device *dev, struct device_attribute *attr,
 			  const char *buf, size_t count)
 {
+	struct lpc_driver_data *lpc = (struct lpc_driver_data *)dev_get_drvdata(dev);
 	uint8_t discard[8];
 	for (size_t i = 0; i < count; i++) {
-		lpc_command(dev, 'z', buf[i], discard);
+		lpc_command(lpc, 'z', buf[i], discard);
 	}
 	return count;
 }
@@ -323,10 +318,9 @@ static ssize_t show_status(struct device *dev, struct device_attribute *attr,
 	int16_t amps;
 	uint8_t percentage;
 	uint8_t status;
-	struct lpc_driver_data *data;
-	data = (struct lpc_driver_data *)dev_get_drvdata(dev);
+	struct lpc_driver_data *lpc = (struct lpc_driver_data *)dev_get_drvdata(dev);
 
-	ret = lpc_command(dev, 'q', 0, buffer);
+	ret = lpc_command(lpc, 'q', 0, buffer);
 	if (ret)
 		return 0;
 
@@ -339,7 +333,7 @@ static ssize_t show_status(struct device *dev, struct device_attribute *attr,
 			"%d.%dV %d.%dA %2d%% [status=%d] [API=%d]\n",
 			voltage / 1000, voltage % 1000, amps / 1000,
 			abs(amps % 1000), percentage, status,
-			data->api_version);
+			lpc->api_version);
 
 	return snprintf(buf, PAGE_SIZE, "ok\n");
 }
@@ -348,13 +342,14 @@ static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
 			  char *buf)
 {
 	int ret = 0;
-	uint8_t buffer[16];
+	uint8_t buffer[LPC_RES_SZ*2];
 	uint16_t cells[16];
+	struct lpc_driver_data *lpc = (struct lpc_driver_data *)dev_get_drvdata(dev);
 
-	ret = lpc_command(dev, 'v', 0, buffer);
+	ret = lpc_command(lpc, 'v', 0, buffer);
 	if (ret)
 		return 0;
-	ret = lpc_command(dev, 'v', 1, &buffer[8]);
+	ret = lpc_command(lpc, 'v', 1, &buffer[8]);
 	if (ret)
 		return 0;
 
@@ -378,17 +373,16 @@ static ssize_t show_firmware(struct device *dev, struct device_attribute *attr,
 			     char *buf)
 {
 	int ret = 0;
-	uint8_t str1[9];
-	uint8_t str2[9];
-	uint8_t str3[9];
+	uint8_t str1[LPC_RES_SZ], str2[LPC_RES_SZ], str3[LPC_RES_SZ];
+	struct lpc_driver_data *lpc = (struct lpc_driver_data *)dev_get_drvdata(dev);
 
-	ret = lpc_command(dev, 'f', 0, str1);
+	ret = lpc_command(lpc, 'f', 0, str1);
 	if (ret)
 		return 0;
-	ret = lpc_command(dev, 'f', 1, str2);
+	ret = lpc_command(lpc, 'f', 1, str2);
 	if (ret)
 		return 0;
-	ret = lpc_command(dev, 'f', 2, str3);
+	ret = lpc_command(lpc, 'f', 2, str3);
 	if (ret)
 		return 0;
 
@@ -398,9 +392,11 @@ static ssize_t show_firmware(struct device *dev, struct device_attribute *attr,
 static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 			     char *buf)
 {
-	uint8_t buffer[8];
+	uint8_t buffer[LPC_RES_SZ];
 	uint16_t cap_acc_mah, cap_min_mah, cap_max_mah;
-	lpc_command(dev, 'c', 0, buffer);
+	struct lpc_driver_data *lpc = (struct lpc_driver_data *)dev_get_drvdata(dev);
+
+	lpc_command(lpc, 'c', 0, buffer);
 
 	cap_acc_mah = buffer[0] | (buffer[1] << 8);
 	cap_min_mah = buffer[2] | (buffer[3] << 8);
@@ -410,10 +406,17 @@ static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 			cap_acc_mah, cap_min_mah, cap_max_mah);
 }
 
-static void lpc_power_off(void)
+static int lpc_power_off(struct sys_off_data* data)
 {
-	uint8_t buffer[8];
-	lpc_command(poweroff_device, 'p', 1, buffer);
+	uint8_t buffer[LPC_RES_SZ];
+	struct lpc_driver_data *lpc = (struct lpc_driver_data *)data->cb_data;
+
+	/* try to shut down power, forever */
+	while (true) {
+		lpc_command(lpc, 'p', 1, buffer);
+		msleep(100);
+	}
+	return 0;
 }
 
 static int get_bat_property(struct power_supply *psy,
@@ -421,18 +424,14 @@ static int get_bat_property(struct power_supply *psy,
 			    union power_supply_propval *val)
 {
 	int ret = 0;
-	uint8_t buffer[8];
-	struct lpc_driver_data *data;
-	struct device *dev;
+	uint8_t buffer[LPC_RES_SZ];
 	int milliamp, millivolt;
-
-	data = (struct lpc_driver_data *)power_supply_get_drvdata(psy);
-	dev = &data->spi->dev;
+	struct lpc_driver_data *lpc = (struct lpc_driver_data *)power_supply_get_drvdata(psy);
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
 		val->intval = POWER_SUPPLY_STATUS_UNKNOWN;
-		ret = lpc_command(dev, 'q', 0, buffer);
+		ret = lpc_command(lpc, 'q', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -456,7 +455,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-		ret = lpc_command(dev, 'q', 0, buffer);
+		ret = lpc_command(lpc, 'q', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -468,7 +467,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
-		ret = lpc_command(dev, 'q', 0, buffer);
+		ret = lpc_command(lpc, 'q', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -486,7 +485,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CAPACITY:
-		ret = lpc_command(dev, 'q', 0, buffer);
+		ret = lpc_command(lpc, 'q', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -504,7 +503,7 @@ static int get_bat_property(struct power_supply *psy,
 
 	case POWER_SUPPLY_PROP_CHARGE_FULL:
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
-		ret = lpc_command(dev, 'c', 0, buffer);
+		ret = lpc_command(lpc, 'c', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -513,7 +512,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
-		ret = lpc_command(dev, 'c', 0, buffer);
+		ret = lpc_command(lpc, 'c', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -521,7 +520,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_EMPTY:
-		ret = lpc_command(dev, 'c', 0, buffer);
+		ret = lpc_command(lpc, 'c', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
