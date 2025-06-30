@@ -36,7 +36,7 @@ typedef struct lpc_driver_data {
 
 static int lpc_probe(struct spi_device *spi);
 static void lpc_remove(struct spi_device *spi);
-static int lpc_power_off(struct sys_off_data* data);
+static int lpc_power_off(struct sys_off_data *data);
 static ssize_t show_status(struct device *dev, struct device_attribute *attr,
 			   char *buf);
 static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
@@ -49,8 +49,8 @@ static ssize_t show_uart(struct device *dev, struct device_attribute *attr,
 			 char *buf);
 static ssize_t store_uart(struct device *dev, struct device_attribute *attr,
 			  const char *buf, size_t count);
-static ssize_t lpc_command(struct lpc_driver_data *lpc, char command, uint8_t arg1,
-			   uint8_t *response);
+static ssize_t lpc_command(struct lpc_driver_data *lpc, char command,
+			   uint8_t arg1, uint8_t *response);
 static int get_bat_property(struct power_supply *psy,
 			    enum power_supply_property psp,
 			    union power_supply_propval *val);
@@ -100,8 +100,7 @@ static int bl_get_brightness(struct backlight_device *bl)
 
 static int bl_update_status(struct backlight_device *bl)
 {
-	struct lpc_driver_data *lpc =
-		(struct lpc_driver_data *)bl_get_data(bl);
+	struct lpc_driver_data *lpc = (struct lpc_driver_data *)bl_get_data(bl);
 	uint8_t buffer[LPC_RES_SZ];
 	lpc_command(lpc, 'b', bl->props.brightness, buffer);
 	return 0;
@@ -134,7 +133,8 @@ static uint32_t lpc_get_api_version(struct device *dev)
 	int ret;
 	uint32_t version;
 	uint8_t str[LPC_RES_SZ];
-	struct lpc_driver_data *lpc = (struct lpc_driver_data *)dev_get_drvdata(dev);
+	struct lpc_driver_data *lpc =
+		(struct lpc_driver_data *)dev_get_drvdata(dev);
 
 	ret = lpc_command(lpc, 'f', 2, str);
 	if (ret)
@@ -166,7 +166,8 @@ static int lpc_probe(struct spi_device *spi)
 		return -ENODEV;
 	}
 
-	data = devm_kzalloc(&spi->dev, sizeof(struct lpc_driver_data), GFP_KERNEL);
+	data = devm_kzalloc(&spi->dev, sizeof(struct lpc_driver_data),
+			    GFP_KERNEL);
 	if (data == NULL) {
 		dev_err(&spi->dev, "devm_kzalloc failed\n");
 		return -ENOMEM;
@@ -205,10 +206,11 @@ static int lpc_probe(struct spi_device *spi)
 	}
 
 	/* register lpc as poweroff handler */
-	ret = devm_register_sys_off_handler(&spi->dev, SYS_OFF_MODE_POWER_OFF_PREPARE, 
-			SYS_OFF_PRIO_FIRMWARE, lpc_power_off, data);
-	if (ret)
-	{
+	ret = devm_register_sys_off_handler(&spi->dev,
+					    SYS_OFF_MODE_POWER_OFF_PREPARE,
+					    SYS_OFF_PRIO_FIRMWARE,
+					    lpc_power_off, data);
+	if (ret) {
 		dev_err(&spi->dev, "devm_register_sys_off_handler failed\n");
 		return ret;
 	}
@@ -250,8 +252,8 @@ static void lpc_remove(struct spi_device *spi)
 }
 
 /* response[] has to have a size of at least 8 bytes! */
-static ssize_t lpc_command(struct lpc_driver_data *lpc, char command, uint8_t arg1,
-			   uint8_t *response)
+static ssize_t lpc_command(struct lpc_driver_data *lpc, char command,
+			   uint8_t arg1, uint8_t *response)
 {
 	int ret = 0;
 	memset(response, 0, LPC_RES_SZ);
@@ -272,8 +274,8 @@ static ssize_t lpc_command(struct lpc_driver_data *lpc, char command, uint8_t ar
 	msleep(delays[0]);
 	ret = spi_write(lpc->spi, cmd, 4);
 	if (ret) {
-		dev_err(&lpc->spi->dev, "lpc_command: %c/%d spi_write failed\n", command,
-			arg1);
+		dev_err(&lpc->spi->dev, "lpc_command: %c/%d spi_write failed\n",
+			command, arg1);
 		mutex_unlock(&lpc->lock);
 		return ret;
 	}
@@ -281,8 +283,8 @@ static ssize_t lpc_command(struct lpc_driver_data *lpc, char command, uint8_t ar
 	msleep(delays[1]);
 	ret = spi_read(lpc->spi, response, 8);
 	if (ret) {
-		dev_err(&lpc->spi->dev, "lpc_command: %c/%d spi_read failed\n", command,
-			arg1);
+		dev_err(&lpc->spi->dev, "lpc_command: %c/%d spi_read failed\n",
+			command, arg1);
 	}
 	msleep(delays[2]);
 
@@ -301,7 +303,8 @@ static ssize_t show_uart(struct device *dev, struct device_attribute *attr,
 static ssize_t store_uart(struct device *dev, struct device_attribute *attr,
 			  const char *buf, size_t count)
 {
-	struct lpc_driver_data *lpc = (struct lpc_driver_data *)dev_get_drvdata(dev);
+	struct lpc_driver_data *lpc =
+		(struct lpc_driver_data *)dev_get_drvdata(dev);
 	uint8_t discard[8];
 	for (size_t i = 0; i < count; i++) {
 		lpc_command(lpc, 'z', buf[i], discard);
@@ -318,7 +321,8 @@ static ssize_t show_status(struct device *dev, struct device_attribute *attr,
 	int16_t amps;
 	uint8_t percentage;
 	uint8_t status;
-	struct lpc_driver_data *lpc = (struct lpc_driver_data *)dev_get_drvdata(dev);
+	struct lpc_driver_data *lpc =
+		(struct lpc_driver_data *)dev_get_drvdata(dev);
 
 	ret = lpc_command(lpc, 'q', 0, buffer);
 	if (ret)
@@ -332,8 +336,7 @@ static ssize_t show_status(struct device *dev, struct device_attribute *attr,
 	return snprintf(buf, PAGE_SIZE,
 			"%d.%dV %d.%dA %2d%% [status=%d] [API=%d]\n",
 			voltage / 1000, voltage % 1000, amps / 1000,
-			abs(amps % 1000), percentage, status,
-			lpc->api_version);
+			abs(amps % 1000), percentage, status, lpc->api_version);
 
 	return snprintf(buf, PAGE_SIZE, "ok\n");
 }
@@ -342,9 +345,10 @@ static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
 			  char *buf)
 {
 	int ret = 0;
-	uint8_t buffer[LPC_RES_SZ*2];
+	uint8_t buffer[LPC_RES_SZ * 2];
 	uint16_t cells[16];
-	struct lpc_driver_data *lpc = (struct lpc_driver_data *)dev_get_drvdata(dev);
+	struct lpc_driver_data *lpc =
+		(struct lpc_driver_data *)dev_get_drvdata(dev);
 
 	ret = lpc_command(lpc, 'v', 0, buffer);
 	if (ret)
@@ -374,7 +378,8 @@ static ssize_t show_firmware(struct device *dev, struct device_attribute *attr,
 {
 	int ret = 0;
 	uint8_t str1[LPC_RES_SZ], str2[LPC_RES_SZ], str3[LPC_RES_SZ];
-	struct lpc_driver_data *lpc = (struct lpc_driver_data *)dev_get_drvdata(dev);
+	struct lpc_driver_data *lpc =
+		(struct lpc_driver_data *)dev_get_drvdata(dev);
 
 	ret = lpc_command(lpc, 'f', 0, str1);
 	if (ret)
@@ -394,7 +399,8 @@ static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 {
 	uint8_t buffer[LPC_RES_SZ];
 	uint16_t cap_acc_mah, cap_min_mah, cap_max_mah;
-	struct lpc_driver_data *lpc = (struct lpc_driver_data *)dev_get_drvdata(dev);
+	struct lpc_driver_data *lpc =
+		(struct lpc_driver_data *)dev_get_drvdata(dev);
 
 	lpc_command(lpc, 'c', 0, buffer);
 
@@ -406,7 +412,7 @@ static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 			cap_acc_mah, cap_min_mah, cap_max_mah);
 }
 
-static int lpc_power_off(struct sys_off_data* data)
+static int lpc_power_off(struct sys_off_data *data)
 {
 	uint8_t buffer[LPC_RES_SZ];
 	struct lpc_driver_data *lpc = (struct lpc_driver_data *)data->cb_data;
@@ -426,7 +432,8 @@ static int get_bat_property(struct power_supply *psy,
 	int ret = 0;
 	uint8_t buffer[LPC_RES_SZ];
 	int milliamp, millivolt;
-	struct lpc_driver_data *lpc = (struct lpc_driver_data *)power_supply_get_drvdata(psy);
+	struct lpc_driver_data *lpc =
+		(struct lpc_driver_data *)power_supply_get_drvdata(psy);
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
