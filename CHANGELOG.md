@@ -1,3 +1,10 @@
+1.74 (2025-07-01)
+=================
+
+ * add alsa ucm2 profile for rk3588 pocket reform and next
+ * lpc: use correct kernel api for poweroff
+ * add bin/pocket-reform-handbook
+
 1.74 (2025-06-12)
 =================
 
