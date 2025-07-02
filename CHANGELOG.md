@@ -1,4 +1,4 @@
-1.74 (2025-07-01)
+1.75 (2025-07-01)
 =================
 
  * add alsa ucm2 profile for rk3588 pocket reform and next
