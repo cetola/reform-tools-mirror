@@ -38,6 +38,11 @@ xkb-options = ['compose:rctrl', 'lv3:ralt_alt']
 [org.gnome.mutter.wayland.keybindings]
 restore-shortcuts = @as []
 
+# Fractional scaling reduces the rendering performance.
+# Remove 'scale-monitor-framebuffer' from the list.
+[org.gnome.mutter:GNOME]
+experimental-features=['xwayland-native-scaling']
+
 [org.gnome.settings-daemon.plugins.media-keys]
 help = @as []
 keyboard-brightness-down-static = @as []
