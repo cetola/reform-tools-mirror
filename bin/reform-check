@@ -413,21 +413,6 @@ if [ -n "$(dpkg --verify reform-tools)" ]; then
 fi
 
 if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-arm64" 2>/dev/null | grep -q '^installed$'; then
-  case "$MIRROR" in mntre.com)
-    if ! apt-cache policy linux-image-arm64 | grep --quiet mntre.com; then
-      echo "E: the linux-image-arm64 package cannot come from the MNT repos" >&2
-    fi
-    ;;
-  reform.debian.net)
-    if ! apt-cache policy linux-image-arm64 | grep --quiet /reform.debian.net/; then
-      echo "E: the linux-image-arm64 package cannot come from the reform.debian.net repos" >&2
-    fi
-    ;;
-  *)
-    echo "invalid mirror: $MIRROR" >&2
-    exit 1
-    ;;
-  esac
   echo "W: The deprecated meta-package linux-image-arm64 is installed." >&2
   if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-mnt-reform-arm64" 2>/dev/null | grep -q '^installed$'; then
     echo "W: Since the new meta-package linux-image-mnt-reform-arm64 is installed," >&2
@@ -441,23 +426,7 @@ if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-arm64" 2>
   fi
 fi
 
-if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-mnt-reform-arm64" 2>/dev/null | grep -q '^installed$'; then
-  case "$MIRROR" in mntre.com)
-    if ! apt-cache policy linux-image-mnt-reform-arm64 | grep --quiet mntre.com; then
-      echo "E: the linux-image-mnt-reform-arm64 package cannot come from the MNT repos" >&2
-    fi
-    ;;
-  reform.debian.net)
-    if ! apt-cache policy linux-image-mnt-reform-arm64 | grep --quiet /reform.debian.net/; then
-      echo "E: the linux-image-mnt-reform-arm64 package cannot come from the reform.debian.net repos" >&2
-    fi
-    ;;
-  *)
-    echo "invalid mirror: $MIRROR" >&2
-    exit 1
-    ;;
-  esac
-else
+if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-mnt-reform-arm64" 2>/dev/null | grep -q '^installed$'; then
   echo "E: linux-image-mnt-reform-arm64 is not installed" >&2
 fi
 
@@ -727,4 +696,40 @@ else
     rm "$mhdpfwbin"
     ;;
   esac
+
+  if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-arm64" 2>/dev/null | grep -q '^installed$'; then
+    case "$MIRROR" in mntre.com)
+      if ! apt-cache policy linux-image-arm64 | grep --quiet mntre.com; then
+        echo "E: the linux-image-arm64 package cannot come from the MNT repos" >&2
+      fi
+      ;;
+    reform.debian.net)
+      if ! apt-cache policy linux-image-arm64 | grep --quiet /reform.debian.net/; then
+        echo "E: the linux-image-arm64 package cannot come from the reform.debian.net repos" >&2
+      fi
+      ;;
+    *)
+      echo "invalid mirror: $MIRROR" >&2
+      exit 1
+      ;;
+    esac
+  fi
+
+  if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-mnt-reform-arm64" 2>/dev/null | grep -q '^installed$'; then
+    case "$MIRROR" in mntre.com)
+      if ! apt-cache policy linux-image-mnt-reform-arm64 | grep --quiet mntre.com; then
+        echo "E: the linux-image-mnt-reform-arm64 package cannot come from the MNT repos" >&2
+      fi
+      ;;
+    reform.debian.net)
+      if ! apt-cache policy linux-image-mnt-reform-arm64 | grep --quiet /reform.debian.net/; then
+        echo "E: the linux-image-mnt-reform-arm64 package cannot come from the reform.debian.net repos" >&2
+      fi
+      ;;
+    *)
+      echo "invalid mirror: $MIRROR" >&2
+      exit 1
+      ;;
+    esac
+  fi
 fi
