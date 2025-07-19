@@ -373,6 +373,28 @@ if [ -e /etc/flash-kernel/ubootenv.d/00reform2_ubootenv ]; then
   fi
 fi
 
+if command -v systemctl >/dev/null 2>&1 \
+  && systemctl is-active --quiet greetd \
+  && test -e /etc/greetd/config.toml \
+  && grep --quiet '^ *command *= *["'"'"']/usr/bin/tuigreet *' /etc/greetd/config.toml; then
+  if [ -e /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel ]; then
+    # shellcheck disable=SC2016
+    if ! echo 'setenv bootargs "${bootargs} loglevel=3"' | cmp --quiet - /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel; then
+      echo "I: /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel exists but with the wrong content." >&2
+      echo 'I: it should contain this: setenv bootargs "${bootargs} loglevel=3'
+    fi
+  else
+    # shellcheck disable=SC2016
+    echo 'I: your system is booting using greetd with tuigreet. You may want to put the following line into your /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel: setenv bootargs "${bootargs} loglevel=3' >&2
+    echo "I: Then run 'sudo flash-kernel' to regenerate your /boot/boot.scr. This will do away with your kernel overwriting your login prompt" >&2
+  fi
+else
+  # shellcheck disable=SC2016
+  if [ -e /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel ] && echo 'setenv bootargs "${bootargs} loglevel=3"' | cmp --quiet - /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel; then
+    echo "W: you do not seem to boot using tuigreet but you the following file sets your loglevel to 3: /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel -- you may consider removing it and re-running 'sudo flash-kernel'" >&2
+  fi
+fi
+
 initramfstoolsmodulescontent="pwm_imx27\nnwl-dsi\nti-sn65dsi86\nimx-dcss\npanel-edp\nmux-mmio\nmxsfb\nusbhid\nimx8mq-interconnect\n"
 if [ -e /etc/initramfs-tools/modules ] && printf "$initramfstoolsmodulescontent" | cmp --quiet - /etc/initramfs-tools/modules; then
   echo "W: /etc/initramfs-tools/modules contains default content superseded by /usr/share/initramfs-tools/modules.d/reform.conf" >&2
