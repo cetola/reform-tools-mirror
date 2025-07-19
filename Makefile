@@ -127,4 +127,8 @@ lint:
 
 test:
 	# check the validity of gschema overrides
+	# Create a dummy placeholder file to convince glib-compile-schemas to
+	# not skip processing this directory
+	echo '<schemalist></schemalist>' > schemas/dummy.gschema.xml
 	glib-compile-schemas --dry-run --strict schemas
+	rm schemas/dummy.gschema.xml
