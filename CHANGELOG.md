@@ -1,3 +1,16 @@
+1.76 (2025-07-19)
+=================
+
+ * disable gnome fractional scaling by default
+ * ucm2 profiles:
+    - fix alsa ucm2 profile paths
+    - main speaker switch needs to be on for headphones
+ * bin/reform-check:
+    - move 'apt-cache policy' calls to the end as they do not work with
+      --offline
+    - check for the correct contents of
+      /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel
+
 1.75 (2025-07-01)
 =================
 
