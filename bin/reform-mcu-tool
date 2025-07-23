@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright 2024 Chris Hofstaedtler <chris@hofstaedtler.name>
+# Copyright 2024-2025 Chris Hofstaedtler <chris@hofstaedtler.name>
 # SPDX-License-Identifier: GPL-3.0+
 #
 # Use `black --line-length 120 bin/reform-mcu-tool` to reformat.
@@ -33,6 +33,8 @@ To reset the RP2040 bootrom back into the application:
 import argparse
 import struct
 import sys
+from dataclasses import dataclass
+from typing import Tuple
 
 try:
     import usb1
@@ -66,6 +68,117 @@ RESET_REQUEST_FLASH = 2
 PICOBOOT_MAGIC = 0x431FD10B
 PC_REBOOT = 0x2
 PICOBOOT_IF_RESET = 0x41
+
+
+@dataclass(kw_only=True)
+class BOSDescriptor:
+    """Binary Device Object Store"""
+
+    bLength: int
+    bDescriptorType: int
+    wTotalLength: int
+    bNumDeviceCaps: int
+    data: bytearray
+
+    _header_format = "<BBHB"
+    DESCRIPTOR_TYPE = 0xF
+
+    @classmethod
+    def parse(cls, data: bytearray) -> "BOSDescriptor":
+        header_length = struct.calcsize(cls._header_format)
+        bLength, bDescriptorType, wTotalLength, bNumDeviceCaps = struct.unpack(
+            cls._header_format, data[0:header_length]
+        )
+        if bDescriptorType != cls.DESCRIPTOR_TYPE:
+            raise TypeError(
+                f"Descriptor returned by USB device is of type {bDescriptorType} instead of {cls.DESCRIPTOR_TYPE}"
+            )
+
+        return cls(
+            bLength=bLength,
+            bDescriptorType=bDescriptorType,
+            wTotalLength=wTotalLength,
+            bNumDeviceCaps=bNumDeviceCaps,
+            data=data[header_length:],
+        )
+
+
+@dataclass(kw_only=True)
+class BOSDeviceCapability:
+    bLength: int
+    bDescriptorType: int
+    bDevCapabilityType: int
+    data: bytearray
+
+    _header_format = "<BBB"
+    DESCRIPTOR_TYPE = 0x10  # DEVICE CAPABILITY
+
+    @classmethod
+    def parse(cls, data: bytearray) -> "BOSDeviceCapability":
+        header_length = struct.calcsize(cls._header_format)
+        bLength, bDescriptorType, bDevCapabilityType = struct.unpack(cls._header_format, data[0:header_length])
+        if bDescriptorType != cls.DESCRIPTOR_TYPE:
+            raise TypeError(
+                f"Descriptor returned by USB device is of type {bDescriptorType} instead of {cls.DESCRIPTOR_TYPE}"
+            )
+
+        return cls(
+            bLength=bLength,
+            bDescriptorType=bDescriptorType,
+            bDevCapabilityType=bDevCapabilityType,
+            data=data[header_length : header_length + bLength],
+        )
+
+
+@dataclass(kw_only=True)
+class PlatformCapabilityDescriptor:
+    """Defines a device capability specific to a particular platform/operating system"""
+
+    bLength: int
+    bDescriptorType: int
+    bDevCapabilityType: int
+    # uint8_t bReserved
+    PlatformCapabilityUUID: str  #  16byte
+    data: bytearray  # bLength - 20
+
+    _header_format = "<BBBB16s"
+    DEV_CAPABILITY_TYPE = 0x05
+
+    @classmethod
+    def parse(cls, data: bytearray) -> "PlatformCapabilityDescriptor":
+        header_length = struct.calcsize(cls._header_format)
+        bLength, bDescriptorType, bDevCapabilityType, _, PlatformCapabilityUUID = struct.unpack(
+            cls._header_format, data[0:header_length]
+        )
+        if bDescriptorType != BOSDeviceCapability.DESCRIPTOR_TYPE:
+            raise TypeError(f"Descriptor is of type {bDescriptorType} instead of {BOSDeviceCapability.DESCRIPTOR_TYPE}")
+        if bDevCapabilityType != cls.DEV_CAPABILITY_TYPE:
+            raise TypeError(f"DevCapability is of type {bDevCapabilityType} instead of {cls.DEV_CAPABILITY_TYPE}")
+
+        return cls(
+            bLength=bLength,
+            bDescriptorType=bDescriptorType,
+            bDevCapabilityType=bDevCapabilityType,
+            PlatformCapabilityUUID=PlatformCapabilityUUID,
+            data=data[header_length : header_length + bLength],
+        )
+
+
+@dataclass(kw_only=True)
+class DS20Descriptor:
+    dwVersion: int
+    wLength: int
+    bVendorCode: int
+    bAltEnumCmd: int
+
+    _format = "<IHBB"
+
+    UUID = bytes([0x63, 0xEC, 0x0A, 0x01, 0x74, 0xF5, 0xCD, 0x52, 0x9D, 0xDA, 0x28, 0x52, 0x55, 0x0D, 0x94, 0xF0])
+
+    @classmethod
+    def parse(cls, data: bytearray) -> "DS20Descriptor":
+        dwVersion, wLength, bVendorCode, bAltEnumCmd = struct.unpack(cls._format, data)
+        return cls(dwVersion=dwVersion, wLength=wLength, bVendorCode=bVendorCode, bAltEnumCmd=bAltEnumCmd)
 
 
 def device_reset(handle: usb1.USBDeviceHandle, reset_interface: int, reset_request: int):
@@ -130,6 +243,104 @@ def find_picoboot_interface(device: usb1.USBDevice) -> usb1.USBInterfaceSetting 
     return None
 
 
+def _read_bos_descriptor(handle: usb1.USBDeviceHandle) -> None | BOSDescriptor:
+    request_type = usb1.TYPE_STANDARD | usb1.RECIPIENT_DEVICE
+    request_value = BOSDescriptor.DESCRIPTOR_TYPE << 8
+    timeout = 1000
+
+    # Read descriptor header first
+    try:
+        bos_data = handle.controlRead(request_type, usb1.REQUEST_GET_DESCRIPTOR, request_value, 0, 5, timeout=timeout)
+    except usb1.USBErrorPipe:
+        print("nah")
+        return None  # unsupported
+
+    descriptor = BOSDescriptor.parse(bos_data)
+
+    # Read full descriptor now that we know how long it is
+    bos_data = handle.controlRead(
+        request_type, usb1.REQUEST_GET_DESCRIPTOR, request_value, 0, descriptor.wTotalLength, timeout=timeout
+    )
+    if len(bos_data) != descriptor.wTotalLength:
+        # USB device returned too little or too much data
+        return None
+
+    return BOSDescriptor.parse(bos_data)
+
+
+def _read_bos_ds20_version(handle: usb1.USBDeviceHandle) -> str | None:
+    bos_descriptor = _read_bos_descriptor(handle)
+    if bos_descriptor is None:
+        return None
+
+    offset = 0
+    while offset < len(bos_descriptor.data):
+        device_cap = BOSDeviceCapability.parse(bos_descriptor.data[offset:])
+        offset += device_cap.bLength
+        try:
+            platform_desc = PlatformCapabilityDescriptor.parse(bos_descriptor.data[offset - device_cap.bLength :])
+        except TypeError as except_inst:
+            continue
+
+        # See https://github.com/fwupd/fwupd/blob/main/docs/ds20.md
+        if platform_desc.PlatformCapabilityUUID != DS20Descriptor.UUID:
+            continue
+        ds20_desc = DS20Descriptor.parse(platform_desc.data)
+        if ds20_desc.dwVersion < 0x0001090E:
+            # Minimum version is 0x0001090e (1.9.14).
+            continue
+        if ds20_desc.bAltEnumCmd != 0:
+            continue
+
+        if ds20_desc.bVendorCode == 0:
+            # Probably invalid, will read something we do not want.
+            continue
+
+        # Read quirk data from device (in UTF-8).
+        bmRequestType = usb1.TYPE_VENDOR | usb1.RECIPIENT_DEVICE
+        response = handle.controlRead(
+            usb1.TYPE_VENDOR | usb1.RECIPIENT_DEVICE,
+            ds20_desc.bVendorCode,
+            0x00,  # wValue per ds20.md
+            0x07,  # wIndex per ds20.md
+            ds20_desc.wLength,
+            timeout=2000,
+        )
+
+        if not response:
+            return None
+
+        response_str = response.decode("utf-8", errors="ignore")
+        quirk_data = {}
+        for line in response_str.splitlines():
+            line = line.strip()
+            if line.startswith(";") or not "=" in line:
+                continue
+            k, v = line.split("=", maxsplit=1)
+            quirk_data[k] = v
+        version = quirk_data.get("Version")
+        if version is None:
+            continue
+        version_format = quirk_data.get("VersionFormat")
+        if version_format != "number":
+            print(f"W: VersionFormat {version_format} not understood, ignoring")
+            continue
+        return int(version)
+
+    return None
+
+
+def read_bos_ds20_version(device: usb1.USBDevice) -> str | None:
+    """Read BOS DS20 descriptor and extract Version string."""
+    try:
+        handle = device.open()
+        return _read_bos_ds20_version(handle)
+    except (usb1.USBError, usb1.USBErrorAccess, usb1.USBErrorNoDevice, usb1.USBErrorTimeout) as except_inst:
+        return None
+    finally:
+        handle.close()
+
+
 def action_bootsel(args, device: usb1.USBDevice):
     target_flags = MCU_TYPES[args.target][2]
     if target_flags & IS_RP_BOOTROM:
@@ -174,13 +385,23 @@ def action_list(args, usb_context: usb1.USBContext):
     for device in usb_context.getDeviceIterator(skip_on_error=True):
         vid = device.getVendorID()
         pid = device.getProductID()
+
         for mcu_name, (mcu_vid, mcu_pid, flags) in MCU_TYPES.items():
-            if (vid, pid) == (mcu_vid, mcu_pid):
-                print(
-                    f"Target {mcu_name} ID {vid:04x}:{pid:04x} Serial# {device.getSerialNumber()} "
-                    f"USB bus {device.getBusNumber()} address {device.getDeviceAddress()}"
-                )
-                break
+            if (vid, pid) != (mcu_vid, mcu_pid):
+                continue
+
+            device_info = (
+                f"Target {mcu_name} ID {vid:04x}:{pid:04x} Serial# {device.getSerialNumber()} "
+                f"USB bus {device.getBusNumber()} address {device.getDeviceAddress()}"
+            )
+
+            version_info = read_bos_ds20_version(device)
+            if version_info:
+                device_info += f" Version {version_info}"
+
+            print(device_info)
+            break
+
     return 0
 
 
