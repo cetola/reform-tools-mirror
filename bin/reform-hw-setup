@@ -69,11 +69,11 @@ init_rk3588() {
 
 init_wm8960() {
   # Fix WM8960 being too quiet
-  amixer -c 0 sset Playback 255
-  amixer -c 0 sset 'Left Output Mixer PCM' on
-  amixer -c 0 sset 'Right Output Mixer PCM' on
+  amixer -c "$1" sset Playback 255
+  amixer -c "$1" sset 'Left Output Mixer PCM' on
+  amixer -c "$1" sset 'Right Output Mixer PCM' on
   # This switch in WM8960 needs to be on for the headset mic input to work
-  amixer -c 0 sset 'Left Input Mixer Boost' on
+  amixer -c "$1" sset 'Left Input Mixer Boost' on
 }
 
 init_tlv320aic3100() {
@@ -138,7 +138,7 @@ case "$(cat /proc/device-tree/model)" in
     fi
     test -e /sys/bus/i2c/drivers/wm8960/2-001a
 
-    init_wm8960
+    init_wm8960 0
     ;;
   "MNT Reform 2 with BPI-CM4 Module")
     # Workaround for WM8960 sometimes not coming out of reset
@@ -148,7 +148,7 @@ case "$(cat /proc/device-tree/model)" in
     test -e /sys/bus/i2c/drivers/wm8960/1-001a
 
     init_a311d
-    init_wm8960
+    init_wm8960 0
     ;;
   "MNT Reform 2 with LS1028A Module")
     # Workaround for a DWC3 USB Controller regression
@@ -180,16 +180,16 @@ case "$(cat /proc/device-tree/model)" in
     init_tlv320aic3100
     ;;
   "MNT Reform 2 with i.MX8MP Module")
-    init_wm8960
+    init_wm8960 0
     init_qca9377_wifi || echo "W: init_qca9377_wifi failed" >&2
     ;;
   "MNT Reform 2 with RCORE RK3588 Module")
     init_rk3588
-    init_wm8960
+    init_wm8960 rk3588wm8960
     ;;
   "MNT Reform 2 with RCORE-DSI RK3588 Module")
     init_rk3588
-    init_wm8960
+    init_wm8960 rk3588wm8960
     ;;
   "MNT Pocket Reform with RCORE RK3588 Module")
     init_rk3588
