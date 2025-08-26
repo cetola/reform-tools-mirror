@@ -391,11 +391,22 @@ if [ ! -e /etc/flash-kernel/machine ]; then
       ;;
   esac
 else
+  # we can check only /etc/flash-kernel/machine and not /proc/device-tree/model
+  # as well because above we check (and print) if their contents diff
   case "$(cat /etc/flash-kernel/machine)" in
     "MNT Reform 2") : ;;
     "MNT Reform 2 HDMI") : ;;
-    "MNT Reform 2 with BPI-CM4 Module") echo "W: /etc/flash-kernel/machine is not needed on A311D. Consider removing it." >&2 ;;
-    "MNT Reform 2 with LS1028A Module") echo "W: /etc/flash-kernel/machine is not needed on LS1028A. Consider removing it." >&2 ;;
+    "MNT Pocket Reform with BPI-CM4 Module.conf" | \
+      "MNT Pocket Reform with i.MX8MP Module.conf" | \
+      "MNT Pocket Reform with RCORE RK3588 Module.conf" | \
+      "MNT Reform 2 with BPI-CM4 Module.conf" | \
+      "MNT Reform 2 with i.MX8MP Module.conf" | \
+      "MNT Reform 2 with LS1028A Module.conf" | \
+      "MNT Reform 2 with RCORE-DSI RK3588 Module.conf" | \
+      "MNT Reform 2 with RCORE RK3588 Module.conf" | \
+      "MNT Reform Next with RCORE RK3588 Module.conf")
+      echo "W: /etc/flash-kernel/machine is not needed on $(cat /etc/flash-kernel/machine). Consider removing it." >&2
+      ;;
     *) echo "E: unexpected content in /etc/flash-kernel/machine" >&2 ;;
   esac
 fi
