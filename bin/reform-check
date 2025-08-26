@@ -217,6 +217,24 @@ else
   echo "W: Unable to infer version of system image from /etc/motd" >&2
 fi
 
+case "$(cat /proc/device-tree/model)" in
+  "MNT Pocket Reform with "*" Module")
+    # FIXME: make reform-mcu-tool list output machine readable
+    SYS_VER="$(reform-mcu-tool list | sed -ne 's/Target pocket-sysctl-1.0 ID .* Version //p')"
+    if [ -n "$SYS_VER" ]; then
+      echo "I: Version of system controller firmware: $SYS_VER" >&2
+    else
+      echo "W: unable to obtain version of system controller firmware -- firmware too old?" >&2
+    fi
+    KBD_VER="$(reform-mcu-tool list | sed -ne 's/Target pocket-input-1.0 ID .* Version //p')"
+    if [ -n "$KBD_VER" ]; then
+      echo "I: Version of keyboard firmware: $KBD_VER" >&2
+    else
+      echo "W: unable to obtain version of keyboard firmware -- firmware too old?" >&2
+    fi
+    ;;
+esac
+
 HAVE_BOOTSCR=no
 if test -e /boot/boot.scr; then
   HAVE_BOOTSCR=yes
