@@ -210,6 +210,13 @@ else
   echo "E: Cannot get version of linux-image-mnt-reform-arm64 as it is not installed" >&2
 fi
 echo "I: Version of reform-tools: $(dpkg-query --show --showformat '${Version}' reform-tools)" >&2
+
+if grep --quiet "System Image " /etc/motd; then
+  echo "I: Version of system image: $(grep --only-matching "System Image .*" /etc/motd)" >&2
+else
+  echo "W: Unable to infer version of system image from /etc/motd" >&2
+fi
+
 HUMAN_ROOT=
 case $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) in
   "/dev/reformvg/root")
