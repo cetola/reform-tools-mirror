@@ -277,7 +277,7 @@ for META in reform-desktop-full reform-desktop-minimal; do
   # if meta package is installed, we don't need to check its Depends
   RELATIONS="Recommends Suggests"
   if ! dpkg-query --showformat '${db:Status-Status}\n' --show "$META" 2>/dev/null | grep -q '^installed$'; then
-    echo "W: MNT Reform Desktop meta-package is not installed: $META" >&2
+    echo "I: MNT Reform Desktop meta-package is not installed: $META" >&2
     RELATIONS="Depends $RELATIONS"
   fi
   for REL in $RELATIONS; do
@@ -286,7 +286,7 @@ for META in reform-desktop-full reform-desktop-minimal; do
     for PKG in $(apt-cache show --no-all-versions $META | sed -ne 's/^'"$REL"': \(.*\)/\1/p'); do
       PKG="${PKG## }" # strip whitespace
       if ! dpkg-query --showformat '${db:Status-Status}\n' --show "$PKG" 2>/dev/null | grep -q '^installed$'; then
-        echo "W: $REL of $META is not installed: $PKG" >&2
+        echo "I: $REL of $META is not installed: $PKG" >&2
       fi
     done
     IFS=$OIFS
