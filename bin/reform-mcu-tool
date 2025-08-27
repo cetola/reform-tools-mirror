@@ -459,8 +459,12 @@ def run(args, usb_context: usb1.USBContext) -> int:
 def main() -> int:
     args = parse_args()
 
-    with usb1.USBContext() as usb_context:
-        return run(args, usb_context)
+    try:
+        with usb1.USBContext() as usb_context:
+            return run(args, usb_context)
+    except usb1.USBErrorAccess:
+        print("E: Accessing USB devices failed. -- Maybe you need to be root / use sudo.")
+        return 3
 
 
 if __name__ == "__main__":
