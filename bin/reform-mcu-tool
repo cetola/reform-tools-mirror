@@ -39,7 +39,8 @@ from typing import Tuple
 try:
     import usb1
 except ModuleNotFoundError as except_inst:
-    raise RuntimeError('Library "usb1" not found, please install python3-usb1') from except_inst
+    print('E: Library "usb1" not found, please install python3-usb1.')
+    sys.exit(4)
 
 
 USB_VID_PIDCODES = 0x1209
