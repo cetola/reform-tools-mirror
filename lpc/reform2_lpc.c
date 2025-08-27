@@ -197,7 +197,11 @@ static int lpc_probe(struct spi_device *spi)
 	if (ret)
 		dev_err(&spi->dev, "device_create_file failed\n");
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 17, 0)
+	psy_cfg.fwnode = dev_fwnode(&spi->dev);
+#else
 	psy_cfg.of_node = spi->dev.of_node;
+#endif
 	psy_cfg.drv_data = data;
 	data->bat = devm_power_supply_register(&spi->dev, &bat_desc, &psy_cfg);
 	if (IS_ERR(data->bat)) {
