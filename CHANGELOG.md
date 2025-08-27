@@ -1,3 +1,18 @@
+1.77 (2025-08-27)
+=================
+
+ * bin/reform-mcu-tool: read Version from DS20 quirk data
+ * bin/reform-check:
+    - demote missing depends from 'W:' to 'I:'
+    - print version of the system image that the system was installed from
+    - try to infer how the system was booted
+    - add additional platforms on which /etc/flash-kernel/machine is not needed
+    - suggest to remove reform-qcacld2 if not on the i.mx8m+
+    - print version of system controller and keyboard firmware on the pocket
+    - reform-help was never removed from /etc/skel/profile
+ * bin/reform-hw-setup: select soundcard by name, not by number
+ * reform2_lpc.c: switch from of_node to fwnode in 6.17 or later
+
 1.76 (2025-07-19)
 =================
 
