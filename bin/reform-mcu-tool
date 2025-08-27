@@ -252,7 +252,6 @@ def _read_bos_descriptor(handle: usb1.USBDeviceHandle) -> None | BOSDescriptor:
     try:
         bos_data = handle.controlRead(request_type, usb1.REQUEST_GET_DESCRIPTOR, request_value, 0, 5, timeout=timeout)
     except usb1.USBErrorPipe:
-        print("nah")
         return None  # unsupported
 
     descriptor = BOSDescriptor.parse(bos_data)
