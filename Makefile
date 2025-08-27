@@ -55,8 +55,11 @@ man/%.1: bin/%
 		--no-discard-stderr "$*"                                      \
 		--output="$@";                                                \
 
+plymouth/background.png: ./share/backgrounds/mnt-reform-next-y2k.jpg
+	convert $< -resize 1920x1080 $@
+
 .PHONY: install
-install: $(MAN1)
+install: $(MAN1) plymouth/background.png
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/NetworkManager/conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/NetworkManager/conf.d NetworkManager/default-wifi-powersave-off.conf
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/udev/rules.d
@@ -111,10 +114,27 @@ install: $(MAN1)
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/rk3588-tlv320ai/
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/rk3588-tlv320ai/ audio/ucm2.conf.d/rk3588-tlv320ai/rk3588-tlv320aic3100.conf
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/rk3588-tlv320ai/ audio/ucm2.conf.d/rk3588-tlv320ai/HiFi.conf
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k
+	set -e; for f in bullet capslock entry keyboard keymap-render lock; do \
+		ln --symbolic --no-target-directory ../spinner/$${f}.png $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/$${f}.png; \
+	done
+		#$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/ "plymouth/$${f}.png";
+	set -e; for i in $$(seq 1 36); do \
+		filename=$$(printf "animation-%04d.png" "$$i"); \
+		ln --symbolic --no-target-directory ../spinner/$$filename $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/$$filename; \
+	done
+		#$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/ "plymouth/$$filename";
+	set -e; for i in $$(seq 1 30); do \
+		filename=$$(printf "throbber-%04d.png" "$$i"); \
+		ln --symbolic --no-target-directory ../spinner/$$filename $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/$$filename; \
+	done
+		#$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/ "plymouth/$$filename";
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k plymouth/background.png
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k plymouth/reform-y2k.plymouth
 
 .PHONY: clean
 clean:
-	rm -f man/*.1
+	rm -f man/*.1 plymouth/background.png
 
 .PHONY: lint
 lint:
