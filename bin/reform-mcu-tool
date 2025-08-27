@@ -39,7 +39,7 @@ from typing import Tuple
 try:
     import usb1
 except ModuleNotFoundError as except_inst:
-    print('E: Library "usb1" not found, please install python3-usb1.')
+    print('E: Library "usb1" not found, please install python3-usb1.', file=sys.stderr)
     sys.exit(4)
 
 
@@ -344,11 +344,11 @@ def read_bos_ds20_version(device: usb1.USBDevice) -> str | None:
 def action_bootsel(args, device: usb1.USBDevice):
     target_flags = MCU_TYPES[args.target][2]
     if target_flags & IS_RP_BOOTROM:
-        print("E: Device is already in bootrom.")
+        print("E: Device is already in bootrom.", file=sys.stderr)
         return 2
 
     if (reset_interface := find_reset_interface(device)) is None:
-        print("E: Could not find Reset USB Interface.")
+        print("E: Could not find Reset USB Interface.", file=sys.stderr)
         return 1
 
     serial_number = device.getSerialNumber()
@@ -363,7 +363,7 @@ def action_reset(args, device: usb1.USBDevice):
     target_flags = MCU_TYPES[args.target][2]
     if target_flags & IS_APP:
         if (reset_interface := find_reset_interface(device)) is None:
-            print("E: Could not find Reset USB Interface.")
+            print("E: Could not find Reset USB Interface.", file=sys.stderr)
             return 1
 
         print(f"I: Resetting device")
@@ -372,7 +372,7 @@ def action_reset(args, device: usb1.USBDevice):
 
     elif target_flags & IS_RP_BOOTROM:
         if (reset_interface := find_picoboot_interface(device)) is None:
-            print("E: Could not find PICOBOOT USB Interface.")
+            print("E: Could not find PICOBOOT USB Interface.", file=sys.stderr)
             return 1
 
         print(f"I: Resetting bootrom into application")
@@ -444,7 +444,7 @@ def run(args, usb_context: usb1.USBContext) -> int:
         (vid, pid, _) = MCU_TYPES[args.target]
         device = usb_context.getByVendorIDAndProductID(vid, pid, skip_on_error=True)
         if not device:
-            print(f"E: USB device with Vendor-ID {vid} Product-ID {pid} not found.")
+            print(f"E: USB device with Vendor-ID {vid} Product-ID {pid} not found.", file=sys.stderr)
             return 1
 
         print(
@@ -463,7 +463,7 @@ def main() -> int:
         with usb1.USBContext() as usb_context:
             return run(args, usb_context)
     except usb1.USBErrorAccess:
-        print("E: Accessing USB devices failed. -- Maybe you need to be root / use sudo.")
+        print("E: Accessing USB devices failed. -- Maybe you need to be root / use sudo.", file=sys.stderr)
         return 3
 
 
