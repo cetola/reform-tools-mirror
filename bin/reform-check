@@ -240,7 +240,7 @@ if test -e /boot/boot.scr; then
   HAVE_BOOTSCR=yes
 fi
 HAVE_EXTLINUX=no
-if test -e /extlinux/extlinux.conf; then
+if test -e /boot/extlinux/extlinux.conf; then
   HAVE_BOOTSCR=yes
 fi
 HAVE_FLASH_KERNEL=no
@@ -254,30 +254,30 @@ fi
 
 case "$HAVE_BOOTSCR$HAVE_EXTLINUX" in
   nono)
-    echo "W: neither /boot/boot.scr nor /extlinux/extlinux.conf exists" >&2
+    echo "W: neither /boot/boot.scr nor /boot/extlinux/extlinux.conf exists" >&2
     case "$HAVE_FLASH_KERNEL$HAVE_U_BOOT_MENU" in
       nono) echo "E: neither flash-kernel nor u-boot-menu are installed" >&2 ;;
-      noyes) echo "E: /extlinux/extlinux.conf should exist because u-boot-menu is installed" >&2 ;;
+      noyes) echo "E: /boot/extlinux/extlinux.conf should exist because u-boot-menu is installed" >&2 ;;
       yesno) echo "E: /boot/boot.scr should exist because flash-kernel is installed" >&2 ;;
       yesyes) echo "E: both files should exist as both flash-kernel and u-boot-menu are installed" >&2 ;;
     esac
     ;;
   noyes)
-    echo "I: probably booting via /extlinux/extlinux.conf (/boot/boot.scr does not exist)" >&2
+    echo "I: probably booting via /boot/extlinux/extlinux.conf (/boot/boot.scr does not exist)" >&2
     if [ "$HAVE_U_BOOT_MENU" = "no" ]; then
-      echo "W: /extlinux/extlinux.conf is not managed by u-boot-menu (not installed)" >&2
+      echo "W: /boot/extlinux/extlinux.conf is not managed by u-boot-menu (not installed)" >&2
     fi
     ;;
   yesno)
-    echo "I: probably booting via /boot/boot.scr (/extlinux/extlinux.conf does not exist)" >&2
+    echo "I: probably booting via /boot/boot.scr (/boot/extlinux/extlinux.conf does not exist)" >&2
     if [ "$HAVE_FLASH_KERNEL" = "no" ]; then
       echo "W: /boot/boot.scr is not managed by flash-kernel (not installed)" >&2
     fi
     ;;
   yesyes)
-    echo "I: probably booting via /extlinux/extlinux.conf (/boot/boot.scr also exists)" >&2
+    echo "I: probably booting via /boot/extlinux/extlinux.conf (/boot/boot.scr also exists)" >&2
     if [ "$HAVE_U_BOOT_MENU" = "no" ]; then
-      echo "W: /extlinux/extlinux.conf is not managed by u-boot-menu (not installed)" >&2
+      echo "W: /boot/extlinux/extlinux.conf is not managed by u-boot-menu (not installed)" >&2
     fi
     if [ "$HAVE_FLASH_KERNEL" = "no" ]; then
       echo "W: /boot/boot.scr is not managed by flash-kernel (not installed)" >&2
