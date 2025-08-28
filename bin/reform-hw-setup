@@ -78,15 +78,15 @@ init_wm8960() {
 
 init_tlv320aic3100() {
   # Set up speaker on MNT Pocket Reform
-  amixer -c 0 sset 'Speaker Driver' on
-  amixer -c 0 sset 'Output Left From Left DAC' on
-  amixer -c 0 sset 'Output Right From Right DAC' on
-  amixer -c 0 sset 'Speaker Analog' 127
-  amixer -c 0 sset 'DAC' 127
-  amixer -c 0 sset 'HP Analog' 127
-  amixer -c 0 sset 'HP Driver' on
-  amixer -c 0 sset 'HP Left' on
-  amixer -c 0 sset 'HP Right' on
+  amixer -c "$1" sset 'Speaker Driver' on
+  amixer -c "$1" sset 'Output Left From Left DAC' on
+  amixer -c "$1" sset 'Output Right From Right DAC' on
+  amixer -c "$1" sset 'Speaker Analog' 127
+  amixer -c "$1" sset 'DAC' 127
+  amixer -c "$1" sset 'HP Analog' 127
+  amixer -c "$1" sset 'HP Driver' on
+  amixer -c "$1" sset 'HP Left' on
+  amixer -c "$1" sset 'HP Right' on
 }
 
 init_qca9377_wifi() {
@@ -173,11 +173,11 @@ case "$(cat /proc/device-tree/model)" in
     ;;
   "MNT Pocket Reform with i.MX8MP Module")
     init_qca9377_wifi || echo "W: init_qca9377_wifi failed" >&2
-    init_tlv320aic3100
+    init_tlv320aic3100 0
     ;;
   "MNT Pocket Reform with BPI-CM4 Module")
     init_a311d
-    init_tlv320aic3100
+    init_tlv320aic3100 0
     ;;
   "MNT Reform 2 with i.MX8MP Module")
     init_wm8960 0
@@ -193,11 +193,11 @@ case "$(cat /proc/device-tree/model)" in
     ;;
   "MNT Pocket Reform with RCORE RK3588 Module")
     init_rk3588
-    init_tlv320aic3100
+    init_tlv320aic3100 rk3588tlv320aic
     ;;
   "MNT Reform Next with RCORE RK3588 Module")
     init_rk3588
-    init_tlv320aic3100
+    init_tlv320aic3100 rk3588tlv320aic
     ;;
   *)
     echo "E: Your platform $(cat /proc/device-tree/model) is not supported by reform-tools" >&2
