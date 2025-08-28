@@ -241,7 +241,7 @@ if test -e /boot/boot.scr; then
 fi
 HAVE_EXTLINUX=no
 if test -e /boot/extlinux/extlinux.conf; then
-  HAVE_BOOTSCR=yes
+  HAVE_EXTLINUX=yes
 fi
 HAVE_FLASH_KERNEL=no
 if dpkg-query --showformat '${db:Status-Status}\n' --show "flash-kernel" 2>/dev/null | grep -q '^installed$'; then
