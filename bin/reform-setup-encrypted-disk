@@ -283,6 +283,15 @@ if [ "$FORCE" = true ]; then
 else
   cryptsetup luksFormat "$DEVICE_PATH"
 fi
+
+# Check if the user supplied the empty string as the passphrase.
+# Theoretically this should work but the initramfs integration seems to not be
+# able to cope with an empty passphrase. TODO: file bug?
+if echo | cryptsetup luksOpen "$DEVICE_PATH" reform_crypt --test-passphrase 2>/dev/null; then
+  echo "E: an empty passphrase is not supported by the Debian initramfs" >&2
+  exit 1
+fi
+
 trap "cleanupluks; error" EXIT INT TERM
 if [ "$FORCE" = true ]; then
   printf "%s" "$PASSPHRASE" | cryptsetup luksOpen --key-file=- "$DEVICE_PATH" reform_crypt
