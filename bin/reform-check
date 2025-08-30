@@ -393,7 +393,7 @@ fi
 
 if [ "$EMMC_USE" = true ] && [ ! -e "/dev/${DEV_MMC}p2" ]; then
   echo "W: /dev/${DEV_MMC}p2 doesn't exist." >&2
-  echo "W: To update your eMMC to sysimage-v4 you can run reform-flash-rescue" >&2
+  echo "W: To update your eMMC to sysimage-v5 you can run reform-flash-rescue" >&2
   echo "W: Only run reform-flash-rescue if you intend a factory-reset of your eMMC" >&2
   echo "W: Do not use reform-flash-rescue if you boot from eMMC because this will overwrite your /boot partition" >&2
 fi
