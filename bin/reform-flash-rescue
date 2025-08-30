@@ -11,33 +11,71 @@ usage() {
   echo "filesystem and adjusts filesystem labels." >&2
   echo "Calls reform-boot-config to set up /boot on eMMC to load the rootfs from eMMC." >&2
   echo >&2
-  echo "Usage: $0 [--help] [--mirror={mntre.com,reform.debian.net}]" >&2
+  echo "Usage: $0 [--help] [--force] [--mirror={mntre.com,reform.debian.net}]" >&2
   echo >&2
   echo "Options:" >&2
   echo "  --help           Display this help and exit." >&2
   echo "  --mirror=MIRROR  Force MIRROR, either mntre.com (default) or reform.debian.net" >&2
+  echo "  -f, --force      No user interaction, overwriting data without confirmation" >&2
+  echo "                   and flash to devices marked as 'warn'" >&2
 }
 
-if [ "$#" -gt 1 ]; then
-  echo "E: incorrect number of arguments" >&2
-  exit 1
-fi
-
-if [ "$#" -gt 0 ] && [ "$1" = "--help" ]; then
-  usage
-  exit 0
-fi
-
+FORCE=false
 MIRROR="mntre.com"
-if [ "$#" -gt 0 ]; then
-  case $1 in
-    --mirror=mntre.com) MIRROR="mntre.com" ;;
-    --mirror=reform.debian.net) MIRROR="reform.debian.net" ;;
+while getopts :h-: OPTCHAR; do
+  case "$OPTCHAR" in
+    h)
+      usage
+      exit 0
+      ;;
+    -)
+      case "$OPTARG" in
+        help)
+          usage
+          exit 0
+          ;;
+        force) FORCE=true ;;
+        mirror)
+          if [ "$OPTIND" -gt "$#" ]; then
+            echo "E: missing argument for --mirror" >&2
+            exit 1
+          fi
+          MIRROR="$(nth_arg "$OPTIND" "$@")"
+          OPTIND=$((OPTIND + 1))
+          ;;
+        mirror=*)
+          MIRROR="${OPTARG#*=}"
+          ;;
+        *)
+          echo "E: unrecognized option: --$OPTARG" >&2
+          exit 1
+          ;;
+      esac
+      ;;
+    :)
+      echo "E: missing argument for -$OPTARG" >&2
+      exit 1
+      ;;
+    '?')
+      echo "E: unrecognized option -$OPTARG" >&2
+      exit 1
+      ;;
     *)
-      echo "E: invalid argument for --mirror" >&2
+      echo "E: error parsing options" >&2
       exit 1
       ;;
   esac
+done
+shift "$((OPTIND - 1))"
+
+if [ "$#" -gt 0 ]; then
+  usage
+  exit 1
+fi
+
+if [ "$MIRROR" != "mntre.com" ] && [ "$MIRROR" != "reform.debian.net" ]; then
+  echo "E: invalid value for --mirror: $MIRROR -- only mntre.com and reform.debian.net are supported" >&2
+  exit 1
 fi
 
 # shellcheck source=/dev/null
@@ -60,8 +98,13 @@ case $EMMC_USE in
     echo "W: For example, flashing the wrong u-boot or if the flashing process goes wrong, it is" >&2
     echo "W: possible to soft-brick your board. Restoring it might need some extra hardware." >&2
     echo "W: Please only proceed if you are sure that the benefits outweigh the risks for you." >&2
-    printf "Are you sure you want to proceed? [y/N] "
-    read -r response
+    if [ "$FORCE" = true ]; then
+      echo "Proceeding without user interaction because of --force" >&2
+      response="y"
+    else
+      printf "Are you sure you want to proceed? [y/N] "
+      read -r response
+    fi
 
     if [ "$response" != "y" ]; then
       echo "Exiting."
@@ -76,8 +119,13 @@ if [ "$EMMC_BOOT" != false ]; then
     echo "W: If you flash the wrong u-boot or if the flashing process goes wrong, it is" >&2
     echo "W: possible to soft-brick your board. Restoring it might need some extra hardware." >&2
     echo "W: Please only proceed if you are sure that the benefits outweigh the risks for you." >&2
-    printf "Are you sure you want to proceed? [y/N] "
-    read -r response
+    if [ "$FORCE" = true ]; then
+      echo "Proceeding without user interaction because of --force" >&2
+      response="y"
+    else
+      printf "Are you sure you want to proceed? [y/N] "
+      read -r response
+    fi
 
     if [ "$response" != "y" ]; then
       echo "Exiting."
@@ -95,8 +143,14 @@ if [ "$EMMC_BOOT" != false ]; then
   fi
 
   if [ ! -e /boot/flash.bin ]; then
-    printf "/boot/flash.bin doesn't exist, should reform-flash-uboot be run to download it? [y/N] "
-    read -r response
+    echo "/boot/flash.bin doesn't exist" >&2
+    if [ "$FORCE" = true ]; then
+      echo "Running reform-flash-uboot without user interaction because of --force" >&2
+      response="y"
+    else
+      printf "Should reform-flash-uboot be run to download it? [y/N] "
+      read -r response
+    fi
 
     if [ "$response" != "y" ]; then
       echo "Exiting."
@@ -116,15 +170,24 @@ if [ "$EMMC_BOOT" != false ]; then
   echo "WARNING: This overwrites the bootloader on the eMMC rescue disk with the" >&2
   echo "backup stored as /boot/flash.bin!" >&2
 
-  printf "Are you sure you want to proceed? [y/N] "
-  read -r response
+  if [ "$FORCE" = true ]; then
+    echo "Proceeding without user interaction because of --force" >&2
+    response="y"
+  else
+    printf "Are you sure you want to proceed? [y/N] "
+    read -r response
+  fi
 
   if [ "$response" != "y" ]; then
     echo "Exiting."
     exit
   fi
 
-  reform-flash-uboot --offline emmc
+  if [ "$FORCE" = true ]; then
+    reform-flash-uboot --force --offline emmc
+  else
+    reform-flash-uboot --offline emmc
+  fi
 
   echo "Bootloader was successfully written to /dev/${DEV_MMC}boot0." >&2
   echo "" >&2
@@ -134,9 +197,14 @@ echo "Do you want to download and install the latest sysimage-v5 to eMMC as well
 echo "This step needs a working internet connection and either wget or curl installed." >&2
 echo "" >&2
 echo "WARNING: This overwrites partitions on eMMC, deleting all data." >&2
-printf "Are you sure you want to proceed? [y/N] "
 
-read -r response
+if [ "$FORCE" = true ]; then
+  echo "Proceeding without user interaction because of --force" >&2
+  response="y"
+else
+  printf "Are you sure you want to proceed? [y/N] "
+  read -r response
+fi
 
 if [ "$response" != "y" ]; then
   echo "Exiting."
@@ -152,9 +220,13 @@ if [ "$MIRROR" = "mntre.com" ]; then
     echo "reform.debian.net. Do you want to flash the system image from reform.debian.net" >&2
     echo 'to your eMMC? If you answer anything but "y", the official MNT system image will' >&2
     echo "be downloaded and written to eMMC instead." >&2
-    printf "Do you want to download and use the rescue system image from reform.debian.net? [y/N] "
-
-    read -r response
+    if [ "$FORCE" = true ]; then
+      echo "Proceeding without user interaction because of --force" >&2
+      response="y"
+    else
+      printf "Do you want to download and use the rescue system image from reform.debian.net? [y/N] "
+      read -r response
+    fi
     if [ "$response" = "y" ]; then
       # no need to use the backports kernel because a311d is not
       # allowed to write to emmc anyways
@@ -221,7 +293,11 @@ e2label "/dev/${DEV_MMC}p2" reformemmcroot
 # We use --no-copy-old-boot because by flashing the system image, the new /boot
 # partition already has the correct contents and we don't want to use the /boot
 # partition of the current system as that one might be wildly different.
-reform-boot-config --no-copy-old-boot --emmc emmc
+if [ "$FORCE" = true ]; then
+  reform-boot-config --force --no-copy-old-boot --emmc emmc
+else
+  reform-boot-config --no-copy-old-boot --emmc emmc
+fi
 
 case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
   echo "If the SoM dip switch is turned off and no SD-Card is present, your" >&2
