@@ -286,9 +286,9 @@ fi
 
 # Check if the user supplied the empty string as the passphrase.
 # Theoretically this should work but the initramfs integration seems to not be
-# able to cope with an empty passphrase. TODO: file bug?
+# able to cope with an empty passphrase, see https://bugs.debian.org/1112484
 if echo | cryptsetup luksOpen "$DEVICE_PATH" reform_crypt --test-passphrase 2>/dev/null; then
-  echo "E: an empty passphrase is not supported by the Debian initramfs" >&2
+  echo "E: an empty passphrase is not supported by cryptsetup-initramfs, see #1112484" >&2
   exit 1
 fi
 
