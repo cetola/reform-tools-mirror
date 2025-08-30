@@ -403,10 +403,11 @@ fi
 set -- "/dev/$BOOTPART" "$@"
 mount "/dev/$BOOTPART" "$MOUNTROOT/boot"
 
+# find the device that was mounted as /boot according to the /etc/fstab in the
+# given rootfs
+OLDBOOTPART="$(LIBMOUNT_FSTAB="$MOUNTROOT/etc/fstab" findmnt --fstab --noheadings --evaluate --mountpoint /boot --output SOURCE || :)"
+
 if [ "$COPY_OLDBOOT" = true ]; then
-  # find the device that was mounted as /boot according to the /etc/fstab in the
-  # given rootfs
-  OLDBOOTPART="$(LIBMOUNT_FSTAB="$MOUNTROOT/etc/fstab" findmnt --fstab --noheadings --evaluate --mountpoint /boot --output SOURCE || :)"
   if [ -z "$OLDBOOTPART" ]; then
     echo "cannot find /boot device referenced by /etc/fstab in rootfs at /dev/$ROOTPART" >&2
     exit 1
@@ -552,10 +553,11 @@ case "$(cat /proc/device-tree/model)" in
   "MNT Pocket Reform with "*) PLATFORM_HUMAN="MNT Pocket Reform" ;;
   "MNT Reform Next with "*) PLATFORM_HUMAN="MNT Reform Next" ;;
   "MNT Reform 2" | "MNT Reform 2 HDMI") PLATFORM_HUMAN="Reform 2" ;;
+  "MNT Reform 2 with "*) PLATFORM_HUMAN="MNT Reform" ;;
   "MNT "*) PLATFORM_HUMAN="MNT Reform (unknown)" ;;
 esac
 
-if [ "$EMMC" = true ] && [ -n "${OLDBOOTPART-}" ]; then
+if [ "$EMMC" = true ]; then
   echo "Your /boot partition is on emmc (/dev/$BOOTPART)." >&2
   # If the current system runs on SD-card and the user set up /boot on eMMC
   # then they need to remove the SD-card before booting again or otherwise
