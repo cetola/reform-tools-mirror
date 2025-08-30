@@ -116,17 +116,17 @@ install: $(MAN1) plymouth/background.png
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/rk3588-tlv320ai/ audio/ucm2.conf.d/rk3588-tlv320ai/HiFi.conf
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k
 	set -e; for f in bullet capslock entry keyboard keymap-render lock; do \
-		ln --symbolic --no-target-directory ../spinner/$${f}.png $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/$${f}.png; \
+		ln --force --symbolic --no-target-directory ../spinner/$${f}.png $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/$${f}.png; \
 	done
 		#$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/ "plymouth/$${f}.png";
 	set -e; for i in $$(seq 1 36); do \
 		filename=$$(printf "animation-%04d.png" "$$i"); \
-		ln --symbolic --no-target-directory ../spinner/$$filename $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/$$filename; \
+		ln --force --symbolic --no-target-directory ../spinner/$$filename $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/$$filename; \
 	done
 		#$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/ "plymouth/$$filename";
 	set -e; for i in $$(seq 1 30); do \
 		filename=$$(printf "throbber-%04d.png" "$$i"); \
-		ln --symbolic --no-target-directory ../spinner/$$filename $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/$$filename; \
+		ln --force --symbolic --no-target-directory ../spinner/$$filename $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/$$filename; \
 	done
 		#$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/ "plymouth/$$filename";
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k plymouth/background.png
