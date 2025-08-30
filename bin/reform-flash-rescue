@@ -95,8 +95,14 @@ if [ "$EMMC_BOOT" != false ]; then
   fi
 
   if [ ! -e /boot/flash.bin ]; then
-    echo "/boot/flash.bin doesn't exist" >&2
-    exit 1
+    printf "/boot/flash.bin doesn't exist, should reform-flash-uboot be run to download it? [y/N] "
+    read -r response
+
+    if [ "$response" != "y" ]; then
+      echo "Exiting."
+      exit 1
+    fi
+    reform-flash-uboot
   fi
 
   for p in $(lsblk --list --noheadings --output=NAME "/dev/$DEV_MMC") "${DEV_MMC}boot0" "${DEV_MMC}boot1"; do
