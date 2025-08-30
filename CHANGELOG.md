@@ -1,3 +1,19 @@
+1.78 (2025-08-30)
+=================
+
+ * reform-mcu-tool:
+    - handle non-root better
+    - drop leftover debug print
+    - handle usb1 missing better
+    - send errors to stderr
+ * bin/reform-check:
+    - fix copypaste error HAVE_BOOTSCR=yes -> HAVE_EXTLINUX=yes
+    - remove errornous .conf suffix in comparison
+ * bin/reform-hw-setup: select soundcard by name, not by number
+ * bin/reform-setup-encrypted-disk: disallow empty passphrase
+ * Add reform-y2k plymouth theme based on the two-step module
+ * bin/reform-flash-rescue: add --force argument for unattended operation
+
 1.77 (2025-08-27)
 =================
 
