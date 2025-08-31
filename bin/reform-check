@@ -772,7 +772,11 @@ else
     ubootsize=$(stat --format=%s "$ubootbin")
 
     if [ "$EMMC_BOOT" != false ]; then
-      if cmp --quiet --bytes="$((ubootsize - FLASHBIN_OFFSET))" "--ignore-initial=$FLASHBIN_OFFSET:$UBOOT_OFFSET" "$ubootbin" "/dev/${DEV_MMC}boot0" 2>/dev/null; then
+      realdev="/dev/${DEV_MMC}"
+      if [ "$DEV_MMC_BOOT0" = true ]; then
+        realdev="/dev/${DEV_MMC}boot0"
+      fi
+      if cmp --quiet --bytes="$((ubootsize - FLASHBIN_OFFSET))" "--ignore-initial=$FLASHBIN_OFFSET:$UBOOT_OFFSET" "$ubootbin" "$realdev" 2>/dev/null; then
         echo "I: eMMC contains the latest u-boot version ${UBOOT_TAG}" >&2
       else
         echo "W: eMMC does not contain latest uboot" >&2
