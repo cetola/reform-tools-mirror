@@ -377,14 +377,10 @@ fi
 
 if [ -z "$(findmnt --fstab --noheadings --evaluate --mountpoint /boot --output SOURCE)" ]; then
   echo "E: your /etc/fstab does not have an entry for /boot" >&2
-  if [ "$EMMC_BOOT" = true ]; then
-    echo "E: for eMMC booting, add:" >&2
-    echo "/dev/${DEV_MMC}p1 /boot auto errors=remount-ro 0 1" >&2
-  fi
-  if [ "$SD_BOOT" = true ]; then
-    echo "E: for SD-Card booting, add:" >&2
-    echo "/dev/${DEV_SD}p1 /boot auto errors=remount-ro 0 1" >&2
-  fi
+  echo "E: for eMMC booting, add:" >&2
+  echo "/dev/${DEV_MMC}p1 /boot auto errors=remount-ro 0 1" >&2
+  echo "E: for SD-Card booting, add:" >&2
+  echo "/dev/${DEV_SD}p1 /boot auto errors=remount-ro 0 1" >&2
 fi
 
 if ! mountpoint --quiet /boot; then
