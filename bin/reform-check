@@ -219,10 +219,29 @@ fi
 
 case "$(cat /proc/device-tree/model)" in
   "MNT Pocket Reform with "*" Module")
+    if [ "$OFFLINE" != "yes" ] && [ ! -e /var/cache/fwupd/metadata.xmlb ] && command -v fwupdtool >/dev/null; then
+      echo "I: running fwupdtool refresh" >&2
+      fwupdtool refresh
+    fi
+    # fwupd might add functionality in the future to perform the below for us
+    # https://github.com/fwupd/fwupd/issues/9192
+    LATEST_SYS_VER=""
+    if command -v xb-tool >/dev/null && [ -e /var/cache/fwupd/metadata.xmlb ]; then
+      LATEST_SYS_VER=$(xb-tool query /var/cache/fwupd/metadata.xmlb "components/component/id[text()='com.mntre.pocket_reform.sysctl10.firmware']/../releases/release[1]")
+    elif [ "$OFFLINE" != "yes" ] && command -v unxz >/dev/null && command -v curl >/dev/null && command -v xmllint >/dev/null; then
+      LATEST_SYS_VER=$(curl --silent https://fwupd.org//downloads/firmware.xml.xz | unxz | xmllint --xpath "string(/components/component[id[text()='com.mntre.pocket_reform.sysctl10.firmware']]/releases/release[1]/@version)" -)
+    fi
+    if [ -z "$LATEST_SYS_VER" ]; then
+      echo "I: To retrieve the latest firmware versions either install libxmlb-utils or install curl, xz-utils and libxml2-utils" >&2
+    fi
+
     # FIXME: make reform-mcu-tool list output machine readable
     SYS_VER="$(reform-mcu-tool list | sed -ne 's/Target pocket-sysctl-1.0 ID .* Version //p')"
     if [ -n "$SYS_VER" ]; then
       echo "I: Version of system controller firmware: $SYS_VER" >&2
+      if [ -n "$LATEST_SYS_VER" ]; then
+        echo "I: Latest version of system controller firmware: $LATEST_SYS_VER" >&2
+      fi
     else
       echo "W: unable to obtain version of system controller firmware -- firmware too old?" >&2
     fi
