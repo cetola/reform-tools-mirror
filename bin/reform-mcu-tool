@@ -324,7 +324,7 @@ def _read_bos_ds20_version(handle: usb1.USBDeviceHandle) -> str | None:
         if version_format != "number":
             print(f"W: VersionFormat {version_format} not understood, ignoring")
             continue
-        return int(version)
+        return version
 
     return None
 
