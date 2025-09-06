@@ -297,7 +297,6 @@ def _read_bos_ds20_version(handle: usb1.USBDeviceHandle) -> str | None:
             continue
 
         # Read quirk data from device (in UTF-8).
-        bmRequestType = usb1.TYPE_VENDOR | usb1.RECIPIENT_DEVICE
         response = handle.controlRead(
             usb1.TYPE_VENDOR | usb1.RECIPIENT_DEVICE,
             ds20_desc.bVendorCode,
