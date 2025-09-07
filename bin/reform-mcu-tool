@@ -31,6 +31,8 @@ To reset the RP2040 bootrom back into the application:
 """
 
 import argparse
+import enum
+import json
 import struct
 import sys
 from dataclasses import dataclass
@@ -53,11 +55,101 @@ USB_PID_RASPBERRY_RP2350_BOOT = 0x000F
 IS_APP = 0b0000_0001
 IS_RP_BOOTROM = 0b0000_0010
 
+
+class Bus(enum.StrEnum):
+    USB = "usb"
+
+
+class TargetMode(enum.StrEnum):
+    Runtime = "runtime"
+    Bootloader = "bootloader"
+
+
+class TargetFlags(enum.StrEnum):
+    RP_PICO = "rp-pico"
+    FWUPD_SUPPORTED = "fwupd-supported"
+
+
+@dataclass(kw_only=True)
+class TargetDevice:
+    vid: int
+    pid: int
+    name: str
+    description: str
+    bus: Bus
+    mode: TargetMode
+    flags: list[TargetFlags]
+
+    def to_dict(self):
+        return {
+            "vid": f"{self.vid:04x}",
+            "pid": f"{self.pid:04x}",
+            "name": self.name,
+            "description": self.description,
+            "bus": self.bus,
+            "mode": self.mode,
+            "flags": self.flags,
+        }
+
+
+@dataclass(kw_only=True)
+class DetectedDevice:
+    device: TargetDevice
+    version: str | None
+    serial_number: str
+    bus_number: str
+    bus_address: str
+
+    def to_dict(self):
+        return {
+            "device": self.device.to_dict(),
+            "version": self.version,
+            "serial_number": self.serial_number,
+            "bus_number": self.bus_number,
+            "bus_address": self.bus_address,
+        }
+
+
 MCU_TYPES = {
-    "pocket-input-1.0": (USB_VID_PIDCODES, USB_PID_MNT_POCKET_REFORM_INPUT_10, IS_APP),
-    "pocket-sysctl-1.0": (USB_VID_PIDCODES, USB_PID_MNT_POCKET_REFORM_SYSCTL_10, IS_APP),
-    "rp2040-boot": (USB_VID_RASPBERRY, USB_PID_RASPBERRY_RP2040_BOOT, IS_RP_BOOTROM),
-    "rp2350-boot": (USB_VID_RASPBERRY, USB_PID_RASPBERRY_RP2350_BOOT, IS_RP_BOOTROM),
+    device.name: device
+    for device in [
+        TargetDevice(
+            vid=USB_VID_PIDCODES,
+            pid=USB_PID_MNT_POCKET_REFORM_INPUT_10,
+            name="pocket-input-1.0",
+            description="MNT Pocket Reform Input 1.0",
+            bus=Bus.USB,
+            mode=TargetMode.Runtime,
+            flags=[TargetFlags.RP_PICO, TargetFlags.FWUPD_SUPPORTED],
+        ),
+        TargetDevice(
+            vid=USB_VID_PIDCODES,
+            pid=USB_PID_MNT_POCKET_REFORM_SYSCTL_10,
+            name="pocket-sysctl-1.0",
+            description="MNT Pocket Reform System Controller 1.0",
+            bus=Bus.USB,
+            mode=TargetMode.Runtime,
+            flags=[TargetFlags.RP_PICO, TargetFlags.FWUPD_SUPPORTED],
+        ),
+        TargetDevice(
+            vid=USB_VID_RASPBERRY,
+            pid=USB_PID_RASPBERRY_RP2040_BOOT,
+            name="rp2040-boot",
+            description="Raspberry Pi Pico RP2040 Boot ROM",
+            bus=Bus.USB,
+            mode=TargetMode.Bootloader,
+            flags=[TargetFlags.RP_PICO],
+        ),
+        TargetDevice(
+            vid=USB_VID_RASPBERRY,
+            pid=USB_PID_RASPBERRY_RP2350_BOOT,
+            name="rp2350-boot",
+            description="Raspberry Pi Pico RP2350 Boot ROM",
+            bus=Bus.USB,
+            mode=TargetMode.Bootloader,
+            flags=[TargetFlags.RP_PICO],
+        ),
+    ]
 }
 
 RESET_INTERFACE_SUBCLASS = 0
@@ -341,9 +433,9 @@ def read_bos_ds20_version(device: usb1.USBDevice) -> str | None:
 
 
 def action_bootsel(args, device: usb1.USBDevice):
-    target_flags = MCU_TYPES[args.target][2]
-    if target_flags & IS_RP_BOOTROM:
-        print("E: Device is already in bootrom.", file=sys.stderr)
+    target = MCU_TYPES[args.target]
+    if target.mode == TargetMode.Bootloader:
+        print("E: Device is already in boot loader.", file=sys.stderr)
         return 2
 
     if (reset_interface := find_reset_interface(device)) is None:
@@ -359,8 +451,8 @@ def action_bootsel(args, device: usb1.USBDevice):
 
 
 def action_reset(args, device: usb1.USBDevice):
-    target_flags = MCU_TYPES[args.target][2]
-    if target_flags & IS_APP:
+    target = MCU_TYPES[args.target]
+    if target.mode == TargetMode.Runtime:
         if (reset_interface := find_reset_interface(device)) is None:
             print("E: Could not find Reset USB Interface.", file=sys.stderr)
             return 1
@@ -369,7 +461,7 @@ def action_reset(args, device: usb1.USBDevice):
         handle = device.open()
         device_reset(handle, reset_interface, RESET_REQUEST_FLASH)
 
-    elif target_flags & IS_RP_BOOTROM:
+    elif target.mode == TargetMode.Bootloader and TargetFlags.RP_PICO in target.flags:
         if (reset_interface := find_picoboot_interface(device)) is None:
             print("E: Could not find PICOBOOT USB Interface.", file=sys.stderr)
             return 1
@@ -381,25 +473,38 @@ def action_reset(args, device: usb1.USBDevice):
 
 
 def action_list(args, usb_context: usb1.USBContext):
+    devices = []
     for device in usb_context.getDeviceIterator(skip_on_error=True):
         vid = device.getVendorID()
         pid = device.getProductID()
 
-        for mcu_name, (mcu_vid, mcu_pid, flags) in MCU_TYPES.items():
-            if (vid, pid) != (mcu_vid, mcu_pid):
+        for mcu_name, target in MCU_TYPES.items():
+            if (vid, pid) != (target.vid, target.pid):
                 continue
 
-            device_info = (
-                f"Target {mcu_name} ID {vid:04x}:{pid:04x} Serial# {device.getSerialNumber()} "
-                f"USB bus {device.getBusNumber()} address {device.getDeviceAddress()}"
+            version_info = read_bos_ds20_version(device)
+            detected_device = DetectedDevice(
+                device=target,
+                version=version_info,
+                serial_number=device.getSerialNumber(),
+                bus_number=device.getBusNumber(),
+                bus_address=device.getDeviceAddress(),
             )
 
-            version_info = read_bos_ds20_version(device)
-            if version_info:
-                device_info += f" Version {version_info}"
-
-            print(device_info)
+            if args.json:
+                devices.append(detected_device)
+            else:
+                device_info = (
+                    f'Target {target.name} "{target.description}" ID {target.vid:04x}:{target.pid:04x} Serial# {device.getSerialNumber()} '
+                    f"USB bus {device.getBusNumber()} address {device.getDeviceAddress()}"
+                )
+                if version_info:
+                    device_info += f" Version {version_info}"
+                print(device_info)
             break
+
+    if args.json:
+        print(json.dumps([device.to_dict() for device in devices], indent=2))
 
     return 0
 
@@ -430,6 +535,12 @@ def parse_args():
 
     parser_list = subparsers.add_parser("list", help="List USB devices matching known VID/PIDs")
     parser_list.set_defaults(func=action_list)
+    parser_list.add_argument(
+        "--json",
+        default=False,
+        action="store_true",
+        help=f"Emit machine-readable JSON format",
+    )
 
     args = parser.parse_args()
     if "func" not in args:
@@ -440,7 +551,9 @@ def parse_args():
 
 def run(args, usb_context: usb1.USBContext) -> int:
     if "target" in args:
-        (vid, pid, _) = MCU_TYPES[args.target]
+        target = MCU_TYPES[args.target]
+        vid = target.vid
+        pid = target.pid
         device = usb_context.getByVendorIDAndProductID(vid, pid, skip_on_error=True)
         if not device:
             print(f"E: USB device with Vendor-ID {vid} Product-ID {pid} not found.", file=sys.stderr)
