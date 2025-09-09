@@ -239,7 +239,7 @@ case "$(cat /proc/device-tree/model)" in
     SYS_VER="$(reform-mcu-tool list | sed -ne 's/Target pocket-sysctl-1.0 ID .* Version //p')"
     if [ -n "$SYS_VER" ]; then
       echo "I: Version of system controller firmware: $SYS_VER" >&2
-      if [ -n "$LATEST_SYS_VER" ]; then
+      if [ -n "$LATEST_SYS_VER" ] && [ "$LATEST_SYS_VER" != "$SYS_VER" ]; then
         echo "I: Latest version of system controller firmware: $LATEST_SYS_VER" >&2
       fi
     else
