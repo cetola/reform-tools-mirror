@@ -79,6 +79,7 @@ install: $(MAN1) plymouth/background.png
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/flash-kernel/ubootenv.d flash-kernel/ubootenv.d/00reform2_ubootenv
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/initramfs-tools/hooks
 	$(INSTALL)     -t $(DESTDIR)$(datadir)/initramfs-tools/hooks initramfs-tools/hooks/reform
+	$(INSTALL)     -t $(DESTDIR)$(datadir)/initramfs-tools/hooks initramfs-tools/hooks/reform-plymouth
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/initramfs-tools/modules.d
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/initramfs-tools/modules.d initramfs-tools/reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/initramfs-tools/scripts/init-top

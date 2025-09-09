@@ -1,0 +1,40 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2023-2025 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
+
+set -e
+
+PREREQ=""
+prereqs() { echo "$PREREQ"; }
+case $1 in prereqs)
+  prereqs
+  exit 0
+  ;;
+esac
+
+# shellcheck disable=SC1091
+. /usr/share/initramfs-tools/hook-functions
+
+THEME="$(/usr/sbin/plymouth-set-default-theme || true)"
+
+if [ "$THEME" != "reform-y2k" ]; then
+  # only need to act for reform-y2k theme
+  exit 0
+fi
+
+if [ ! -e "/usr/share/fonts/opentype/inter/Inter-Medium.otf" ]; then
+  # nothing to do if font is missing
+  exit 0
+fi
+
+mkdir -p "${DESTDIR}/etc/fonts/conf.d"
+cp -a --target-directory="${DESTDIR}/etc/fonts" /etc/fonts/fonts.conf
+cp -L --target-directory="${DESTDIR}/etc/fonts/conf.d" /etc/fonts/conf.d/60-latin.conf
+mkdir -p "${DESTDIR}/var/cache/fontconfig"
+# This is only needed because fc-cache bellow fails if the directory doesn't exist
+mkdir -p "${DESTDIR}/usr/local/share/fonts"
+mkdir -p "${DESTDIR}/usr/share/fonts/opentype/inter"
+
+cp -a --target-directory="${DESTDIR}/usr/share/fonts/opentype/inter" /usr/share/fonts/opentype/inter/Inter-Medium.otf
+
+fc-cache -s -y "${DESTDIR}" >/dev/null 2>&1
