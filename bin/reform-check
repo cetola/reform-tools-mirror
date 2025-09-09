@@ -253,6 +253,13 @@ case "$(cat /proc/device-tree/model)" in
     ;;
 esac
 
+if [ -e "/proc/device-tree/chosen/u-boot,version" ]; then
+  echo "I: Version of U-Boot: $(cat "/proc/device-tree/chosen/u-boot,version")" >&2
+  if [ "$(cat "/proc/device-tree/chosen/u-boot,version")" != "$UBOOT_TAG" ]; then
+    echo "I: Latest version of U-Boot: $UBOOT_TAG" >&2
+  fi
+fi
+
 HAVE_BOOTSCR=no
 if test -e /boot/boot.scr; then
   HAVE_BOOTSCR=yes
