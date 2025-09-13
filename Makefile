@@ -12,6 +12,7 @@ bindir = $(prefix)/bin
 libexecdir = $(prefix)/libexec
 libdir = $(prefix)/lib
 statedir = /var
+sysconfdir = /etc
 
 BINPROGS=$(wildcard bin/*)
 MAN1=$(patsubst bin/%,man/%.1,$(BINPROGS))
@@ -139,6 +140,8 @@ install: $(MAN1) plymouth/background.png
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/systemd/user systemd/pipewire.socket
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/wireplumber/wireplumber.conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/wireplumber/wireplumber.conf.d audio/reform-hdmi-audio-priority.conf
+	$(INSTALL)     -d $(DESTDIR)$(sysconfdir)/profile.d
+	$(INSTALLDATA) -t $(DESTDIR)$(sysconfdir)/profile.d etc/profile.d/reform-kwin.sh
 
 .PHONY: clean
 clean:
