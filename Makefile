@@ -137,6 +137,8 @@ install: $(MAN1) plymouth/background.png
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/systemd/user systemd/pipewire-pulse.socket
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/systemd/user systemd/pipewire.service
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/systemd/user systemd/pipewire.socket
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/wireplumber/wireplumber.conf.d
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/wireplumber/wireplumber.conf.d audio/reform-hdmi-audio-priority.conf
 
 .PHONY: clean
 clean:
