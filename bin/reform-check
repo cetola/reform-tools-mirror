@@ -232,7 +232,7 @@ case "$(cat /proc/device-tree/model)" in
       LATEST_SYS_VER=$(curl --silent https://fwupd.org//downloads/firmware.xml.xz | unxz | xmllint --xpath "string(/components/component[id[text()='com.mntre.pocket_reform.sysctl10.firmware']]/releases/release[1]/@version)" -)
     fi
     if [ -z "$LATEST_SYS_VER" ]; then
-      echo "I: To retrieve the latest firmware versions either install libxmlb-utils or install curl, xz-utils and libxml2-utils" >&2
+      echo "I: To retrieve the latest sysctl and keyboard firmware versions either install libxmlb-utils or install curl, xz-utils and libxml2-utils" >&2
     fi
 
     SYS_VER="$(reform-mcu-tool list --json | jq 'map(select(.device.name == "pocket-sysctl-1.0")) | .[] | .version')"
