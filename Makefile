@@ -132,6 +132,11 @@ install: $(MAN1) plymouth/background.png
 		#$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/ "plymouth/$$filename";
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k plymouth/background.png
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k plymouth/reform-y2k.plymouth
+	$(INSTALL)     -d $(DESTDIR)$(libdir)/systemd/user
+	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/systemd/user systemd/pipewire-pulse.service
+	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/systemd/user systemd/pipewire-pulse.socket
+	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/systemd/user systemd/pipewire.service
+	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/systemd/user systemd/pipewire.socket
 
 .PHONY: clean
 clean:
