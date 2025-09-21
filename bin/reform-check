@@ -253,6 +253,31 @@ case "$(cat /proc/device-tree/model)" in
     ;;
 esac
 
+case "$(cat /proc/device-tree/model)" in
+  "MNT Pocket Reform with "*) : ;; # this check is specific to classic reform
+  "MNT Reform Next with "*) : ;;   # this check is specific to classic reform
+  "MNT Reform 2 with BPI-CM4 Module")
+    if [ -e "/sys/bus/spi/drivers/reform2_lpc/spi0.0/firmware" ]; then
+      # A311D
+      echo "I: Version of LPC firmware: $(cat /sys/bus/spi/drivers/reform2_lpc/spi0.0/firmware)"
+    else
+      echo "W: /sys/bus/spi/drivers/reform2_lpc/spi0.0/firmware does not exist -- is the reform2_lpc module loaded?" >&2
+    fi
+    ;;
+  "MNT Reform 2" | "MNT Reform 2 HDMI" | \
+    "MNT Reform 2 with i.MX8MP Module" | \
+    "MNT Reform 2 with LS1028A Module" | \
+    "MNT Reform 2 with RCORE-DSI RK3588 Module" | \
+    "MNT Reform 2 with RCORE RK3588 Module")
+    if [ -e "/sys/bus/spi/drivers/reform2_lpc/spi1.0/firmware" ]; then
+      echo "I: Version of LPC firmware: $(cat /sys/bus/spi/drivers/reform2_lpc/spi1.0/firmware)"
+    else
+      echo "W: /sys/bus/spi/drivers/reform2_lpc/spi1.0/firmware does not exist -- is the reform2_lpc module loaded?" >&2
+    fi
+    ;;
+  *) echo "E: unexpected content in /proc/device-tree/model: $(cat /proc/device-tree/model)" >&2 ;;
+esac
+
 if [ -e "/proc/device-tree/chosen/u-boot,version" ]; then
   echo "I: Version of U-Boot: $(cat "/proc/device-tree/chosen/u-boot,version")" >&2
   if [ "$(cat "/proc/device-tree/chosen/u-boot,version")" != "$UBOOT_TAG" ]; then
