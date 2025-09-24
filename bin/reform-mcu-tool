@@ -49,6 +49,7 @@ USB_VID_PIDCODES = 0x1209
 USB_VID_RASPBERRY = 0x2E8A
 USB_PID_MNT_POCKET_REFORM_INPUT_10 = 0x6D06
 USB_PID_MNT_POCKET_REFORM_SYSCTL_10 = 0x6D07
+USB_PID_MNT_REFORM_NEXT_SYSCTL_10 = 0x6D08
 USB_PID_RASPBERRY_RP2040_BOOT = 0x0003
 USB_PID_RASPBERRY_RP2350_BOOT = 0x000F
 
@@ -127,6 +128,15 @@ MCU_TYPES = {
             pid=USB_PID_MNT_POCKET_REFORM_SYSCTL_10,
             name="pocket-sysctl-1.0",
             description="MNT Pocket Reform System Controller 1.0",
+            bus=Bus.USB,
+            mode=TargetMode.Runtime,
+            flags=[TargetFlags.RP_PICO, TargetFlags.FWUPD_SUPPORTED],
+        ),
+        TargetDevice(
+            vid=USB_VID_PIDCODES,
+            pid=USB_PID_MNT_REFORM_NEXT_SYSCTL_10,
+            name="next-sysctl-1.0",
+            description="MNT Reform Next System Controller 1.0",
             bus=Bus.USB,
             mode=TargetMode.Runtime,
             flags=[TargetFlags.RP_PICO, TargetFlags.FWUPD_SUPPORTED],
