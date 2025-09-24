@@ -472,7 +472,7 @@ static int get_bat_property(struct power_supply *psy,
 
 		millivolt = (buffer[0] | buffer[1] << 8);
 		if (millivolt < 5000 || millivolt >= 40000)
-			return -EBUSY;
+			millivolt = 0;
 
 		val->intval = millivolt * 1000;
 		break;
@@ -485,12 +485,8 @@ static int get_bat_property(struct power_supply *psy,
 		ma16 = (int16_t)buffer[2] | ((int16_t)buffer[3] << 8);
 		milliamp = (int)ma16;
 		if (milliamp < -20000 || milliamp >= 20000)
-			return -EBUSY;
+			return 0;
 
-		/* negative current, battery is charging
-		   reporting a negative value is out of spec */
-		if (milliamp < 0)
-			milliamp = 0;
 		val->intval = milliamp * 1000;
 
 		break;
@@ -507,7 +503,7 @@ static int get_bat_property(struct power_supply *psy,
 		if (gauge < 6)
 			gauge = 6;
 		if (gauge > 100)
-			return -EBUSY;
+			gauge = 100;
 
 		val->intval = gauge;
 		break;
