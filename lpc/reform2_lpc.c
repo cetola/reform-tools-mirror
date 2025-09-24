@@ -266,9 +266,9 @@ static ssize_t lpc_command(struct lpc_driver_data *lpc, char command,
 	if (lpc->api_version == 2) {
 		/* newer LPC firmware doesn't need huge delays */
 		/* because the response time is minimized */
-		delays[0] = 2;
-		delays[1] = 3;
-		delays[2] = 0;
+		delays[0] = 5;
+		delays[1] = 5;
+		delays[2] = 5;
 	}
 
 	uint8_t cmd[4] = { 0xb5, command, arg1, 0x0 };
