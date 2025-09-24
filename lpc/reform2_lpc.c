@@ -487,7 +487,9 @@ static int get_bat_property(struct power_supply *psy,
 		if (milliamp < -20000 || milliamp >= 20000)
 			return 0;
 
-		val->intval = milliamp * 1000;
+		/* system controller and linux disagree on which sign
+		 * means charging and which means discharging */
+		val->intval = -milliamp * 1000;
 
 		break;
 
