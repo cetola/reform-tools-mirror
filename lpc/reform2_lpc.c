@@ -237,7 +237,10 @@ static int lpc_probe(struct spi_device *spi)
 		}
 	}
 
-	data->api_version = lpc_get_api_version(&spi->dev);
+	/* the first time, SPI on LPC could be in a bad state,
+	 * so do it twice */
+	for (int i=0; i<2; i++)
+		data->api_version = lpc_get_api_version(&spi->dev);
 
 	spi_controller_get(spi->controller);
 
