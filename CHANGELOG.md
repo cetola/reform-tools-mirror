@@ -1,3 +1,27 @@
+1.79 (2025-09-25)
+=================
+
+ * bin/reform-check:
+    - /boot can be on emmc or sd-card even if u-boot cannot
+    - also warn about outdated u-boot on platforms where updating it is not
+      without risk
+    - when checking u-boot version, respect DEV_MMC_BOOT0 setting
+    - retrieve latest pocket reform system controller firmware version
+    - print installed u-boot version and latest u-boot version if it differs
+    - print version of classic reform lpc firmware
+ * reform-mcu-tool:
+    - add list --json for stable JSON output
+    - add support for MNT Reform Next system controller
+ * reform2_lpc:
+    - don't report EBUSY on clipped values; allow reporting negative current
+    - negate dis/charging current sign
+ * initramfs-tools/hooks/reform-plymouth:
+    - copy Inter-Medium font into ramdisk
+    - do not act if plymouth-set-default-theme is not available
+ * add pipewire{-pulse,} systemd service and socket override
+ * wireplumber: lower hdmi audio priority
+ * /etc/profile.d/reform-kwin.sh: KWIN_FORCE_SW_CURSOR=1
+
 1.78 (2025-08-30)
 =================
 
