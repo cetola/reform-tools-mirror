@@ -15,7 +15,12 @@ esac
 # shellcheck disable=SC1091
 . /usr/share/initramfs-tools/hook-functions
 
-THEME="$(/usr/sbin/plymouth-set-default-theme || true)"
+if ! command -v plymouth-set-default-theme >/dev/null; then
+  # do nothing if plymouth is not installed
+  exit 0
+fi
+
+THEME="$(plymouth-set-default-theme || true)"
 
 if [ "$THEME" != "reform-y2k" ]; then
   # only need to act for reform-y2k theme
