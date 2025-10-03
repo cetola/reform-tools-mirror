@@ -142,6 +142,8 @@ install: $(MAN1) plymouth/background.png
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/wireplumber/wireplumber.conf.d audio/reform-hdmi-audio-priority.conf
 	$(INSTALL)     -d $(DESTDIR)$(sysconfdir)/profile.d
 	$(INSTALLDATA) -t $(DESTDIR)$(sysconfdir)/profile.d etc/profile.d/reform-kwin.sh
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/doc/reform-tools/examples
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/doc/reform-tools/examples examples/keyboard_rainbow.py
 
 .PHONY: clean
 clean:
@@ -152,7 +154,7 @@ lint:
 	clang-format lpc/reform2_lpc.c | diff -u lpc/reform2_lpc.c -
 	shfmt --posix --simplify --binary-next-line --case-indent --indent 2 --diff \
 		bin kernel/* initramfs-tools/*/* flash-kernel/*/*
-	black --check --diff bin/reform-compstat libexec/reform-tools/reform-tray.py libexec/reform-tools/reform-wallpaper.py
+	black --check --diff bin/reform-compstat libexec/reform-tools/reform-tray.py libexec/reform-tools/reform-wallpaper.py examples/keyboard_rainbow.py
 	black --line-length 120 --check --diff bin/reform-mcu-tool
 	shellcheck bin/* kernel/* initramfs-tools/*/* flash-kernel/*/*
 
