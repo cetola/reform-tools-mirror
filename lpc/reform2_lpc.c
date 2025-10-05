@@ -367,12 +367,12 @@ static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
 		cells[s + 1] = val % 1000;
 	}
 
-	ret = snprintf(buf, PAGE_SIZE,
-		       "%d.%d %d.%d %d.%d %d.%d %d.%d %d.%d %d.%d %d.%d\n",
-		       cells[0], cells[1], cells[2], cells[3], cells[4],
-		       cells[5], cells[6], cells[7], cells[8], cells[9],
-		       cells[10], cells[11], cells[12], cells[13], cells[14],
-		       cells[15]);
+	ret = snprintf(
+		buf, PAGE_SIZE,
+		"%d.%03d %d.%03d %d.%03d %d.%03d %d.%03d %d.%03d %d.%03d %d.%03d\n",
+		cells[0], cells[1], cells[2], cells[3], cells[4], cells[5],
+		cells[6], cells[7], cells[8], cells[9], cells[10], cells[11],
+		cells[12], cells[13], cells[14], cells[15]);
 
 	return ret;
 }
