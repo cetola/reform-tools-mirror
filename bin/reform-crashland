@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# dependencies: sysstat
+
+BASE=/var/log/reform-crashland
+mkdir -p $BASE
+
+DATE=$(date +%Y%m%d%H%M%S)
+LOG="$BASE/$DATE.log"
+
+echo "reform-crashland logging to: $LOG"
+
+while true
+do
+  sleep 1
+  echo >> $LOG; sync
+  echo "=========" >> $LOG; sync
+  echo "uptime: $(uptime)" >> $LOG; sync
+
+  echo -n "cells: " >> $LOG
+  cat /sys/devices/platform/feb10000.spi/spi_master/spi1/spi1.0/cells >> $LOG; sync
+
+  echo -n "batstat: " >> $LOG
+  cat /sys/devices/platform/feb10000.spi/spi_master/spi1/spi1.0/status >> $LOG; sync
+
+  echo "dispbrt: $(brightnessctl g)" >> $LOG; sync
+
+  echo "cpufreqs: $(cat /sys/devices/system/cpu/cpufreq/policy0/cpuinfo_cur_freq) $(cat /sys/devices/system/cpu/cpufreq/policy4/cpuinfo_cur_freq) $(cat /sys/devices/system/cpu/cpufreq/policy6/cpuinfo_cur_freq)" >> $LOG; sync
+
+  echo "gpufreq: $(cat /sys/class/devfreq/fb000000.gpu/cur_freq)" >> $LOG; sync
+
+  echo "sensors: $(sensors -A -j)" >> $LOG; sync
+
+  echo "top:" >> $LOG; sync
+  top -w 100 -b | head -n 20 >> $LOG; sync
+
+  echo "memory: $(free -hL)" >> $LOG; sync
+
+  echo "iostat:" >> $LOG; sync
+  iostat >> $LOG; sync
+
+  echo "dmesg:" >> $LOG; sync
+  dmesg | tail -n5 >> $LOG; sync
+
+  echo "drm:" >> $LOG; sync
+  drm_info 2>/dev/null | grep -E "(Type|Status|Plane)" >> $LOG; sync
+
+  echo "interrupts:" >> $LOG; sync
+  cat /proc/interrupts >> $LOG; sync
+done
+
+
