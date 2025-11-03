@@ -32,7 +32,7 @@ always-show-universal-access-status = true
 # Make EURkey layout and compose work
 [org.gnome.desktop.input-sources]
 show-all-sources = true
-xkb-options = ['compose:rctrl', 'lv3:ralt_alt']
+xkb-options = ['compose:rctrl', 'lv3:ralt_switch']
 
 # this is hogging Super+Escape by default
 [org.gnome.mutter.wayland.keybindings]
@@ -84,7 +84,6 @@ show-screenshot-ui = ['<Shift><Super>x']
 show-screen-recording-ui = ['<Shift><Super>r']
 screen-brightness-down = ['XF86MonBrightnessDown', '<Super>F1']
 screen-brightness-up = ['XF86MonBrightnessUp', '<Super>F2']
-
 
 ## window actions
 [org.gnome.desktop.wm.keybindings]
