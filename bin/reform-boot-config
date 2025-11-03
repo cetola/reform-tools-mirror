@@ -585,6 +585,21 @@ if [ "$EMMC" = true ]; then
         echo "E: to emmc using reform-flash-uboot." >&2
         echo >&2
       fi
+      if [ -e /boot/flash.bin ]; then
+        ubootsize=$(stat --format=%s "/boot/flash.bin")
+        realdev="/dev/${DEV_MMC}"
+        if [ "$DEV_MMC_BOOT0" = true ]; then
+          realdev="/dev/${DEV_MMC}boot0"
+        fi
+        if cmp --quiet --bytes="$((ubootsize - FLASHBIN_OFFSET))" "--ignore-initial=0:$UBOOT_OFFSET" /dev/zero "$realdev" 2>/dev/null; then
+          echo "E: The space where u-boot would've been on eMMC is all zeroes." >&2
+          echo "E: Removal of your SD-card will make your system unbootable but" >&2
+          echo "E: leaving your SD-card plugged in will make u-boot prefer booting" >&2
+          echo "E: the system on SD-card. Best prepare a SD-card containing only" >&2
+          echo "E: u-boot and no bootable system or flash u-boot to emmc using" >&2
+          echo "E: reform-flash-uboot" >&2
+        fi
+      fi
       echo "I: u-boot will prefer the first partition on SD-card over the first partition on eMMC" >&2
       echo "I: Your current system has its /boot mounted from SD-card." >&2
       echo "I: You requested to configure a new /boot on eMMC" >&2
