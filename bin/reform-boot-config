@@ -564,6 +564,27 @@ if [ "$EMMC" = true ]; then
   # u-boot will prefer /boot from this system.
   case $OLDBOOTPART in
     "/dev/${DEV_SD}"*)
+      # If the user booted from sd-card before and is now told to remove the
+      # SD-card for booting, it is possible that emmc does not contain u-boot
+      # and in that case, the system will not boot anymore.
+      #  * is there enough space in front of the first partition for u-boot?
+      #  * if not, then there cannot be u-boot on emmc
+      #  * if yes, check if it's the expected u-boot version
+      # The above check is only sensible on platforms which store u-boot
+      # directly on the main device and not in a /boot0 partition.
+      if [ "$DEV_MMC_BOOT0" = false ] \
+        && [ "$(parted --json --script "/dev/$DEV_EMMC" unit B print 2>/dev/null | jq --raw-output '.disk.label')" != "unknown" ] \
+        && [ "$(parted --json --script "/dev/$DEV_EMMC" unit B print | jq --raw-output '.disk.partitions | length')" -ne 0 ] \
+        && [ "$(parted --json --script "/dev/$DEV_EMMC" unit B print | jq --raw-output '.disk.partitions[0].start' | sed 's/B$//')" -lt "16777216" ]; then
+        echo "E: The first partition on your eMMC (/dev/$DEV_EMMC) starts before 16 MiB" >&2
+        echo "E: This is usually not sufficient space for u-boot (for example on RK3588)" >&2
+        echo "E: If you do not have u-boot on eMMC, then removal of your SD-card will" >&2
+        echo "E: likely make your system unbootable but leaving your SD-card plugged in" >&2
+        echo "E: will make u-boot prefer booting the system on SD-card. Best prepare a" >&2
+        echo "E: SD-card containing only u-boot and no bootable system or flash u-boot" >&2
+        echo "E: to emmc using reform-flash-uboot." >&2
+        echo >&2
+      fi
       echo "I: u-boot will prefer the first partition on SD-card over the first partition on eMMC" >&2
       echo "I: Your current system has its /boot mounted from SD-card." >&2
       echo "I: You requested to configure a new /boot on eMMC" >&2
