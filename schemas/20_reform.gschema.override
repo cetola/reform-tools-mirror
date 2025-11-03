@@ -60,7 +60,7 @@ custom-keybindings = ['/org/gnome/settings-daemon/plugins/media-keys/custom-keyb
 # /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/
 # can be populated via gsettings like so:
 # gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ name 'Launch Terminal'
-# gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ command 'x-terminal-emulator'
+# gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ command 'xdg-terminal-exec'
 # gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ binding '<Super>Return'
 # The syntax with the colon indicates a relocatable schema. Unfortunately,
 # relocatable schemas are not supported by gschema override files. To

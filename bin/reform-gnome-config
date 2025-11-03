@@ -9,7 +9,7 @@
 # gsettings list-recursively | grep -E "(shell\.keybindings|wm\.keybindings|wayland\.keybindings)
 
 usage() {
-  echo "Right now, this is just a temporary tool to set up GNOME configuration on MNT Reform Series devices." >&2
+  echo "Reset parts of GNOME configuration (like keyboard shortcuts and some window behavior) to the defaults customized for MNT Reform Series devices." >&2
 }
 
 if [ "$#" -gt 0 ] && [ "$1" = "--help" ]; then
@@ -17,6 +17,13 @@ if [ "$#" -gt 0 ] && [ "$1" = "--help" ]; then
   exit 0
 fi
 
+# disable "Automatic Screen Blank"
+gsettings set org.gnome.desktop.session idle-delay 0
+# Make EURkey layout and compose work
+gsettings set org.gnome.desktop.input-sources show-all-sources true
+gsettings set org.gnome.desktop.input-sources xkb-options "['compose:rctrl', 'lv3:ralt_switch']"
+# Don't attach modal windows, it's annoying when some windows can't be moved individually
+gsettings set org.gnome.mutter attach-modal-dialogs false
 # this is hogging Super+Escape by default
 gsettings set org.gnome.mutter.wayland.keybindings restore-shortcuts "@as []"
 gsettings set org.gnome.settings-daemon.plugins.media-keys help "@as []"
@@ -79,13 +86,13 @@ gsettings set org.gnome.shell.keybindings show-screen-recording-ui "['<Shift><Su
 ## media keys
 gsettings set org.gnome.settings-daemon.plugins.media-keys keyboard-brightness-down-static "@as []"
 gsettings set org.gnome.settings-daemon.plugins.media-keys keyboard-brightness-up-static "@as []"
-gsettings set org.gnome.settings-daemon.plugins.media-keys screen-brightness-down-static "['XF86MonBrightnessDown', '<Super>F1']"
-gsettings set org.gnome.settings-daemon.plugins.media-keys screen-brightness-up-static "['XF86MonBrightnessUp', '<Super>F2']"
+gsettings set org.gnome.shell.keybindings screen-brightness-down "['XF86MonBrightnessDown', '<Super>F1']"
+gsettings set org.gnome.shell.keybindings screen-brightness-up "['XF86MonBrightnessUp', '<Super>F2']"
 ## launchers
 dconf load /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/ <<EOF
 [custom0]
 binding='<Super>Return'
-command='x-terminal-emulator'
+command='xdg-terminal-exec'
 name='Launch Terminal'
 EOF
 gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/']"
