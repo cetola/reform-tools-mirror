@@ -15,12 +15,21 @@ usage() {
   echo "u-boot to the SD-card or eMMC, respectively." >&2
   echo >&2
   echo "Options:" >&2
-  echo "  DEVICE       Block device to flash or short-hands 'sd' or 'emmc'" >&2
+  echo "  DEVICE       One or more block device(s) to flash or short-hands 'sd' or 'emmc'" >&2
   echo "  -h, --help   Display this help and exit." >&2
-  echo "  -i, --image  Custom image (default: /boot/flash.bin). Implies --offline and disables checksum verification." >&2
+  echo "  -i IMAGE, --image=IMAGE" >&2
+  echo "               Custom image (default: /boot/flash.bin). Implies --offline and" >&2
+  echo "               disables checksum verification." >&2
   echo "  --offline    Do not download latest u-boot to /boot/flash.bin." >&2
   echo "  -f, --force  No user interaction and flash to devices marked as 'warn'" >&2
   echo "  --zero       Fill the space where u-boot would've been flashed to with zeroes" >&2
+  echo "  --machine=MACHINE" >&2
+  echo "               Force a different machine than the one this script is running on" >&2
+  echo "               using the values from /proc/device-tree/model or the basenames of" >&2
+  echo "               config files in /usr/share/reform-tools/machines/. This will change" >&2
+  echo "               flashing offsets. Implies --offline. Requires a custom u-boot binary" >&2
+  echo "               via --image. Device short-hands are disabled. Flashing to emmc is" >&2
+  echo "               disabled." >&2
   echo "" >&2
 }
 
@@ -33,6 +42,7 @@ OFFLINE=
 FORCE=
 IMAGE=
 ZERO=
+MACHINE=
 while getopts :hfi:-: OPTCHAR; do
   case "$OPTCHAR" in
     h)
@@ -59,6 +69,19 @@ while getopts :hfi:-: OPTCHAR; do
           ;;
         image=*)
           IMAGE="${OPTARG#*=}"
+          OFFLINE=yes
+          ;;
+        machine)
+          if [ "$OPTIND" -gt "$#" ]; then
+            echo "E: missing argument for --machine" >&2
+            exit 1
+          fi
+          MACHINE="$(nth_arg "$OPTIND" "$@")"
+          OPTIND=$((OPTIND + 1))
+          OFFLINE=yes
+          ;;
+        machine=*)
+          MACHINE="${OPTARG#*=}"
           OFFLINE=yes
           ;;
         offline) OFFLINE=yes ;;
@@ -90,6 +113,10 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 1
 fi
 
+# Even with --machine is used to override the machine config to load, we are
+# loading the native machine config to be able to forbid flashing to eMMC.
+# Since eMMC might be named differently in the config passed via --machine
+# we need to load the native one for that information first.
 # shellcheck source=/dev/null
 if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
   . "./machines/$(cat /proc/device-tree/model).conf"
@@ -98,6 +125,52 @@ elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
 else
   echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
   exit 1
+fi
+
+if [ -n "$MACHINE" ]; then
+  if [ -z "$IMAGE" ]; then
+    echo "E: using the --machine option requires a custom image passed via the --image option" >&2
+    exit 1
+  fi
+  for dev in "$@"; do
+    case $dev in
+      "/dev/${DEV_MMC}"*)
+        echo "E: flashing to eMMC not supported with --machine" >&2
+        exit 1
+        ;;
+      "sd" | "emmc")
+        echo "E: short-hands not supported with --machine. Supply the device path explicitly." >&2
+        exit 1
+        ;;
+    esac
+  done
+  case $MACHINE in
+    *"/"*)
+      echo "E: invalid machine name (contains a slash)" >&2
+      exit 1
+      ;;
+    *.conf)
+      echo "E: invalid machine name (ends with .conf)" >&2
+      exit 1
+      ;;
+    *.*)
+      echo "E: invalid machine name (contains a dot)" >&2
+      exit 1
+      ;;
+  esac
+  # shellcheck source=/dev/null
+  if [ -e "./machines/$MACHINE.conf" ]; then
+    . "./machines/$MACHINE.conf"
+  elif [ -e "/usr/share/reform-tools/machines/$MACHINE.conf" ]; then
+    . "/usr/share/reform-tools/machines/$MACHINE.conf"
+  else
+    echo "E: unable to find config for $MACHINE" >&2
+    exit 1
+  fi
+  # Make sure that the given device name can never be interpreted as meaning
+  # the eMMC. This is because the other machine config might indicate a device
+  # to be eMMC which it is not on this platform.
+  DEV_MMC="i-do-not-exist"
 fi
 
 for dev in "$@"; do
@@ -266,20 +339,22 @@ for dev in "$@"; do
 done
 
 # inform about the DIP switch position only on imx8mq
-case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
-  for dev in "$@"; do
-    case $dev in
-      emmc | "/dev/${DEV_MMC}"*)
-        echo "For the i.MX8MQ to load u-boot from MMC, make sure" >&2
-        echo "that your DIP switch is set to OFF." >&2
-        continue
-        ;;
-      sd | "/dev/${DEV_SD}"*)
-        echo "For the i.MX8MQ to load u-boot from SD-Card, make sure" >&2
-        echo "that your DIP switch is set to ON." >&2
-        continue
-        ;;
-    esac
-  done
-  ;;
-esac
+if [ -z "$MACHINE" ]; then
+  case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
+    for dev in "$@"; do
+      case $dev in
+        emmc | "/dev/${DEV_MMC}"*)
+          echo "For the i.MX8MQ to load u-boot from MMC, make sure" >&2
+          echo "that your DIP switch is set to OFF." >&2
+          continue
+          ;;
+        sd | "/dev/${DEV_SD}"*)
+          echo "For the i.MX8MQ to load u-boot from SD-Card, make sure" >&2
+          echo "that your DIP switch is set to ON." >&2
+          continue
+          ;;
+      esac
+    done
+    ;;
+  esac
+fi
