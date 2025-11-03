@@ -197,7 +197,7 @@ fi
 
 echo "Starting the copy. This can take a while."
 
-rsync -axHAWXS --numeric-ids --info=progress2 / "$MOUNTPOINT"
+rsync -axHAWXS --numeric-ids --info=progress2 --no-inc-recursive / "$MOUNTPOINT"
 
 echo "Files copied."
 
