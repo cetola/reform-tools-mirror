@@ -20,6 +20,7 @@ usage() {
   echo "  -i, --image  Custom image (default: /boot/flash.bin). Implies --offline and disables checksum verification." >&2
   echo "  --offline    Do not download latest u-boot to /boot/flash.bin." >&2
   echo "  -f, --force  No user interaction and flash to devices marked as 'warn'" >&2
+  echo "  --zero       Fill the space where u-boot would've been flashed to with zeroes" >&2
   echo "" >&2
 }
 
@@ -31,6 +32,7 @@ nth_arg() {
 OFFLINE=
 FORCE=
 IMAGE=
+ZERO=
 while getopts :hfi:-: OPTCHAR; do
   case "$OPTCHAR" in
     h)
@@ -60,6 +62,7 @@ while getopts :hfi:-: OPTCHAR; do
           OFFLINE=yes
           ;;
         offline) OFFLINE=yes ;;
+        zero) ZERO=yes ;;
         *)
           echo "E: unrecognized option: --$OPTARG" >&2
           exit 1
@@ -245,7 +248,13 @@ for dev in "$@"; do
       fi
       ;;
   esac
-  dd if="$IMAGE" of="$realdev" bs=512 seek="$((UBOOT_OFFSET / 512))" skip="$((FLASHBIN_OFFSET / 512))"
+  if [ "$ZERO" != "yes" ]; then
+    # write u-boot binary
+    dd if="$IMAGE" of="$realdev" bs=512 seek="$((UBOOT_OFFSET / 512))" skip="$((FLASHBIN_OFFSET / 512))"
+  else
+    # write zeroes instead of the u-boot image
+    dd if="/dev/zero" of="$realdev" bs=512 seek="$((UBOOT_OFFSET / 512))" count="$(((ubootsize - FLASHBIN_OFFSET) / 512))"
+  fi
   case $dev in
     emmc | "/dev/${DEV_MMC}"*)
       if [ "$DEV_MMC_BOOT0" = true ]; then
