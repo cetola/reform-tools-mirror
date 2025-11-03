@@ -47,8 +47,6 @@ experimental-features=['xwayland-native-scaling']
 help = @as []
 keyboard-brightness-down-static = @as []
 keyboard-brightness-up-static = @as []
-screen-brightness-down-static = ['XF86MonBrightnessDown', '<Super>F1']
-screen-brightness-up-static = ['XF86MonBrightnessUp', '<Super>F2']
 custom-keybindings = ['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/']
 
 # /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/
@@ -84,6 +82,9 @@ open-new-window-application-9 = @as []
 screenshot = ['<Shift><Super>s']
 show-screenshot-ui = ['<Shift><Super>x']
 show-screen-recording-ui = ['<Shift><Super>r']
+screen-brightness-down = ['XF86MonBrightnessDown', '<Super>F1']
+screen-brightness-up = ['XF86MonBrightnessUp', '<Super>F2']
+
 
 ## window actions
 [org.gnome.desktop.wm.keybindings]
