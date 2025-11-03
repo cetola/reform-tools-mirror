@@ -280,9 +280,10 @@ esac
 
 if [ -e "/proc/device-tree/chosen/u-boot,version" ]; then
   echo "I: Version of U-Boot: $(cat "/proc/device-tree/chosen/u-boot,version")" >&2
-  if [ "$(cat "/proc/device-tree/chosen/u-boot,version")" != "$UBOOT_TAG" ]; then
-    echo "I: Latest version of U-Boot: $UBOOT_TAG" >&2
-  fi
+  # FIXME: once all u-boot versions are updated to the format which includes
+  # the machine name, we could attempt parsing the version and then only
+  # display the latest version if there is a mismatch
+  echo "I: Latest version of U-Boot: $UBOOT_TAG" >&2
 fi
 
 HAVE_BOOTSCR=no
