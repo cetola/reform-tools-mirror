@@ -702,6 +702,24 @@ if [ "$(tr ' ' '\n' </proc/cmdline | grep console= | tail -1)" != "console=tty1"
   echo "W: This could lead to the luks password prompt being printed to serial instead of your screen." >&2
 fi
 
+case "$(cat /proc/device-tree/model)" in
+  "MNT Pocket Reform with RCORE RK3588 Module" | \
+    "MNT Reform 2 with RCORE-DSI RK3588 Module" | \
+    "MNT Reform 2 with RCORE RK3588 Module" | \
+    "MNT Reform Next with RCORE RK3588 Module")
+    features=$(awk -F": " '/^Features\t: / { print $2; }' /proc/cpuinfo | sort)
+    # features aes, pmull, sha1 and sha2 were found to be missing with wrong TF-A version
+    # https://mntre.com/reform-irc-logs/2025-10-25.log.html
+    # https://tooting.ch/@vimja/115435628986765190
+    for feature in fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp; do
+      case " $features " in
+        *" $feature "*) : ;; # feature is part of features
+        *) echo "E: /proc/cpuinfo does not list $feature as feature -- wrong TF-A version?" >&2 ;;
+      esac
+    done
+    ;;
+esac
+
 if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-headers-$(uname -r)" 2>/dev/null | grep -q '^installed$'; then
   echo "E: the linux header package linux-headers-$(uname -r) for the currently running kernel is not installed" >&2
 fi
