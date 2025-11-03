@@ -47,6 +47,10 @@ restore-shortcuts = @as []
 [org.gnome.mutter:GNOME]
 experimental-features=['xwayland-native-scaling']
 
+# Don't attach modal windows, it's annoying when some windows can't be moved individually
+[org.gnome.mutter]
+attach-modal-dialogs = false
+
 [org.gnome.settings-daemon.plugins.media-keys]
 help = @as []
 keyboard-brightness-down-static = @as []
