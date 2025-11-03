@@ -621,7 +621,7 @@ if [ "$MIRROR" = "mntre.com" ]; then
       :
       ;; # this is imx8m+, nothing to do
     *)
-      echo "I: the reform-qcacld2 package package is only required for wifi on the Pocket Reform with i.MX8MP, you can safely remove it unless you plan to go back to the imx8m+" >&2
+      echo "I: the reform-qcacld2 package is only required for wifi on the Pocket Reform with i.MX8MP, you can safely remove it unless you plan to go back to the imx8m+" >&2
       ;;
     esac
   else
