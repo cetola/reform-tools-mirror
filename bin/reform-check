@@ -617,7 +617,7 @@ fi
 
 if [ "$MIRROR" = "mntre.com" ]; then
   if dpkg-query --showformat '${db:Status-Status}\n' --show "reform-qcacld2" 2>/dev/null | grep -q '^installed$'; then
-    case "$(cat /proc/device-tree/model)" in "MNT Pocket Reform with i.MX8MP Module")
+    case "$(cat /proc/device-tree/model)" in "MNT Pocket Reform with i.MX8MP Module" | "MNT Reform 2 with i.MX8MP Module")
       :
       ;; # this is imx8m+, nothing to do
     *)
