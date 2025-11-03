@@ -872,7 +872,7 @@ else
         if [ "$SD_BOOT" = warn ]; then
           echo "I: note that updating u-boot on SD-card on your platform is not without risk!" >&2
         fi
-        if cmp --quiet --bytes="$((ubootsize - FLASHBIN_OFFSET))" "--ignore-initial=0:$UBOOT_OFFSET" /dev/zero "$realdev" 2>/dev/null; then
+        if cmp --quiet --bytes="$((ubootsize - FLASHBIN_OFFSET))" "--ignore-initial=0:$UBOOT_OFFSET" /dev/zero "/dev/$DEV_SD" 2>/dev/null; then
           echo "I: The space where u-boot would've been on SD-Card is all zeroes." >&2
         fi
       fi
