@@ -837,6 +837,9 @@ else
         if [ "$EMMC_BOOT" = warn ]; then
           echo "I: note that updating u-boot on eMMC on your platform is not without risk!" >&2
         fi
+        if cmp --quiet --bytes="$((ubootsize - FLASHBIN_OFFSET))" "--ignore-initial=0:$UBOOT_OFFSET" /dev/zero "$realdev" 2>/dev/null; then
+          echo "I: The space where u-boot would've been on eMMC is all zeroes." >&2
+        fi
       fi
     fi
 
@@ -849,6 +852,9 @@ else
         echo "reform-flash-uboot sd" >&2
         if [ "$SD_BOOT" = warn ]; then
           echo "I: note that updating u-boot on SD-card on your platform is not without risk!" >&2
+        fi
+        if cmp --quiet --bytes="$((ubootsize - FLASHBIN_OFFSET))" "--ignore-initial=0:$UBOOT_OFFSET" /dev/zero "$realdev" 2>/dev/null; then
+          echo "I: The space where u-boot would've been on SD-Card is all zeroes." >&2
         fi
       fi
     fi
