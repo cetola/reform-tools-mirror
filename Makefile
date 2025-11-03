@@ -44,6 +44,7 @@ man/%.1: bin/%
 		setup-encrypted-disk) echo "setup encrypted disk" ;;          \
 		setup-encrypted-nvme) echo "use setup-encrypted-disk" ;;      \
 		standby)        echo "suspend/wakeup tweaks" ;;               \
+		waybar-icon-wedge) echo "launch waybar with custom icon theme" ;; \
 		*) echo "unknown tool: $$1" 2>&1; exit 1 ;;                   \
 	esac; };                                                              \
 	whatis="$$(tool2whatis "$*")";                                        \
@@ -139,6 +140,7 @@ install: $(MAN1) plymouth/background.png
 	$(INSTALLDATA) -t $(DESTDIR)$(sysconfdir)/profile.d etc/profile.d/reform-kwin.sh
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/doc/reform-tools/examples
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/doc/reform-tools/examples examples/keyboard_rainbow.py
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/xdg-terminal-exec share/xdg-terminal-exec/sway-xdg-terminals.list
 
 .PHONY: clean
 clean:
