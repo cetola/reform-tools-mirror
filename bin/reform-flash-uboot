@@ -17,7 +17,7 @@ usage() {
   echo "Options:" >&2
   echo "  DEVICE       Block device to flash or short-hands 'sd' or 'emmc'" >&2
   echo "  -h, --help   Display this help and exit." >&2
-  echo "  -i, --image  Custom image (default: /boot/flash.bin). Implies --offline." >&2
+  echo "  -i, --image  Custom image (default: /boot/flash.bin). Implies --offline and disables checksum verification." >&2
   echo "  --offline    Do not download latest u-boot to /boot/flash.bin." >&2
   echo "  -f, --force  No user interaction and flash to devices marked as 'warn'" >&2
   echo "" >&2
