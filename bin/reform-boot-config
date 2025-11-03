@@ -573,10 +573,10 @@ if [ "$EMMC" = true ]; then
       # The above check is only sensible on platforms which store u-boot
       # directly on the main device and not in a /boot0 partition.
       if [ "$DEV_MMC_BOOT0" = false ] \
-        && [ "$(parted --json --script "/dev/$DEV_EMMC" unit B print 2>/dev/null | jq --raw-output '.disk.label')" != "unknown" ] \
-        && [ "$(parted --json --script "/dev/$DEV_EMMC" unit B print | jq --raw-output '.disk.partitions | length')" -ne 0 ] \
-        && [ "$(parted --json --script "/dev/$DEV_EMMC" unit B print | jq --raw-output '.disk.partitions[0].start' | sed 's/B$//')" -lt "16777216" ]; then
-        echo "E: The first partition on your eMMC (/dev/$DEV_EMMC) starts before 16 MiB" >&2
+        && [ "$(parted --json --script "/dev/$DEV_MMC" unit B print 2>/dev/null | jq --raw-output '.disk.label')" != "unknown" ] \
+        && [ "$(parted --json --script "/dev/$DEV_MMC" unit B print | jq --raw-output '.disk.partitions | length')" -ne 0 ] \
+        && [ "$(parted --json --script "/dev/$DEV_MMC" unit B print | jq --raw-output '.disk.partitions[0].start' | sed 's/B$//')" -lt "16777216" ]; then
+        echo "E: The first partition on your eMMC (/dev/$DEV_MMC) starts before 16 MiB" >&2
         echo "E: This is usually not sufficient space for u-boot (for example on RK3588)" >&2
         echo "E: If you do not have u-boot on eMMC, then removal of your SD-card will" >&2
         echo "E: likely make your system unbootable but leaving your SD-card plugged in" >&2
