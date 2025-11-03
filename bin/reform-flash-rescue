@@ -288,6 +288,12 @@ e2fsck -fy "/dev/${DEV_MMC}p2"
 e2label "/dev/${DEV_MMC}p1" reformemmcboot
 e2label "/dev/${DEV_MMC}p2" reformemmcroot
 
+# regenerate UUIDs
+tune2fs "/dev/${DEV_MMC}p1" -U random
+tune2fs "/dev/${DEV_MMC}p2" -U random
+
+# TODO: also regenerate partition uuids if partition table is GUID and not DOS
+
 # The rescue system image that we downloaded and wrote to the eMMC above is
 # configured to use the rootfs on the SD-Card but we want the initramfs on eMMC
 # to boot the rootfs on eMMC and not the rootfs from SD-Card.  Use
