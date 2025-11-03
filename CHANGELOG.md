@@ -1,3 +1,27 @@
+1.80 (2025-11-03)
+=================
+
+ * bin/reform-flash-rescue:
+    - regenerate filesystem UUIDs
+    - only run reform-flash-uboot if u-boot is written to the boot0 partition
+ * bin/reform-check:
+    - indicate whether the space that would've been occupied by u-boot is all
+      zeroes
+    - test if cpu features are missing on RK3588
+ * bin/reform-setup-encrypted-disk: run rsync with --no-inc-recursive to have a
+   useful progress meter
+ * bin/reform-flash-uboot:
+    - add --zero option to delete u-boot
+    - add --machine option to override the contents of /proc/device-tree/model
+ * revert pipewire{-pulse,} systemd service and socket override
+ * schemas/20_reform.gschema.override:
+    - move screen-brightness-{up,down} from to org.gnome.shell.keybindings
+    - fix altgr for gnome
+    - select useful default apps for the gnome dock
+    - don't attach modal windows
+ * lpc/reform2_lpc.c: pad with zeroes
+ * add examples/keyboard_rainbow.py
+
 1.79 (2025-09-25)
 =================
 
