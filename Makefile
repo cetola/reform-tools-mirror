@@ -140,6 +140,7 @@ install: $(MAN1) plymouth/background.png
 	$(INSTALLDATA) -t $(DESTDIR)$(sysconfdir)/profile.d etc/profile.d/reform-kwin.sh
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/doc/reform-tools/examples
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/doc/reform-tools/examples examples/keyboard_rainbow.py
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/xdg-terminal-exec
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/xdg-terminal-exec share/xdg-terminal-exec/sway-xdg-terminals.list
 
 .PHONY: clean
