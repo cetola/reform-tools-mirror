@@ -1,3 +1,14 @@
+1.81 (2025-11-04)
+=================
+
+ * add reform-waybar-icon-wedge
+ * modernize reform-tray.py
+ * add xdg-terminal-exec/sway-xdg-terminals.list
+ * bin/reform-hw-setup: remove rk3588 ethernet hack
+ * bin/reform-flash-uboot: better error message if /boot/flash.bin does not
+   exist
+ * machines/MNT * with RCORE RK3588 Module.conf: update to u-boot 2025-11-04
+
 1.80 (2025-11-03)
 =================
 
