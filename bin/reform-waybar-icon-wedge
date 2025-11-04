@@ -10,6 +10,28 @@
 # currently set gnome icon theme, and we can use this fact to redirect that theme
 # using a symlink in a specially crafted XDG_DATA_DIR $HOME/.config/waybar-icon-wedge
 
+set -eu
+
+usage() {
+  echo "Run waybar with XDG_DATA_DIRS set to a directory containing a symlink" >&2
+  echo "of the currently selected gtk-theme to work around a waybar limitation" >&2
+  echo >&2
+  echo "Usage: $0 [--help]" >&2
+  echo >&2
+  echo "Options:" >&2
+  echo "  --help           Display this help and exit." >&2
+}
+
+if [ "$#" -gt 0 ]; then
+  if [ "$1" != "--help" ]; then
+    echo "E: too many arguments" >&2
+    usage
+    exit 1
+  fi
+  usage
+  exit 0
+fi
+
 set -x
 
 GNOME_ICON_THEME=$(gsettings get org.gnome.desktop.interface gtk-theme | tr -d "'")
