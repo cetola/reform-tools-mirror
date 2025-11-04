@@ -219,6 +219,10 @@ if [ "$#" -eq 0 ]; then
 fi
 
 if [ -z "$IMAGE" ]; then
+  if [ ! -e /boot/flash.bin ]; then
+    echo "E: /boot/flash.bin does not exist" >&2
+    exit 1
+  fi
   if ! echo "$UBOOT_SHA1  /boot/flash.bin" | sha1sum --strict --check >/dev/null 2>&1; then
     echo "Incorrect checksum for /boot/flash.bin" >&2
     echo "Either flash a custom image with --image, or run without --offline to download the latest uboot version" >&2
