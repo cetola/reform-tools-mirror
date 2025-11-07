@@ -1,0 +1,4 @@
+[Plymouth Theme]
+Name=Monobar
+Description=Text mode theme with mono-color progress bar for MNT Reform
+ModuleName=monobar

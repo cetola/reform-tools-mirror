@@ -11,14 +11,17 @@ datadir = $(prefix)/share
 bindir = $(prefix)/bin
 libexecdir = $(prefix)/libexec
 libdir = $(prefix)/lib
+libdirarch = $(prefix)/lib/$(shell $(CC) --print-multiarch)
 statedir = /var
 sysconfdir = /etc
 
 BINPROGS=$(wildcard bin/*)
 MAN1=$(patsubst bin/%,man/%.1,$(BINPROGS))
 
+
+
 .PHONY: all
-all: $(MAN1)
+all: $(MAN1) plymouth/background.png plymouth/monobar.so
 
 man/%.1: bin/%
 	set -e;                                                               \
@@ -57,11 +60,14 @@ man/%.1: bin/%
 		--no-discard-stderr "$*"                                      \
 		--output="$@";                                                \
 
+plymouth/monobar.so: plymouth/monobar.c
+	$(CC) $< -o $@ $(CPPFLAGS) $(CFLAGS) $(shell pkgconf --cflags --libs ply-splash-core) -Wall -fPIC -pedantic -Wextra -std=c23 -shared $(LDFLAGS)
+
 plymouth/background.png: ./share/backgrounds/mnt-reform-next-y2k.jpg
 	convert $< -resize 1920x1080 $@
 
 .PHONY: install
-install: $(MAN1) plymouth/background.png
+install: $(MAN1) plymouth/background.png plymouth/monobar.so
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/NetworkManager/conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/NetworkManager/conf.d NetworkManager/default-wifi-powersave-off.conf
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/udev/rules.d
@@ -142,6 +148,10 @@ install: $(MAN1) plymouth/background.png
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/doc/reform-tools/examples examples/keyboard_rainbow.py
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/xdg-terminal-exec
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/xdg-terminal-exec share/xdg-terminal-exec/sway-xdg-terminals.list
+	$(INSTALL)     -d $(DESTDIR)$(libdirarch)/plymouth
+	$(INSTALLDATA) -t $(DESTDIR)$(libdirarch)/plymouth plymouth/monobar.so
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/plymouth/themes/monobar/
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/monobar/ plymouth/monobar.plymouth
 
 .PHONY: clean
 clean:
