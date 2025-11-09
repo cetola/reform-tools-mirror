@@ -91,6 +91,7 @@ install: $(MAN1) plymouth/background.png
 	$(INSTALL)     -d $(DESTDIR)$(libexecdir)/reform-tools
 	$(INSTALL)     -t $(DESTDIR)$(libexecdir)/reform-tools libexec/reform-tools/reform-tray.py
 	$(INSTALL)     -t $(DESTDIR)$(libexecdir)/reform-tools libexec/reform-tools/reform-wallpaper.py
+	$(INSTALL)     -t $(DESTDIR)$(libexecdir)/reform-tools libexec/reform-tools/reform-power-daemon
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/reform-tools/machines
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/reform-tools/machines machines/*
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/modprobe.d
@@ -105,7 +106,7 @@ install: $(MAN1) plymouth/background.png
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/systemd/sleep.conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/systemd/sleep.conf.d systemd/reform-sleep.conf
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/systemd/system
-	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/systemd/system systemd/reform-hw-setup.service systemd/reform-sleep.service
+	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/systemd/system systemd/reform-hw-setup.service systemd/reform-sleep.service systemd/reform-power-daemon.service
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/u-boot-menu/conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/u-boot-menu/conf.d u-boot-menu/reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/dracut/dracut.conf.d
