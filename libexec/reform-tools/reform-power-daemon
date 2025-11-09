@@ -11,13 +11,13 @@
 trap exit SIGINT SIGTERM
 
 if ! grep "MNT Pocket Reform with RCORE RK3588 Module" /proc/device-tree/model; then
-		echo "Fatal: reform-power-daemon currently supports only MNT Pocket Reform with RCORE RK3588 Module."
-		exit 1
+	echo "Fatal: reform-power-daemon currently supports only MNT Pocket Reform with RCORE RK3588 Module."
+	exit 1
 fi
 
 if ! lsmod | grep reform2_lpc; then
-		echo "Fatal: reform2_lpc module not loaded. Please reinstall reform2-lpc-dkms and reboot." >&2
-		exit 1
+	echo "Fatal: reform2_lpc module not loaded. Please reinstall reform2-lpc-dkms and reboot." >&2
+	exit 1
 fi
 
 # TODO: check sysctl and keyboard firmware versions
@@ -37,48 +37,54 @@ ac_cpu_governor="schedutil" # could also be: "performance"
 ac_keyboard_backlight='xLRGB\x20\x00\x20'
 
 while true; do
-		bat_status=$(cat $bat_path/status)
+	bat_status=$(cat $bat_path/status)
 
-		if [ "$bat_status" != "$prev_status" ]; then
-				echo "Battery status changed to $bat_status."
+	if [ "$bat_status" != "$prev_status" ]; then
+		echo "Battery status changed to $bat_status."
 
-				# on AC power?
-				#
-				# - set GPU governor to userspace
-				#		- set GPU max freq to 1000 MHz
-				# - set CPU governor to powersave
-				
-				if [ "$bat_status" == "Charging" ]; then
-						echo "simple_ondemand" > "$gpu_path/governor"
-						echo "300000000" > "$gpu_path/min_freq"
-						echo "$ac_max_gpu_freq" > "$gpu_path/max_freq"
-						brightnessctl set "$ac_display_backlight_level"
-						printf "$ac_keyboard_backlight" > /dev/hidraw0
-						
-						for i in 0 4 6; do
-								echo "$ac_cpu_governor" > "$cpu_path/policy$i/scaling_governor"
-						done
-				fi
+		# on AC power?
+		#
+		# - set GPU governor to userspace
+		#		- set GPU max freq to 1000 MHz
+		# - set CPU governor to powersave
 
-				# on battery power?
-				#
-				# - set GPU governor to userspace
-				#		- set GPU max freq to 300 MHz
-				# - set CPU governor to powersave
+		if [ "$bat_status" == "Charging" ]; then
+			echo "Charging"
+			echo "simple_ondemand" > "$gpu_path/governor"
+			echo "300000000" > "$gpu_path/min_freq"
+			echo "$ac_max_gpu_freq" > "$gpu_path/max_freq"
+			# FIXME this triggers a bug in the panel driver when the panel is turned off (i.e. on HDMI)
+			# that makes everything crash/freeze, so commented out for now
+			#brightnessctl set "$ac_display_backlight_level"
+			printf "$ac_keyboard_backlight" > /dev/hidraw0
 
-				if [ "$bat_status" == "Discharging" ]; then
-						echo "userspace" > "$gpu_path/governor"
-						echo "300000000" > "$gpu_path/min_freq"
-						echo "$bat_max_gpu_freq" > "$gpu_path/max_freq"
-						brightnessctl set "$bat_display_backlight_level"
-						printf "$bat_keyboard_backlight" > /dev/hidraw0
-
-						for i in 0 4 6; do
-								echo "powersave" > "$cpu_path/policy$i/scaling_governor"
-						done
-				fi
+			for i in 0 4 6; do
+				echo "$ac_cpu_governor" > "$cpu_path/policy$i/scaling_governor"
+			done
 		fi
 
-		prev_status="$bat_status"
-		sleep 1
+		# on battery power?
+		#
+		# - set GPU governor to userspace
+		#		- set GPU max freq to 300 MHz
+		# - set CPU governor to powersave
+
+		if [ "$bat_status" == "Discharging" ]; then
+			echo "Discharging"
+			echo "userspace" > "$gpu_path/governor"
+			echo "300000000" > "$gpu_path/min_freq"
+			echo "$bat_max_gpu_freq" > "$gpu_path/max_freq"
+			# FIXME this triggers a bug in the panel driver when the panel is turned off (i.e. on HDMI)
+			# that makes everything crash/freeze, so commented out for now
+			#brightnessctl set "$bat_display_backlight_level"
+			printf "$bat_keyboard_backlight" > /dev/hidraw0
+
+			for i in 0 4 6; do
+				echo "powersave" > "$cpu_path/policy$i/scaling_governor"
+			done
+		fi
+	fi
+
+	prev_status="$bat_status"
+	sleep 1
 done
