@@ -1,12 +1,12 @@
 [Unit]
-Description=MNT (Pocket) Reform Power Daemon Service
+Description=MNT (Pocket) Reform Power Daemon Service (currently for RCORE/RK3588 only)
 
 [Service]
 Type=simple
 ExecStart=/usr/libexec/reform-tools/reform-power-daemon
-Restart=always
+Restart=on-failure
 RestartSec=10
+RestartPreventExitStatus=2
 
 [Install]
 WantedBy=multi-user.target
-
