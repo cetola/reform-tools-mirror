@@ -1,3 +1,10 @@
+1.82 (2025-11-18)
+=================
+
+ * add reform-power-daemon
+ * add monobar plymouth theme
+ * etc/profile.d/reform-mali.sh: set PAN_MESA_DEBUG=gl3
+
 1.81 (2025-11-04)
 =================
 
