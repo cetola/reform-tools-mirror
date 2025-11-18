@@ -316,7 +316,11 @@ for dev in "$@"; do
     *) realdev="$dev" ;;
   esac
 
-  echo "Writing $IMAGE to $realdev" >&2
+  if [ "$ZERO" != "yes" ]; then
+    echo "I: Writing $IMAGE to $realdev" >&2
+  else
+    echo "I: Overwriting u-boot on $realdev with zeroes" >&2
+  fi
 
   case $dev in
     emmc | "/dev/${DEV_MMC}"*)
