@@ -22,8 +22,8 @@ fi
 
 min_sys_ver=20251030
 min_kbd_ver=20251118
-sys_ver="$(reform-mcu-tool list --json | jq 'map(select(.device.name == "pocket-sysctl-1.0")) | .[] | .version')"
-kbd_ver="$(reform-mcu-tool list --json | jq 'map(select(.device.name == "pocket-input-1.0")) | .[] | .version')"
+sys_ver="$(reform-mcu-tool list --json | jq --raw-output 'map(select(.device.name == "pocket-sysctl-1.0")) | .[] | .version')"
+kbd_ver="$(reform-mcu-tool list --json | jq --raw-output 'map(select(.device.name == "pocket-input-1.0")) | .[] | .version')"
 
 echo "System Controller firmware version: $sys_ver"
 echo "Keyboard firmware version: $kbd_ver"

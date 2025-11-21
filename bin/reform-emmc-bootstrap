@@ -215,7 +215,7 @@ MOUNTROOT=
 disk_label=$(parted --json "/dev/${DEV_SSD}" print 2>/dev/null | jq --raw-output '.disk.label')
 case $disk_label in
   msdos | gpt)
-    num_parts=$(parted --json "/dev/${DEV_SSD}" print 2>/dev/null | jq '.disk.partitions | length')
+    num_parts=$(parted --json "/dev/${DEV_SSD}" print 2>/dev/null | jq --raw-output '.disk.partitions | length')
     DEV_SSD_BASE="$DEV_SSD"
     if [ "$DEV_SSD" != "sda" ]; then
       DEV_SSD_BASE="${DEV_SSD}p"

@@ -235,7 +235,7 @@ case "$(cat /proc/device-tree/model)" in
       echo "I: To retrieve the latest sysctl and keyboard firmware versions either install libxmlb-utils or install curl, xz-utils and libxml2-utils" >&2
     fi
 
-    SYS_VER="$(reform-mcu-tool list --json | jq 'map(select(.device.name == "pocket-sysctl-1.0")) | .[] | .version')"
+    SYS_VER="$(reform-mcu-tool list --json | jq --raw-output 'map(select(.device.name == "pocket-sysctl-1.0")) | .[] | .version')"
     if [ -n "$SYS_VER" ]; then
       echo "I: Version of system controller firmware: $SYS_VER" >&2
       if [ -n "$LATEST_SYS_VER" ] && [ "$LATEST_SYS_VER" != "$SYS_VER" ]; then
@@ -244,7 +244,7 @@ case "$(cat /proc/device-tree/model)" in
     else
       echo "W: unable to obtain version of system controller firmware -- firmware too old?" >&2
     fi
-    KBD_VER="$(reform-mcu-tool list --json | jq 'map(select(.device.name == "pocket-input-1.0")) | .[] | .version')"
+    KBD_VER="$(reform-mcu-tool list --json | jq --raw-output 'map(select(.device.name == "pocket-input-1.0")) | .[] | .version')"
     if [ -n "$KBD_VER" ]; then
       echo "I: Version of keyboard firmware: $KBD_VER" >&2
     else
@@ -342,7 +342,7 @@ case $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) in
     pv_device="$(pvdisplay --noheadings --select vgname=reformvg --columns --options pv_name)"
     pv_device="${pv_device#  }" # remove whitespace prefix
     if [ "$pv_device" = "/dev/mapper/reform_crypt" ]; then
-      luks_disk="$(lsblk --json -o PATH,PKNAME | jq -r '.blockdevices[] | select(.path == "/dev/mapper/reform_crypt") | .pkname')"
+      luks_disk="$(lsblk --json -o PATH,PKNAME | jq --raw-output '.blockdevices[] | select(.path == "/dev/mapper/reform_crypt") | .pkname')"
       if [ "$luks_disk" = "${DEV_SSD}" ]; then
         HUMAN_ROOT="LVM vg 'reformvg' on LUKS device 'reform_crypt' on SSD"
       else
