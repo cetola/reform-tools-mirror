@@ -163,6 +163,8 @@ lint:
 	clang-format lpc/reform2_lpc.c | diff -u lpc/reform2_lpc.c -
 	shfmt --posix --simplify --binary-next-line --case-indent --indent 2 --diff \
 		bin kernel/* initramfs-tools/*/* flash-kernel/*/*
+	shfmt --language-dialect=bash --simplify --binary-next-line --case-indent --indent 2 --diff \
+		libexec/reform-tools/reform-power-daemon
 	black --check --diff bin/reform-compstat libexec/reform-tools/reform-tray.py libexec/reform-tools/reform-wallpaper.py examples/keyboard_rainbow.py
 	black --line-length 120 --check --diff bin/reform-mcu-tool
 	shellcheck bin/* kernel/* initramfs-tools/*/* flash-kernel/*/* libexec/reform-tools/reform-power-daemon
