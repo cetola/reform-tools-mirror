@@ -153,10 +153,6 @@ if [ -n "$MACHINE" ]; then
       echo "E: invalid machine name (ends with .conf)" >&2
       exit 1
       ;;
-    *.*)
-      echo "E: invalid machine name (contains a dot)" >&2
-      exit 1
-      ;;
   esac
   # shellcheck source=/dev/null
   if [ -e "./machines/$MACHINE.conf" ]; then
