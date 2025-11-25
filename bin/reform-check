@@ -705,6 +705,11 @@ if [ "$(tr ' ' '\n' </proc/cmdline | grep console= | tail -1)" != "console=tty1"
   echo "W: This could lead to the luks password prompt being printed to serial instead of your screen." >&2
 fi
 
+case "$(cat /proc/cmdline)" in *" single "* | "single "* | *" single" | "single")
+  echo "W: Your kernel cmdline has 'single' in it and will boot into rescue mode on each boot. Maybe booting via extlinux.conf failed?" >&2
+  ;;
+esac
+
 case "$(cat /proc/device-tree/model)" in
   "MNT Pocket Reform with RCORE RK3588 Module" | \
     "MNT Reform 2 with RCORE-DSI RK3588 Module" | \
