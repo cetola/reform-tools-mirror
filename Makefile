@@ -145,6 +145,7 @@ install: $(MAN1) plymouth/background.png plymouth/monobar.so
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/wireplumber/wireplumber.conf.d audio/reform-hdmi-audio-priority.conf
 	$(INSTALL)     -d $(DESTDIR)$(sysconfdir)/profile.d
 	$(INSTALLDATA) -t $(DESTDIR)$(sysconfdir)/profile.d etc/profile.d/reform-kwin.sh
+	$(INSTALLDATA) -t $(DESTDIR)$(sysconfdir)/profile.d etc/profile.d/reform-mali.sh
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/doc/reform-tools/examples
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/doc/reform-tools/examples examples/keyboard_rainbow.py
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/xdg-terminal-exec
