@@ -179,7 +179,12 @@ for dev in "$@"; do
       ;;
     sd | "/dev/${DEV_SD}"*)
       if [ "$SD_BOOT" = false ]; then
-        echo "E: writing uboot to SD-Card not supported on $(cat /proc/device-tree/model)" >&2
+        printf "E: Refusing to write u-boot for this platform to SD-Card because this SoM is unable to load u-boot from SD-Card: " >&2
+        if [ -z "$MACHINE" ]; then
+          printf "%s\n" "$(cat /proc/device-tree/model)" >&2
+        else
+          echo "$MACHINE" >&2
+        fi
         exit 1
       fi
       ;;
