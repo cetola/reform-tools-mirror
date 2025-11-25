@@ -278,12 +278,118 @@ case "$(cat /proc/device-tree/model)" in
   *) echo "E: unexpected content in /proc/device-tree/model: $(cat /proc/device-tree/model)" >&2 ;;
 esac
 
+parse_uboot_version() {
+  version=$1
+  # MNT u-boot version starts with upstream u-boot version
+  case $version in
+    [0-9][0-9][0-9][0-9].[0-9][0-9]" MNT "*) : ;;
+    *)
+      echo "E: expected u-boot version string to start with upstream version but got: $version" >&2
+      return
+      ;;
+  esac
+  # Strip off everything following the first space for the upstream version
+  upstream_version=${version%% *}
+  echo "I: Version of upstream U-Boot: $upstream_version" >&2
+  # Remove the upstream version to parse the remainder
+  version=${version#[0-9][0-9][0-9][0-9].[0-9][0-9] }
+  # After the upstream version comes the machine name
+  # The part after the machine name does not contain any spaces, so we can
+  # split the version again here
+  machine=${version% *}
+  case $machine in
+    "MNT Pocket Reform with BPI-CM4 Module" | \
+      "MNT Pocket Reform with i.MX8MP Module" | \
+      "MNT Pocket Reform with RCORE RK3588 Module" | \
+      "MNT Reform 2" | \
+      "MNT Reform 2 HDMI" | \
+      "MNT Reform 2 with BPI-CM4 Module" | \
+      "MNT Reform 2 with i.MX8MP Module" | \
+      "MNT Reform 2 with LS1028A Module" | \
+      "MNT Reform 2 with RCORE-DSI RK3588 Module" | \
+      "MNT Reform 2 with RCORE RK3588 Module" | \
+      "MNT Reform Next with RCORE RK3588 Module") : ;;
+    *)
+      echo "E: unknown machine name in u-boot version string: $machine"
+      return
+      ;;
+  esac
+  if [ "$machine" != "$(cat /proc/device-tree/model)" ]; then
+    case "$(cat /proc/device-tree/model)" in
+      "MNT Reform 2" | "MNT Reform 2 HDMI")
+        case $machine in "MNT Reform 2" | "MNT Reform 2 HDMI") : ;;
+        *)
+          echo "E: machine name in u-boot version does not match system: $machine != $(cat /proc/device-tree/model)"
+          return
+          ;;
+        esac
+        ;;
+      *)
+        echo "E: machine name in u-boot version does not match system: $machine != $(cat /proc/device-tree/model)"
+        return
+        ;;
+    esac
+  fi
+  version=${version##* }
+  # The remaining version was generated from a "git describe" from the MNT
+  # u-boot project together with "git describe" from upstream u-boot.
+  # The latter will likely be suffixed with "-dirty" because we applied
+  # patches, strip that off
+  version=${version%-dirty}
+  # The remaining version should start with the latest MNT u-boot git tag
+  # which is a ISO8601 date
+  case $version in
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9])
+      # In case of i.MX8MQ u-boot, upstream u-boot is not a sub-project and thus,
+      # there is no additional content after the date
+      # In this case, we are done.
+      echo "$version"
+      return
+      ;;
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*) : ;;
+    *)
+      echo "E: unable to parse U-Boot version git suffix: $version" >&2
+      return
+      ;;
+  esac
+  year=${version%%-*}
+  version=${version#*-}
+  month=${version%%-*}
+  version=${version#*-}
+  day=${version%%-*}
+  version=${version#*-}
+  # If the remaining version contains no hyphen, then that should be the
+  # abbreviated git object name and should start with a g.
+  case $version in
+    - | -* | *- | *-*)
+      # If there is a hyphen in the remainder, then the U-Boot build is not
+      # from a tag but contains changes
+      echo "W: U-Boot version not from tagged commit but with local changes: $version" >&2
+      ;;
+    g*) : ;;
+    *)
+      echo "E: Unable to parse U-Boot version git suffix: $version" >&2
+      return
+      ;;
+  esac
+  # Finally, if successful, print the MNT U-Boot version for the caller
+  echo "$year-$month-$day"
+}
+
 if [ -e "/proc/device-tree/chosen/u-boot,version" ]; then
-  echo "I: Version of U-Boot: $(cat "/proc/device-tree/chosen/u-boot,version")" >&2
-  # FIXME: once all u-boot versions are updated to the format which includes
-  # the machine name, we could attempt parsing the version and then only
-  # display the latest version if there is a mismatch
-  echo "I: Latest version of U-Boot: $UBOOT_TAG" >&2
+  version=$(parse_uboot_version "$(cat /proc/device-tree/chosen/u-boot,version)")
+  if [ -z "$version" ]; then
+    echo "I: Contents of /proc/device-tree/chosen/u-boot,version: $(cat /proc/device-tree/chosen/u-boot,version)" >&2
+    echo "W: Unable to parse contents of /proc/device-tree/chosen/u-boot,version -- U-Boot too old?" >&2
+  else
+    if [ "$version" != "$UBOOT_TAG" ]; then
+      echo "I: Contents of /proc/device-tree/chosen/u-boot,version: $(cat /proc/device-tree/chosen/u-boot,version)" >&2
+      echo "I: Booting with outdated U-Boot. Local version is $version while latest version is $UBOOT_TAG" >&2
+    fi
+    echo "I: Version of MNT U-Boot: $version" >&2
+  fi
+else
+  echo "W: /proc/device-tree/chosen/u-boot,version does not exist -- U-Boot version too old?" >&2
 fi
 
 HAVE_BOOTSCR=no
