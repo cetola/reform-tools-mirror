@@ -1,2 +1,5 @@
 [org/gnome/login-screen]
 logo='/usr/share/pixmaps/mnt-reform-logo-login-invert.svg'
+
+[org/gnome/deskop/interface]
+accent-color='purple'
