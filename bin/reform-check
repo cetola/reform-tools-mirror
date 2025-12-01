@@ -789,6 +789,36 @@ if [ ! -e "/usr/lib/modules/$(uname -r)/updates/dkms/reform2_lpc.ko" ] \
   echo "E: /usr/lib/modules/$(uname -r)/updates/dkms/reform2_lpc.ko{.xz} does not exist" >&2
 fi
 
+if [ ! -e "/sys/class/power_supply/BAT0" ]; then
+  echo "E: /sys/class/power_supply/BAT0 is missing -- reform2_lpc module not loaded?" >&2
+elif [ ! -L "/sys/class/power_supply/BAT0" ]; then
+  echo "E: /sys/class/power_supply/BAT0 exists but is not a symlink" >&2
+else
+  case "$(cat /proc/device-tree/model)" in
+    "MNT Reform Next with "*) : ;; # not implemented for Reform Next yet
+    "MNT Reform 2 with LS1028A Module" | \
+      "MNT Reform 2 with BPI-CM4 Module" | \
+      "MNT Pocket Reform with BPI-CM4 Module")
+      case "$(readlink /sys/class/power_supply/BAT0)" in
+        ../../devices/platform/*/spi_master/spi0/spi0.0/power_supply/BAT0) : ;;
+        *) echo "E: unexpected link target of /sys/class/power_supply/BAT0: $(readlink /sys/class/power_supply/BAT0)" >&2 ;;
+      esac
+      ;;
+    "MNT Reform 2" | "MNT Reform 2 HDMI" | \
+      "MNT Reform 2 with i.MX8MP Module" | \
+      "MNT Reform 2 with RCORE-DSI RK3588 Module" | \
+      "MNT Reform 2 with RCORE RK3588 Module" | \
+      "MNT Pocket Reform with i.MX8MP Module" | \
+      "MNT Pocket Reform with RCORE RK3588 Module")
+      case "$(readlink /sys/class/power_supply/BAT0)" in
+        ../../devices/platform/*/spi_master/spi1/spi1.0/power_supply/BAT0) : ;;
+        *) echo "E: unexpected link target of /sys/class/power_supply/BAT0: $(readlink /sys/class/power_supply/BAT0)" >&2 ;;
+      esac
+      ;;
+    *) echo "E: unexpected content in /proc/device-tree/model: $(cat /proc/device-tree/model)" >&2 ;;
+  esac
+fi
+
 worddiff() {
   for word in $1; do
     case $2 in
