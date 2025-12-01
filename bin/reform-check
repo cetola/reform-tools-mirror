@@ -254,10 +254,10 @@ case "$(cat /proc/device-tree/model)" in
 esac
 
 case "$(cat /proc/device-tree/model)" in
-  "MNT Pocket Reform with "*) : ;; # this check is specific to classic reform
-  "MNT Reform Next with "*) : ;;   # this check is specific to classic reform
+  "MNT Reform Next with "*) : ;; # not implemented for Reform Next yet
   "MNT Reform 2 with LS1028A Module" | \
-    "MNT Reform 2 with BPI-CM4 Module")
+    "MNT Reform 2 with BPI-CM4 Module" | \
+    "MNT Pocket Reform with BPI-CM4 Module")
     if [ -e "/sys/bus/spi/drivers/reform2_lpc/spi0.0/firmware" ]; then
       # A311D
       echo "I: Version of LPC firmware: $(cat /sys/bus/spi/drivers/reform2_lpc/spi0.0/firmware)"
@@ -268,7 +268,9 @@ case "$(cat /proc/device-tree/model)" in
   "MNT Reform 2" | "MNT Reform 2 HDMI" | \
     "MNT Reform 2 with i.MX8MP Module" | \
     "MNT Reform 2 with RCORE-DSI RK3588 Module" | \
-    "MNT Reform 2 with RCORE RK3588 Module")
+    "MNT Reform 2 with RCORE RK3588 Module" | \
+    "MNT Pocket Reform with i.MX8MP Module" | \
+    "MNT Pocket Reform with RCORE RK3588 Module")
     if [ -e "/sys/bus/spi/drivers/reform2_lpc/spi1.0/firmware" ]; then
       echo "I: Version of LPC firmware: $(cat /sys/bus/spi/drivers/reform2_lpc/spi1.0/firmware)"
     else
