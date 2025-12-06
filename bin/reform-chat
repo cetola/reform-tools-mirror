@@ -7,22 +7,56 @@ set -eu
 
 usage() {
   echo "Join the #mnt-reform chat room on irc.libera.chat" >&2
-  echo "under a random pseudonym" >&2
+  echo "under a random pseudonym or a given nickname" >&2
   echo >&2
-  echo "Usage: $0 [--help]" >&2
+  echo "Usage: $0 [--help] [nickname]" >&2
   echo >&2
   echo "Options:" >&2
   echo "  --help           Display this help and exit." >&2
 }
 
-if [ "$#" -gt 0 ]; then
-  if [ "$1" != "--help" ]; then
-    echo "E: too many arguments" >&2
-    usage
-    exit 1
-  fi
-  usage
-  exit 0
-fi
+NICKNAME="reform$(shuf -i 0-32767 -n 1)"
+while getopts :h-: OPTCHAR; do
+  case "$OPTCHAR" in
+    h)
+      usage
+      exit 0
+      ;;
+    -)
+      case "$OPTARG" in
+        help)
+          usage
+          exit 0
+          ;;
+        *)
+          echo "E: unrecognized option: --$OPTARG" >&2
+          exit 1
+          ;;
+      esac
+      ;;
+    :)
+      echo "E: missing argument for -$OPTARG" >&2
+      exit 1
+      ;;
+    '?')
+      echo "E: unrecognized option -$OPTARG" >&2
+      exit 1
+      ;;
+    *)
+      echo "E: error parsing options" >&2
+      exit 1
+      ;;
+  esac
+done
+shift "$((OPTIND - 1))"
 
-exec irc -c '#mnt-reform' -p 6697 "reform$(shuf -i 0-32767 -n 1)" SSLIRC/irc.libera.chat
+case "$#" in
+  0) : ;;
+  1) NICKNAME="$1" ;;
+  *)
+    echo "E: too many positional arguments" >&2
+    exit 1
+    ;;
+esac
+
+exec irc -c '#mnt-reform' -p 6697 "$NICKNAME" SSLIRC/irc.libera.chat
