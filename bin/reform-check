@@ -693,7 +693,7 @@ if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-mnt-ref
 fi
 
 if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-headers-mnt-reform-arm64" 2>/dev/null | grep -q '^installed$'; then
-  echo "E: linux-headers-mnt-reform-arm64 is not installed -- cannot compile reform2_lpc module" >&2
+  echo "E: linux-headers-mnt-reform-arm64 is not installed (cannot compile reform2_lpc.ko DKMS module for battery status)" >&2
 fi
 
 for file in /boot/initrd.img-*-reform2-arm64 /boot/vmlinuz-*-reform2-arm64; do
@@ -867,7 +867,7 @@ case "$(cat /proc/device-tree/model)" in
 esac
 
 if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-headers-$(uname -r)" 2>/dev/null | grep -q '^installed$'; then
-  echo "E: the linux header package linux-headers-$(uname -r) for the currently running kernel is not installed" >&2
+  echo "E: the linux header package linux-headers-$(uname -r) for the currently running kernel is not installed (cannot compile reform2_lpc.ko DKMS module for battery status)" >&2
 fi
 
 for f in mntre reform_bookworm reform_bookworm-backports; do
