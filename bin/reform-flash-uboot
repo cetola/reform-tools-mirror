@@ -30,6 +30,7 @@ usage() {
   echo "               flashing offsets. Implies --offline. Requires a custom u-boot binary" >&2
   echo "               via --image. Device short-hands are disabled. Flashing to emmc is" >&2
   echo "               disabled." >&2
+  echo "  --verbose    Print with higher verbosity." >&2
   echo "  --dry-run    Do not perform the actual flashing." >&2
   echo "" >&2
 }
@@ -44,6 +45,7 @@ FORCE=
 IMAGE=
 ZERO=
 MACHINE=
+VERBOSE=
 DRYRUN=
 while getopts :hfi:-: OPTCHAR; do
   case "$OPTCHAR" in
@@ -88,6 +90,7 @@ while getopts :hfi:-: OPTCHAR; do
           ;;
         offline) OFFLINE=yes ;;
         zero) ZERO=yes ;;
+        verbose) VERBOSE=yes ;;
         dry-run) DRYRUN=yes ;;
         *)
           echo "E: unrecognized option: --$OPTARG" >&2
@@ -390,6 +393,9 @@ for dev in "$@"; do
   if [ "$DRYRUN" = "yes" ]; then
     echo "S: simulating: dd $*" >&2
   else
+    if [ "$VERBOSE" = "yes" ]; then
+      echo "D: running: dd $*" >&2
+    fi
     dd "$@"
   fi
   case $dev in
