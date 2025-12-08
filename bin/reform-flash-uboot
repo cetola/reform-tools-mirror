@@ -211,18 +211,18 @@ done
 
 if [ "$OFFLINE" != "yes" ]; then
   if echo "$UBOOT_SHA1  /boot/flash.bin" | sha1sum --strict --check >/dev/null 2>&1; then
-    echo "/boot/flash.bin is up-to-date -- not downloading it again" >&2
+    echo "I: /boot/flash.bin is up-to-date and has expected sha1sum -- not downloading it again" >&2
   else
-    echo "Downloading uboot to /boot/flash.bin and comparing checksum" >&2
+    echo "I: Downloading uboot to /boot/flash.bin and comparing checksum" >&2
     ubooturl="https://source.mnt.re/reform/${UBOOT_PROJECT}/-/jobs/artifacts/${UBOOT_TAG}/raw/$(basename "$DTBPATH" .dtb)-flash.bin?job=build"
     /usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file "$ubooturl" "/boot/flash.bin" "SHA1:$UBOOT_SHA1"
   fi
   # download mhdpfw.bin on ls1028a
   case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with LS1028A Module")
     if echo "fa96b9aa59d7c1e9e6ee1c0375d0bcc8f8e5b78c  /boot/ls1028a-mhdpfw.bin"; then
-      echo "/boot/ls1028a-mhdpfw.bin is up-to-date -- not downloading it again" >&2
+      echo "I: /boot/ls1028a-mhdpfw.bin is up-to-date -- not downloading it again" >&2
     else
-      echo "Downloading LS1028A MHDP firmware to /boot/ls1028a-mhdpfw.bin and comparing checksum" >&2
+      echo "I: Downloading LS1028A MHDP firmware to /boot/ls1028a-mhdpfw.bin and comparing checksum" >&2
       /usr/lib/apt/apt-helper -oAPT::Sandbox::User=root download-file \
         "https://source.mnt.re/reform/reform-ls1028a-uboot/-/raw/main/ls1028a-mhdpfw.bin" \
         "/boot/ls1028a-mhdpfw.bin" \
@@ -233,7 +233,7 @@ if [ "$OFFLINE" != "yes" ]; then
 fi
 
 if [ "$#" -eq 0 ]; then
-  echo "No device unto which to flash uboot provided. Exiting." >&2
+  echo "I: No device unto which to flash uboot provided. Exiting." >&2
   exit 0
 fi
 
@@ -317,8 +317,8 @@ for dev in "$@"; do
   # strip off trailing B
   firstpartstart=${firstpartstart%B}
   if [ "$((UBOOT_OFFSET - FLASHBIN_OFFSET + ubootsize))" -ge "$firstpartstart" ]; then
-    echo "the first partition on $realdev starts at $firstpartstart and would be overwritten by uboot" >&2
-    echo "make sure that the first $((UBOOT_OFFSET - FLASHBIN_OFFSET + ubootsize)) bytes are free on $realdev" >&2
+    echo "E: The first partition on $realdev starts at $firstpartstart and would be overwritten by uboot" >&2
+    echo "E: make sure that the first $((UBOOT_OFFSET - FLASHBIN_OFFSET + ubootsize)) bytes are free on $realdev" >&2
     exit 1
   fi
 done
@@ -414,13 +414,13 @@ if [ -z "$MACHINE" ]; then
     for dev in "$@"; do
       case $dev in
         emmc | "/dev/${DEV_MMC}"*)
-          echo "For the i.MX8MQ to load u-boot from MMC, make sure" >&2
-          echo "that your DIP switch is set to OFF." >&2
+          echo "I: For the i.MX8MQ to load u-boot from MMC, make sure" >&2
+          echo "I: that your DIP switch is set to OFF." >&2
           continue
           ;;
         sd | "/dev/${DEV_SD}"*)
-          echo "For the i.MX8MQ to load u-boot from SD-Card, make sure" >&2
-          echo "that your DIP switch is set to ON." >&2
+          echo "I: For the i.MX8MQ to load u-boot from SD-Card, make sure" >&2
+          echo "I: that your DIP switch is set to ON." >&2
           continue
           ;;
       esac
