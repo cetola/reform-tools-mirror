@@ -30,6 +30,7 @@ usage() {
   echo "               flashing offsets. Implies --offline. Requires a custom u-boot binary" >&2
   echo "               via --image. Device short-hands are disabled. Flashing to emmc is" >&2
   echo "               disabled." >&2
+  echo "  --dry-run    Do not perform the actual flashing." >&2
   echo "" >&2
 }
 
@@ -43,6 +44,7 @@ FORCE=
 IMAGE=
 ZERO=
 MACHINE=
+DRYRUN=
 while getopts :hfi:-: OPTCHAR; do
   case "$OPTCHAR" in
     h)
@@ -86,6 +88,7 @@ while getopts :hfi:-: OPTCHAR; do
           ;;
         offline) OFFLINE=yes ;;
         zero) ZERO=yes ;;
+        dry-run) DRYRUN=yes ;;
         *)
           echo "E: unrecognized option: --$OPTARG" >&2
           exit 1
@@ -108,8 +111,20 @@ while getopts :hfi:-: OPTCHAR; do
 done
 shift "$((OPTIND - 1))"
 
-if [ "$(id -u)" -ne 0 ]; then
+if [ "$(id -u)" -ne 0 ] && [ "$DRYRUN" != "yes" ]; then
   echo "reform-flash-uboot has to be run as root / using sudo."
+  exit 1
+fi
+
+if ! command -v parted >/dev/null && [ "$DRYRUN" = "yes" ]; then
+  # parted was not found in $PATH
+  # try adding /bin/sbin and /sbin to $PATH
+  PATH="$PATH:/usr/sbin:/sbin"
+  export PATH
+fi
+
+if ! command -v parted >/dev/null; then
+  echo "E: unable to find parted utility" >&2
   exit 1
 fi
 
@@ -256,6 +271,32 @@ for dev in "$@"; do
     *) realdev="$dev" ;;
   esac
 
+  if [ ! -e "$realdev" ]; then
+    if [ "$DRYRUN" = "yes" ]; then
+      echo "S: $realdev does not exist but that's okay because this is a simulation" >&2
+      continue
+    else
+      echo "E: $realdev does not exist" >&2
+      exit 1
+    fi
+  elif [ ! -b "$realdev" ]; then
+    if [ "$DRYRUN" = "yes" ]; then
+      echo "S: $realdev is not a block device but that's okay because this is a simulation" >&2
+      continue
+    else
+      echo "E: $realdev is not a block device" >&2
+      exit 1
+    fi
+  elif [ ! -r "$realdev" ]; then
+    if [ "$DRYRUN" = "yes" ]; then
+      echo "S: $realdev is not readable but that's okay because this is a simulation" >&2
+      continue
+    else
+      echo "E: $realdev is not readable" >&2
+      exit 1
+    fi
+  fi
+
   disk_label=$(parted --json --script "$realdev" unit B print 2>/dev/null | jq --raw-output '.disk.label')
   # no further tests for disks without a partition table
   if [ "$disk_label" = "unknown" ]; then
@@ -317,10 +358,18 @@ for dev in "$@"; do
     *) realdev="$dev" ;;
   esac
 
-  if [ "$ZERO" != "yes" ]; then
-    echo "I: Writing $IMAGE to $realdev" >&2
+  if [ "$DRYRUN" = "yes" ]; then
+    if [ "$ZERO" != "yes" ]; then
+      echo "I: Simulate writing $IMAGE to $realdev" >&2
+    else
+      echo "I: Simulate overwriting u-boot on $realdev with zeroes" >&2
+    fi
   else
-    echo "I: Overwriting u-boot on $realdev with zeroes" >&2
+    if [ "$ZERO" != "yes" ]; then
+      echo "I: Writing $IMAGE to $realdev" >&2
+    else
+      echo "I: Overwriting u-boot on $realdev with zeroes" >&2
+    fi
   fi
 
   case $dev in
@@ -330,12 +379,18 @@ for dev in "$@"; do
       fi
       ;;
   esac
+  set -- of="$realdev" bs=512 seek="$((UBOOT_OFFSET / 512))" skip="$((FLASHBIN_OFFSET / 512))" conv=fdatasync
   if [ "$ZERO" != "yes" ]; then
     # write u-boot binary
-    dd if="$IMAGE" of="$realdev" bs=512 seek="$((UBOOT_OFFSET / 512))" skip="$((FLASHBIN_OFFSET / 512))"
+    set -- if="$IMAGE" "$@"
   else
     # write zeroes instead of the u-boot image
-    dd if="/dev/zero" of="$realdev" bs=512 seek="$((UBOOT_OFFSET / 512))" count="$(((ubootsize - FLASHBIN_OFFSET) / 512))"
+    set -- if="/dev/zero" "$@"
+  fi
+  if [ "$DRYRUN" = "yes" ]; then
+    echo "S: simulating: dd $*" >&2
+  else
+    dd "$@"
   fi
   case $dev in
     emmc | "/dev/${DEV_MMC}"*)
