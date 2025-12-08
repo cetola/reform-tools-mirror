@@ -744,11 +744,18 @@ if [ "$MIRROR" = "mntre.com" ]; then
   fi
 fi
 
-if [ ! -e /boot/boot.scr ]; then
+if [ -e /boot/boot.scr ]; then
+  if ! grep --quiet "setenv fk_kvers '$(uname -r)'" /boot/boot.scr; then
+    echo "E: /boot/boot.scr doesn't reference the currently running kernel" >&2
+  fi
+  if command -v shellcheck >/dev/null; then
+    tail -n +2 /boot/boot.scr | shellcheck --shell sh --exclude=SC2086,SC2154 -
+  else
+    echo "I: Install the package shellcheck for checking /boot/boot.scr for problems" >&2
+  fi
+else
   echo "E: /boot/boot.scr doesn't exist" >&2
   echo "E: run 'sudo flash-kernel' to create it" >&2
-elif ! grep --quiet "setenv fk_kvers '$(uname -r)'" /boot/boot.scr; then
-  echo "E: /boot/boot.scr doesn't reference the currently running kernel" >&2
 fi
 
 if [ ! -e "/boot/vmlinuz-$(uname -r)" ]; then
