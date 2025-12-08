@@ -624,7 +624,7 @@ if command -v systemctl >/dev/null 2>&1 \
     # shellcheck disable=SC2016
     if ! echo 'setenv bootargs "${bootargs} loglevel=3"' | cmp --quiet - /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel; then
       echo "I: /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel exists but with the wrong content." >&2
-      echo 'I: it should contain this: setenv bootargs "${bootargs} loglevel=3'
+      echo 'I: it should contain this: setenv bootargs "${bootargs} loglevel=3"'
     fi
   else
     # shellcheck disable=SC2016
