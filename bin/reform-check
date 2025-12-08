@@ -634,7 +634,7 @@ if command -v systemctl >/dev/null 2>&1 \
 else
   # shellcheck disable=SC2016
   if [ -e /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel ] && echo 'setenv bootargs "${bootargs} loglevel=3"' | cmp --quiet - /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel; then
-    echo "W: you do not seem to boot using tuigreet but you the following file sets your loglevel to 3: /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel -- you may consider removing it and re-running 'sudo flash-kernel'" >&2
+    echo "W: you do not seem to boot using tuigreet but the following file sets your loglevel to 3: /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel -- you may consider removing it and re-running 'sudo flash-kernel'" >&2
   fi
 fi
 
