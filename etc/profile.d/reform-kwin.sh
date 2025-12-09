@@ -3,4 +3,4 @@
 # resulting in a black square behind the cursor and the display pipeline
 # crashing when the cursor is moved into the screen edges.
 # The bug is wontfix upstream. TODO: find the bug URL
-KWIN_FORCE_SW_CURSOR=1
+export KWIN_FORCE_SW_CURSOR=1
