@@ -899,6 +899,9 @@ for f in . firefox firefox/syspref.js motd-full motd-rescue profile.d profile.d/
   fi
   echo "E: $file has insecure permissions (it is world-writable)" >&2
 done
+if [ -e /etc/profile.d/reform-setup.sh ]; then
+  echo "W: reform-setup-wizard failed to clean up /etc/profile.d/reform-setup.sh. It can be safely removed." >&2
+fi
 if [ -e /etc/skel ] && [ "$(stat -c %a /etc/skel)" = "777" ]; then
   echo "E: /etc/skel has insecure permissions 0777, consider a chmod -R g-w,o-rw" >&2
 fi
