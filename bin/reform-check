@@ -943,7 +943,7 @@ if [ "$OFFLINE" = "yes" ]; then
 else
   # shellcheck disable=SC2016
   case "$MIRROR" in mntre.com)
-    if [ "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://mntre.com/reform-debian-repo/' --format '$(RELEASE)')" != reform ]; then
+    if [ "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://mntre.com/reform-debian-repo/' --format '$(RELEASE)' | sort -u)" != "reform" ]; then
       echo "E: the reform repository is not known to apt" >&2
       echo "E: add the following line to your /etc/apt/sources.list to fix this" >&2
       echo "deb [arch=arm64 trusted=yes] https://mntre.com/reform-debian-repo reform main" >&2
