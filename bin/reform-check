@@ -472,14 +472,6 @@ case $(findmnt --noheadings --evaluate --mountpoint /boot --output SOURCE) in
 esac
 echo "I: Mount source of /boot: $(findmnt --noheadings --evaluate --mountpoint /boot --output SOURCE) (${HUMAN_BOOT})" >&2
 
-if [ ! -e "/etc/flash-kernel/machine" ]; then
-  # /etc/flash-kernel/machine not existing is only a potential problem
-  # on imx8mq
-  case "$(cat /proc/device-tree/model)" in
-    "MNT Reform 2" | "MNT Reform 2 HDMI") echo "W: /etc/flash-kernel/machine does not exist" >&2 ;;
-  esac
-fi
-
 if [ ! -e "/proc/device-tree/model" ]; then
   echo "E: /proc/device-tree/model does not exist" >&2
 fi
