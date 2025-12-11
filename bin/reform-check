@@ -519,6 +519,16 @@ for META in reform-desktop-full reform-desktop-minimal; do
   done
 done
 
+if ! dpkg-query --showformat '${db:Status-Status}\n' --show "reform-branding" 2>/dev/null | grep -q '^installed$'; then
+  case "$MIRROR" in mntre.com) echo "W: reform-branding (non-free) is not installed" >&2 ;;
+  reform.debian.net) echo "I: reform-branding (non-free) is not installed" >&2 ;;
+  *)
+    echo "invalid mirror: $MIRROR" >&2
+    exit 1
+    ;;
+  esac
+fi
+
 if [ -z "$(findmnt --fstab --noheadings --evaluate --mountpoint / --output SOURCE)" ]; then
   echo "E: your /etc/fstab does not have an entry for /" >&2
   echo "E: your / device probably is: $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE)" >&2
