@@ -23,6 +23,11 @@ if [ $# -gt 0 ]; then
   exit 0
 fi
 
+if [ ! -e /usr/share/doc/reform-handbook/html/index.html ]; then
+  echo "E: install reform-handbook" >&2
+  exit 1
+fi
+
 if [ -z ${DISPLAY+x} ]; then
   # not running under X/wayland
   set -- elinks
