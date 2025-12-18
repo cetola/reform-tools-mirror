@@ -31,6 +31,20 @@ action="${action%\'}"
 
 set -u
 
+dtb_required() {
+  config="$1"
+  if [ ! -e /proc/device-tree/model ]; then
+    return 1
+  fi
+  if [ -z "$(cat /proc/device-tree/model)" ]; then
+    return 1
+  fi
+  if [ "$(cat /proc/device-tree/model)" != "$(basename "$config" .conf)" ]; then
+    return 1
+  fi
+  return 0
+}
+
 install_dtbs() {
   if [ -d "/usr/lib/modules/$version/dtb" ]; then
     # this should be kernels >= 6.18
@@ -57,11 +71,21 @@ install_dtbs() {
     # run find with -H in case DT_INSTALL_DIR is a symlink
     dtb=$(find -H "$DT_INSTALL_DIR" -wholename "*/$DTBPATH" 2>/dev/null | head -n 1)
     if [ -z "$dtb" ]; then
-      echo "W: no dtb for $DTBPATH in $DT_INSTALL_DIR -- skipping..." >&2
-      continue
+      if dtb_required "$CONF"; then
+        echo "E: no dtb for $DTBPATH in $DT_INSTALL_DIR but is required for this platform" >&2
+        exit 1
+      else
+        echo "W: no dtb for $DTBPATH in $DT_INSTALL_DIR -- skipping..." >&2
+        continue
+      fi
     elif [ ! -f "$dtb" ]; then
-      echo "W: $dtb does not exist -- skipping..." >&2
-      continue
+      if dtb_required "$CONF"; then
+        echo "E: $dtb does not exist but is required for this platform" >&2
+        exit 1
+      else
+        echo "W: $dtb does not exist -- skipping..." >&2
+        continue
+      fi
     fi
     if [ ! -e "$DT_INSTALL_DIR/$DTBPATH" ]; then
       echo "W: irregular dtb path: $dtb" >&2
