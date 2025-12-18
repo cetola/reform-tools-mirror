@@ -39,7 +39,7 @@ install_dtbs() {
       echo "W: /usr/lib/linux-image-$version does not exist -- skipping..." >&2
       continue
     fi
-    dtb=$(find "/usr/lib/linux-image-$version" -wholename "*/$DTBPATH" 2>/dev/null | head -n 1)
+    dtb=$(find -H "/usr/lib/linux-image-$version" -wholename "*/$DTBPATH" 2>/dev/null | head -n 1)
     if [ -z "$dtb" ]; then
       echo "W: no dtb for $DTBPATH in /usr/lib/linux-image-$version -- skipping..." >&2
       continue
