@@ -32,22 +32,38 @@ action="${action%\'}"
 set -u
 
 install_dtbs() {
+  if [ -d "/usr/lib/modules/$version/dtb" ]; then
+    # this should be kernels >= 6.18
+    DT_INSTALL_DIR="/usr/lib/modules/$version/dtb"
+  elif [ -L "/usr/lib/linux-image-$version" ]; then
+    # kernel >= 6.18 ship modules in /usr/lib/modules/$version/dtb and the
+    # old location is a compatibility symlink
+    if [ -d "/usr/lib/linux-image-$version" ]; then
+      DT_INSTALL_DIR="/usr/lib/linux-image-$version"
+    else
+      echo "E: Neither /usr/lib/modules/$version/dtb nor /usr/lib/linux-image-$version do exist" >&2
+      exit 1
+    fi
+  elif [ -d "/usr/lib/linux-image-$version" ]; then
+    # we are likely before kernel 6.18
+    DT_INSTALL_DIR="/usr/lib/linux-image-$version"
+  else
+    echo "E: Neither /usr/lib/modules/$version/dtb nor /usr/lib/linux-image-$version do exist" >&2
+    exit 1
+  fi
   for CONF in /usr/share/reform-tools/machines/*.conf; do
     # shellcheck disable=SC1090
     . "$CONF"
-    if [ ! -d "/usr/lib/linux-image-$version" ]; then
-      echo "W: /usr/lib/linux-image-$version does not exist -- skipping..." >&2
-      continue
-    fi
-    dtb=$(find -H "/usr/lib/linux-image-$version" -wholename "*/$DTBPATH" 2>/dev/null | head -n 1)
+    # run find with -H in case DT_INSTALL_DIR is a symlink
+    dtb=$(find -H "$DT_INSTALL_DIR" -wholename "*/$DTBPATH" 2>/dev/null | head -n 1)
     if [ -z "$dtb" ]; then
-      echo "W: no dtb for $DTBPATH in /usr/lib/linux-image-$version -- skipping..." >&2
+      echo "W: no dtb for $DTBPATH in $DT_INSTALL_DIR -- skipping..." >&2
       continue
     elif [ ! -f "$dtb" ]; then
       echo "W: $dtb does not exist -- skipping..." >&2
       continue
     fi
-    if [ ! -e "/usr/lib/linux-image-$version/$DTBPATH" ]; then
+    if [ ! -e "$DT_INSTALL_DIR/$DTBPATH" ]; then
       echo "W: irregular dtb path: $dtb" >&2
     fi
     mkdir -p "/boot/dtbs/$version/$(dirname "$DTBPATH")"
