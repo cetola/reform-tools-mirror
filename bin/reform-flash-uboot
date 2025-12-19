@@ -302,10 +302,26 @@ for dev in "$@"; do
 
   disk_label=$(parted --json --script "$realdev" unit B print 2>/dev/null | jq --raw-output '.disk.label')
   # no further tests for disks without a partition table
-  if [ "$disk_label" = "unknown" ]; then
-    echo "I: no partition table found on $realdev" >&2
-    continue
-  fi
+  case $disk_label in
+    unknown)
+      echo "I: No partition table found on $realdev" >&2
+      continue
+      ;;
+    msdos)
+      if [ "$UBOOT_OFFSET" -lt 512 ]; then
+        echo "E: u-boot would be flashed with an offset of $UBOOT_OFFSET which would overwrite parts of the" >&2
+        echo "E: MBR partition table which requires 512 bytes of space at the beginning of $realdev" >&2
+        exit 1
+      fi
+      ;;
+    gpt)
+      if [ "$UBOOT_OFFSET" -lt 17408 ]; then
+        echo "E: u-boot would be flashed with an offset of $UBOOT_OFFSET which would overwrite parts of the" >&2
+        echo "E: GUID partition table which requires 17408 bytes of space at the beginning of $realdev" >&2
+        exit 1
+      fi
+      ;;
+  esac
 
   num_parts=$(parted --json --script "$realdev" unit B print | jq --raw-output '.disk.partitions | length')
   if [ "$num_parts" -eq 0 ]; then
