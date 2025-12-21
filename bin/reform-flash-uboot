@@ -325,7 +325,7 @@ for dev in "$@"; do
 
   num_parts=$(parted --json --script "$realdev" unit B print | jq --raw-output '.disk.partitions | length')
   if [ "$num_parts" -eq 0 ]; then
-    echo "I: no partition was found on $realdev" >&2
+    echo "I: No partition was found on $realdev" >&2
     continue
   fi
 
@@ -407,10 +407,10 @@ for dev in "$@"; do
     set -- if="/dev/zero" "$@"
   fi
   if [ "$DRYRUN" = "yes" ]; then
-    echo "S: simulating: dd $*" >&2
+    echo "S: Simulating: dd $*" >&2
   else
     if [ "$VERBOSE" = "yes" ]; then
-      echo "D: running: dd $*" >&2
+      echo "D: Running: dd $*" >&2
     fi
     dd "$@"
   fi
