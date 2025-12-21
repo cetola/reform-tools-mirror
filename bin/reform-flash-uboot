@@ -422,6 +422,45 @@ for dev in "$@"; do
       ;;
   esac
 
+  if [ "$DRYRUN" = "yes" ]; then
+    echo "S: Skipping verification because this is a simulation" >&2
+    continue
+  elif [ "$ZERO" != "yes" ]; then
+    echo "I: Reading u-boot from $realdev and comparing it to $IMAGE" >&2
+  else
+    echo "I: Reading u-boot from $realdev and making sure it's all zeroed out" >&2
+  fi
+
+  # For the extra paranoid, read back what got written and compare.
+  set -- --bytes="$((ubootsize - FLASHBIN_OFFSET))"
+  if [ "$ZERO" != "yes" ]; then
+    set -- "$@" --ignore-initial="0:$FLASHBIN_OFFSET" - "$IMAGE"
+  else
+    set -- "$@" --bytes="$((ubootsize - FLASHBIN_OFFSET))" - /dev/zero
+  fi
+  # We use "dd iflag=direct" (which uses O_DIRECT) in the hopes that we read
+  # from the device directly instead of re-using existing caches.
+  if dd if="$realdev" bs=512 skip="$((UBOOT_OFFSET / 512))" count="$(((ubootsize - FLASHBIN_OFFSET) / 512))" iflag=direct \
+    | cmp "$@"; then
+    echo "I: Successfully read the same bytes from $realdev as were written before" >&2
+  else
+    echo "E: Did not get the same bytes back which were written"
+    exit 1
+  fi
+
+  if [ -n "$IMAGE" ] && [ "$ZERO" != "yes" ]; then
+    echo "I: Reading u-boot from $realdev and comparing sha1sum" >&2
+    trap 'rm $tmpuboot' EXIT INT TERM
+    tmpuboot="$(mktemp)"
+    dd if="$realdev" of="$tmpuboot" bs=512 skip="$((UBOOT_OFFSET / 512))" count="$(((ubootsize - FLASHBIN_OFFSET) / 512))"
+    if echo "$UBOOT_SHA1  $tmpuboot" | sha1sum --strict --check >/dev/null 2>&1; then
+      echo "W: sha1sum hash sum mismatch: u-boot on $realdev has an unexpected checksum" >&2
+    else
+      echo "I: sha1sum check successful" >&2
+    fi
+    rm "$tmpuboot"
+    trap - EXIT INT TERM
+  fi
 done
 
 # inform about the DIP switch position only on imx8mq
