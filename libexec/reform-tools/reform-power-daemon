@@ -75,6 +75,7 @@ while sleep 1; do
 
     # apply keyboard brightness. requires firmware 20251118+
     for hidraw in /dev/input/by-id/usb-MNT_Pocket_Reform_Input_*hidraw; do
+      [ -e "$hidraw" ] || continue
       printf "%b" "$ac_keyboard_backlight" >"$hidraw"
     done
 
@@ -95,6 +96,7 @@ while sleep 1; do
 
     # apply keyboard brightness. requires firmware 20251118+
     for hidraw in /dev/input/by-id/usb-MNT_Pocket_Reform_Input_*hidraw; do
+      [ -e "$hidraw" ] || continue
       printf "%b" "$bat_keyboard_backlight" >"$hidraw"
     done
 
