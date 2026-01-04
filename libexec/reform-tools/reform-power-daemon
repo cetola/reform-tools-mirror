@@ -10,7 +10,7 @@
 
 set -e
 
-if ! grep "MNT Pocket Reform with RCORE RK3588 Module" /proc/device-tree/model; then
+if ! grep -q "MNT Pocket Reform with RCORE RK3588 Module" /proc/device-tree/model; then
   echo "Fatal: reform-power-daemon currently supports only MNT Pocket Reform with RCORE RK3588 Module." >&2
   exit 2
 fi
