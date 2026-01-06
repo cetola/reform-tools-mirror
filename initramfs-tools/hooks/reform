@@ -40,6 +40,7 @@ case $MACHINE in
     [ "${verbose}" = "y" ] && echo "Adding /usr/bin/dmesg"
     copy_exec /usr/bin/dmesg
     ;;
+  "MNT Reform 2 with QUASAR QCS8550 Module") : ;;
   "MNT Reform 2 with RCORE RK3588 Module") : ;;
   "MNT Reform 2 with RCORE-DSI RK3588 Module") : ;;
   "MNT Pocket Reform with i.MX8MP Module") : ;;

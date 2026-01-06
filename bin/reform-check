@@ -267,6 +267,7 @@ case "$(cat /proc/device-tree/model)" in
     ;;
   "MNT Reform 2" | "MNT Reform 2 HDMI" | \
     "MNT Reform 2 with i.MX8MP Module" | \
+    "MNT Reform 2 with QUASAR QCS8550 Module" | \
     "MNT Reform 2 with RCORE-DSI RK3588 Module" | \
     "MNT Reform 2 with RCORE RK3588 Module" | \
     "MNT Pocket Reform with i.MX8MP Module" | \
@@ -308,6 +309,7 @@ parse_uboot_version() {
       "MNT Reform 2 with BPI-CM4 Module" | \
       "MNT Reform 2 with i.MX8MP Module" | \
       "MNT Reform 2 with LS1028A Module" | \
+      "MNT Reform 2 with QUASAR 8550 Module" | \
       "MNT Reform 2 with RCORE-DSI RK3588 Module" | \
       "MNT Reform 2 with RCORE RK3588 Module" | \
       "MNT Reform Next with RCORE RK3588 Module") : ;;
@@ -579,6 +581,7 @@ else
       "MNT Reform 2 with BPI-CM4 Module.conf" | \
       "MNT Reform 2 with i.MX8MP Module.conf" | \
       "MNT Reform 2 with LS1028A Module.conf" | \
+      "MNT Reform 2 with QUASAR 8550 Module" | \
       "MNT Reform 2 with RCORE-DSI RK3588 Module.conf" | \
       "MNT Reform 2 with RCORE RK3588 Module.conf" | \
       "MNT Reform Next with RCORE RK3588 Module.conf")
@@ -815,6 +818,7 @@ else
       ;;
     "MNT Reform 2" | "MNT Reform 2 HDMI" | \
       "MNT Reform 2 with i.MX8MP Module" | \
+      "MNT Reform 2 with QUASAR 8550 Module" | \
       "MNT Reform 2 with RCORE-DSI RK3588 Module" | \
       "MNT Reform 2 with RCORE RK3588 Module" | \
       "MNT Pocket Reform with i.MX8MP Module" | \
