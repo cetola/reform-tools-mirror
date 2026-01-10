@@ -404,7 +404,7 @@ for dev in "$@"; do
     set -- if="$IMAGE" "$@"
   else
     # write zeroes instead of the u-boot image
-    set -- if="/dev/zero" "$@"
+    set -- if="/dev/zero" "$@" count="$(((ubootsize - FLASHBIN_OFFSET) / 512))"
   fi
   if [ "$DRYRUN" = "yes" ]; then
     echo "S: Simulating: dd $*" >&2
