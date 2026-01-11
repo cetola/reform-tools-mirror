@@ -1,3 +1,67 @@
+1.83 (2026-01-12)
+=================
+
+ * Add support for QUASAR QCS6490 and QCS8550
+ * machines:
+    - LS1028A: update to 2025-12-24 with new offset at 1048576
+    - RK3588, A311D, i.mx8mq, i.mx8m+: update to 2026-01-11 with 512 byte
+      alignment
+ * Add plymouth.ignore-serial-consoles to bootargs
+ * audio/ucm2.conf.d: enable microphone in profile for rk3588 pocket/next
+ * bin/{pocket-,}reform-handbook: make handbook package optional by printing an
+   error if it's not installed
+ * bin/reform-chat: allow to specify a nickname
+ * bin/reform-check:
+    - apt-get indextargets can output multiple entries for the reform
+      repository: one for each configured architecture
+    - check for leftovers of reform-setup-wizard:
+      /etc/profile.d/reform-setup.sh
+    - check if reform-branding is installed
+    - check if /sys/class/power_supply/BAT0 exists and has the right symlink
+    - emmc-bootstrap},libexec/reform-tools/reform-power-daemon: run jq with
+      --raw-output to prevent extra quotes from being added to string output
+    - fix missing double quote in suggested 00reform2_tuigreet_loglevel
+    - lpc firmware check also works on pocket reform
+    - LS1028A also uses /sys/bus/spi/drivers/reform2_lpc/spi0.0
+    - parse the new u-boot version format
+    - print a warning if 'single' is in the kernel cmdline
+    - print error if dtb is zero bytes long
+    - print reason why header packages are needed
+    - remove redundant text on imx8mq
+    - test /boot/boot.scr for syntax errors if shellcheck is installed
+    - warn if header files do not exist in
+      /usr/lib/modules/$(uname -r)/build/include
+ * bin/reform-flash-uboot:
+    - add --dry-run
+    - add --verbose
+    - allow a dot in the machine name (i.mx8m+ has one)
+    - also abort flashing if u-boot would override GUID partition table (like
+      a311d u-boot does because it starts at 512 bytes)
+    - clarify error message when trying to write u-boot for a platform that
+      cannot boot from sd-card to an sd-card
+    - prefix messages with I: and E:
+    - verify what got written using cmp and sha1sum
+    - only write as many zeroes as u-boot is large
+    - warn that u-boot >= 2026-01-11 prefers nvme over emmc
+ * libexec/reform-tools/reform-power-daemon:
+    - test if hid device exists before redirecting into it
+    - silence grep output
+ * etc/profile.d:
+    - export variables instead of just setting them
+    - scripts are sourced and do not need to have execute permissions
+ * kernel/zz-reform-tools:
+    - fail if dtb required for the running machine was not found
+    - respect /usr/lib/modules/$version/dtb as the new default for dtbs
+    - Run find with -H because /usr/lib/linux-image-$version might be a symlink
+ * examples/keyboard_rainbow.py:
+    - make setproctitle optional
+    - print error messages when device cannot be opened for writing
+    - use /dev/input/by-id/*-hidraw symlinks to discover correct hidraw device
+ * Makefile: install /etc/profile.d/reform-mali.sh
+ * Stop installing /usr/share/xdg-terminal-exec/sway-xdg-terminals.list
+ * Add .gitignore
+ * Add .mailmap
+
 1.82 (2025-11-18)
 =================
 
