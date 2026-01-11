@@ -881,6 +881,11 @@ esac
 
 if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-headers-$(uname -r)" 2>/dev/null | grep -q '^installed$'; then
   echo "E: the linux header package linux-headers-$(uname -r) for the currently running kernel is not installed (cannot compile reform2_lpc.ko DKMS module for battery status)" >&2
+else
+  # even if the package is installed, the directory might be missing for some reason
+  if [ ! -d "/usr/lib/modules/$(uname -r)/build/include" ]; then
+    echo "E: the kernel header files cannot be found at /usr/lib/modules/$(uname -r)/build/include even though the package linux-headers-$(uname -r) is installed" >&2
+  fi
 fi
 
 for f in mntre reform_bookworm reform_bookworm-backports; do
