@@ -6,18 +6,35 @@
 
 ### Parameters
 default_backlight_intensity = 50  # %
-mnt_keyboard4_hidraw_device = "/dev/hidraw0"
-
 
 ### Modules
 import sys
 import argparse
 from time import time, sleep
+import glob
 
 try:
     from setproctitle import setproctitle
 except ModuleNotFoundError:
     setproctitle = lambda a: True
+
+mnt_keyboard4_hidraw_device = None
+# try hidraw devices until one matches
+for g in [
+    "/dev/input/by-id/usb-MNT_Research_MNT_Reform_Keyboard_4.0_*-hidraw",
+    "/dev/input/by-id/usb-MNT_Pocket_Reform_Input_1.0_*-hidraw",
+    "/dev/hidraw1",
+    "/dev/hidraw0",
+]:
+    matches = glob.glob(g)
+    if len(matches) != 1:
+        continue
+    mnt_keyboard4_hidraw_device = matches[0]
+    break
+
+if mnt_keyboard4_hidraw_device is None:
+    print("unable to find hidraw device")
+    exit(1)
 
 
 ### Defines
