@@ -13,7 +13,11 @@ mnt_keyboard4_hidraw_device = "/dev/hidraw0"
 import sys
 import argparse
 from time import time, sleep
-from setproctitle import setproctitle
+
+try:
+    from setproctitle import setproctitle
+except ModuleNotFoundError:
+    setproctitle = lambda a: True
 
 
 ### Defines
