@@ -124,6 +124,16 @@ def main():
                             )
                         )
                     row += 1
+                except PermissionError:
+                    print(
+                        f"Unable to open {mnt_keyboard4_hidraw_device} for writing: permission denied"
+                    )
+                    exit(1)
+                except BrokenPipeError:
+                    print(
+                        f"Unable to write to {mnt_keyboard4_hidraw_device}: broken pipe -- wrong device?"
+                    )
+                    exit(1)
                 except:
                     row = 0  # Redo the entire refresh in case of error
 
