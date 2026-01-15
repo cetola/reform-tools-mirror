@@ -100,6 +100,7 @@ install: $(MAN1) plymouth/background.png plymouth/monobar.so
 	$(INSTALL)     -t $(DESTDIR)$(libexecdir)/reform-tools libexec/reform-tools/reform-power-daemon
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/reform-tools/machines
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/reform-tools/machines machines/*
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/reform-tools/reform-power-daemon.conf etc/reform-power-daemon.conf
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/modprobe.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/modprobe.d modprobe.d/reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/glib-2.0/schemas
