@@ -177,7 +177,7 @@ fi
 if [ -z "$(apt-get indextargets)" ] && [ "$OFFLINE" != "yes" ]; then
   echo "E: reform-check needs a populated apt cache for some of its operation." >&2
   echo "E: re-run with --offline (disabling some checks) or choose to run 'apt update' now." >&2
-  printf "Should reform-check run 'apt update' for you? [y/N]" >&2
+  printf "Should reform-check run 'apt update' for you? [y/N] " >&2
   read -r response
   if [ "$response" != "y" ]; then
     echo "Exiting."
