@@ -342,35 +342,36 @@ done
 # rk3588 and a311d u-boot version 2026-01-11 starts preferring NVMe over eMMC, so warn the
 # user about it in case they have a bootflow on NVMe but want to use eMMC
 # for their /boot instead
-case $(findmnt --noheadings --evaluate --mountpoint /boot --output SOURCE) in "/dev/${DEV_MMC}"*)
-  case "$(cat /proc/device-tree/model)" in
-    "MNT Pocket Reform with BPI-CM4 Module" | \
-      "MNT Pocket Reform with RCORE RK3588 Module" | \
-      "MNT Reform 2 with BPI-CM4 Module" | \
-      "MNT Reform 2 with RCORE-DSI RK3588 Module" | \
-      "MNT Reform 2 with RCORE RK3588 Module" | \
-      "MNT Reform Next with RCORE RK3588 Module")
-      if dpkg --compare-versions "$UBOOT_TAG" "ge" "2026-01-11"; then
-        echo "W: u-boot version 2026-01-11 for A311D and RK3588 moved the bootflow for NVMe to be preferred over eMMC." >&2
-        echo "W: Make sure that you do not have a boot.scr or extlinux.conf on your NVMe if you were" >&2
-        echo "W: using eMMC for your /boot before" >&2
-        if [ "$FORCE" = "yes" ]; then
-          echo "Proceeding without user interaction because of --force" >&2
-          response="y"
-        else
-          printf "Are you sure you want to proceed? [y/N] "
-          read -r response
+if [ "$ZERO" != "yes" ]; then
+  case $(findmnt --noheadings --evaluate --mountpoint /boot --output SOURCE) in "/dev/${DEV_MMC}"*)
+    case "$(cat /proc/device-tree/model)" in
+      "MNT Pocket Reform with BPI-CM4 Module" | \
+        "MNT Pocket Reform with RCORE RK3588 Module" | \
+        "MNT Reform 2 with BPI-CM4 Module" | \
+        "MNT Reform 2 with RCORE-DSI RK3588 Module" | \
+        "MNT Reform 2 with RCORE RK3588 Module" | \
+        "MNT Reform Next with RCORE RK3588 Module")
+        if dpkg --compare-versions "$UBOOT_TAG" "ge" "2026-01-11"; then
+          echo "W: u-boot version 2026-01-11 for A311D and RK3588 moved the bootflow for NVMe to be preferred over eMMC." >&2
+          echo "W: Make sure that you do not have a boot.scr or extlinux.conf on your NVMe if you were" >&2
+          echo "W: using eMMC for your /boot before" >&2
+          if [ "$FORCE" = "yes" ]; then
+            echo "Proceeding without user interaction because of --force" >&2
+            response="y"
+          else
+            printf "Are you sure you want to proceed? [y/N] "
+            read -r response
+          fi
+          if [ "$response" != "y" ]; then
+            echo "Exiting."
+            exit
+          fi
         fi
-
-        if [ "$response" != "y" ]; then
-          echo "Exiting."
-          exit
-        fi
-      fi
-      ;;
+        ;;
+    esac
+    ;;
   esac
-  ;;
-esac
+fi
 
 if [ "$EMMC_BOOT" = warn ] && [ "$FORCE" != "yes" ]; then
   for dev in "$@"; do
