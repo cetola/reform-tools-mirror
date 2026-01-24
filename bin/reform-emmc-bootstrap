@@ -131,7 +131,7 @@ END
   mv "$MOUNTROOT/etc/fstab.new" "$MOUNTROOT/etc/fstab"
   if [ "$MOUNTROOT" != "/" ]; then
     rm -f "$MOUNTROOT/etc/resolv.conf" # make sure to remove a possible symlink
-    cp -a /etc/resolv.conf "$MOUNTROOT/etc/resolv.conf"
+    cp --dereference /etc/resolv.conf "$MOUNTROOT/etc/resolv.conf"
   fi
 
   # reform-boot-config does the same thing (could share code?)
