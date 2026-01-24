@@ -490,7 +490,8 @@ for dev in "$@"; do
     if echo "$UBOOT_SHA1  $tmpuboot" | sha1sum --strict --check >/dev/null 2>&1; then
       echo "I: sha1sum check successful" >&2
     else
-      echo "W: sha1sum hash sum mismatch: u-boot on $realdev has an unexpected checksum" >&2
+      echo "E: sha1sum hash sum mismatch: u-boot on $realdev has an unexpected checksum" >&2
+      exit 1
     fi
     rm "$tmpuboot"
     trap - EXIT INT TERM
