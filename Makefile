@@ -44,6 +44,7 @@ man/%.1: bin/%
 		migrate)        echo "copy rootfs to device" ;;               \
 		mcu-tool)       echo "manage microcontrollers" ;;             \
 		pavucontrol)    echo "kill and restart pavucontrol" ;;        \
+		rescue-shell)   echo "rescue a system on eMMC/NVMe" ;;        \
 		setup-encrypted-disk) echo "setup encrypted disk" ;;          \
 		setup-encrypted-nvme) echo "use setup-encrypted-disk" ;;      \
 		standby)        echo "suspend/wakeup tweaks" ;;               \
