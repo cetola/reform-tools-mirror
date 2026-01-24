@@ -107,7 +107,7 @@ command -v "cryptsetup" >/dev/null 2>&1 || {
   echo >&2 'Please install "cryptsetup" using: apt install cryptsetup'
   exit 1
 }
-command -v "lvchange" >/dev/null 2>&1 || {
+command -v "vgchange" >/dev/null 2>&1 || {
   echo >&2 'Please install "lvm2" using: apt install lvm2'
   exit 1
 }
