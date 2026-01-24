@@ -1,0 +1,63 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0+
+# Copyright 2026 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
+#
+# Write out /boot/loader/entries/*.conf bootspec files (Type #1)
+# https://uapi-group.org/specifications/specs/boot_loader_specification/
+
+set -e
+
+self="$0"
+version="$1"
+# shellcheck disable=SC2034
+image_path="$2"
+
+# linux-run-hooks from src:linux-base runs run-parts with --report which only
+# prints the name of the scripts it runs *if* the script in question produces
+# any output. Scripts that do not produce any output do not get an indication
+# by run-parts that they got run. So we print early to make sure that we are
+# able to easily see if this script was run or not during a given installation.
+echo "I: Now running: $0 $*" >&2
+echo "I: with DEB_MAINT_PARAMS=$DEB_MAINT_PARAMS" >&2
+
+# shellcheck disable=SC2086
+set -- $DEB_MAINT_PARAMS
+
+# strip single quotes from beginning and end
+action="${1#\'}"
+action="${action%\'}"
+
+set -u
+
+install_bootspecs() {
+  mkdir -p "/boot/loader/entries/"
+  for CONF in /usr/share/reform-tools/machines/*.conf; do
+    # shellcheck disable=SC1090
+    . "$CONF"
+    {
+      printf "title\t\tDebian on %s\n" "$(basename "$CONF" .conf)"
+      printf "version\t\t%s (kernel %s)\n" "$(cat /etc/debian_version)" "$version"
+      printf "linux\t\t/vmlinuz-%s\n" "$version"
+      printf "initrd\t\t/initrd.img-%s\n" "$version"
+      printf "devicetree\t/dtbs/%s/%s\n" "$version" "$DTBPATH"
+      printf "options\t\t%s\n" "$BOOTARGS"
+    } >"/boot/loader/entries/$(basename "$DTBPATH" .dtb)-$version.conf"
+    echo "I: installed /boot/loader/entries/$(basename "$DTBPATH" .dtb)-$version.conf" >&2
+  done
+}
+
+remove_bootspecs() {
+  for CONF in /usr/share/reform-tools/machines/*.conf; do
+    # shellcheck disable=SC1090
+    . "$CONF"
+    rm -f "/boot/loader/entries/$(basename "$DTBPATH" .dtb)-$version.conf" || :
+  done
+}
+
+case "$self:$action" in
+  # Only run on postinst configure and postrm remove, to avoid wasting
+  # time by calling this script multiple times on upgrade and removal.
+  */postinst.d/*:configure) install_bootspecs ;;
+  */postrm.d/*:remove) remove_bootspecs ;;
+  *) exit 0 ;;
+esac

@@ -95,6 +95,7 @@ install: $(MAN1) plymouth/background.png plymouth/monobar.so
 	$(INSTALL)     -t $(DESTDIR)$(datadir)/initramfs-tools/scripts/init-top initramfs-tools/scripts/reform
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/kernel/postinst.d
 	$(INSTALL)     -t $(DESTDIR)$(datadir)/kernel/postinst.d kernel/zz-reform-tools
+	$(INSTALL)     -t $(DESTDIR)$(datadir)/kernel/postinst.d kernel/zz-reform-bootspec
 	$(INSTALL)     -d $(DESTDIR)$(libexecdir)/reform-tools
 	$(INSTALL)     -t $(DESTDIR)$(libexecdir)/reform-tools libexec/reform-tools/reform-tray.py
 	$(INSTALL)     -t $(DESTDIR)$(libexecdir)/reform-tools libexec/reform-tools/reform-wallpaper.py
