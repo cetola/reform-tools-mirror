@@ -257,6 +257,10 @@ fi
 
 ubootsize=$(stat --format=%s "$IMAGE")
 
+if [ "$((ubootsize % 512))" -ne 0 ]; then
+  echo "E: the size of u-boot must be a multiple of 512 bytes" >&2
+fi
+
 # check if there is enough free space at the beginning of the disk
 for dev in "$@"; do
   case $dev in
