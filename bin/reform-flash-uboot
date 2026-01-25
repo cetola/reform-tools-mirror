@@ -492,7 +492,7 @@ for dev in "$@"; do
     echo "I: Reading u-boot from $realdev and comparing sha1sum" >&2
     trap 'rm -f $tmpuboot' EXIT INT TERM
     tmpuboot="$(mktemp)"
-    dd if="$realdev" of="$tmpuboot" bs=512 skip="$((UBOOT_OFFSET / 512))" count="$(((ubootsize - FLASHBIN_OFFSET) / 512))"
+    dd if="$realdev" of="$tmpuboot" bs=512 seek=$((FLASHBIN_OFFSET / 512)) skip="$((UBOOT_OFFSET / 512))" count="$(((ubootsize - FLASHBIN_OFFSET) / 512))"
     if echo "$UBOOT_SHA1  $tmpuboot" | sha1sum --strict --check >/dev/null 2>&1; then
       echo "I: sha1sum check successful" >&2
     else
