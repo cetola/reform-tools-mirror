@@ -490,7 +490,7 @@ for dev in "$@"; do
   # were written
   if [ "$IMAGE" = "/boot/flash.bin" ] && [ "$ZERO" != "yes" ]; then
     echo "I: Reading u-boot from $realdev and comparing sha1sum" >&2
-    trap 'rm $tmpuboot' EXIT INT TERM
+    trap 'rm -f $tmpuboot' EXIT INT TERM
     tmpuboot="$(mktemp)"
     dd if="$realdev" of="$tmpuboot" bs=512 skip="$((UBOOT_OFFSET / 512))" count="$(((ubootsize - FLASHBIN_OFFSET) / 512))"
     if echo "$UBOOT_SHA1  $tmpuboot" | sha1sum --strict --check >/dev/null 2>&1; then
