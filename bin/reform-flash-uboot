@@ -482,7 +482,9 @@ for dev in "$@"; do
     exit 1
   fi
 
-  if [ -n "$IMAGE" ] && [ "$ZERO" != "yes" ]; then
+  # compare checksum if no custom image was provided and if not just zeroes
+  # were written
+  if [ "$IMAGE" = "/boot/flash.bin" ] && [ "$ZERO" != "yes" ]; then
     echo "I: Reading u-boot from $realdev and comparing sha1sum" >&2
     trap 'rm $tmpuboot' EXIT INT TERM
     tmpuboot="$(mktemp)"
