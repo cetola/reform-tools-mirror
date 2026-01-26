@@ -1,3 +1,35 @@
+1.84 (2026-01-28)
+=================
+
+ * machines:
+    - RK3588, A311D, imx8m+: Upgrade to U-boot 2026-01-28
+    - Add MNT Deskto Reform with RCORE RK3588 Module
+    - Remove clk_ignore_unused and fbcon=rotate:3
+ * add bin/reform-rescue-shell
+ * add kernel/zz-reform-bootspec to write out /boot/loader/entries/*.conf
+   bootspec files (Type #1) for barebox
+ * bin/reform-emmc-bootstrap:
+    - dereference /etc/resolv.conf when copying
+    - run parted with --script to prevent user interaction
+ * bin/reform-flash-rescue:
+    - flash u-boot after the image was written
+    - flash u-boot on platforms without boot0 if reform-system-any got flashed
+ * bin/reform-flash-uboot:
+    - do not compare checksums of custom image but only of /boot/flash.bin
+    - error out if sha1sum mismatches
+    - fix sha1sum check
+    - make sure that u-boot binary has a size that is a multiple of 512 bytes
+    - only warn about 2026-01-11 upgrade on rk3588 and a311d without --zero
+    - remove temporary u-boot blob in exit trap with -f to ignore errors
+    - respect FLASHBIN_OFFSET of a311d u-boot when comparing checksums
+ * bin/reform-setup-encrypted-disk:
+    - check for vgchange instead of lvchange
+    - let rsync ignore partial transfer due to vanished source files
+ * examples/keyboard_rainbow.py:
+    - take exact LED position into account
+    - draw slightly slanted rainbow
+    - compute colors instead of hardcoding them
+
 1.83 (2026-01-12)
 =================
 
