@@ -224,10 +224,11 @@ else
   reform-boot-config --no-copy-old-boot --emmc emmc
 fi
 
-# Only run reform-flash-uboot if u-boot is written to the boot0 partition.
-# If u-boot is on the regular disk, then it will be overwritten by flashing the
-# image later, so we do not need to flash it here.
-if [ "$DEV_MMC_BOOT0" = true ] && [ "$EMMC_BOOT" != false ]; then
+# We only need to flash u-boot for platforms which either store it on a boot0
+# partition or which referenced a sysimage without u-boot (reform-system-any)
+if [ "$SYSIMAGE" != "reform-system-any" ] \
+  && [ "$DEV_MMC_BOOT0" = true ] \
+  && [ "$EMMC_BOOT" != false ]; then
   if [ "$EMMC_BOOT" = warn ]; then
     echo "W: Flashing u-boot to eMMC on $(cat /proc/device-tree/model) is not without risk." >&2
     echo "W: If you flash the wrong u-boot or if the flashing process goes wrong, it is" >&2
