@@ -335,7 +335,9 @@ else
   ROOTMNT="$(mktemp --tmpdir --directory reform-setup-encrypted-disk.XXXXXXXXXX)"
   trap 'umount $ROOTMNT; cleanupvg; cleanupluks; error' EXIT INT TERM
   mount /dev/reformvg/root "$ROOTMNT"
-  rsync -axHAWXS --numeric-ids --info=progress2 --no-inc-recursive / "$ROOTMNT"
+  # ignore exit 24 to allow partial transfer with vanished source files which
+  # will inevitably happen when rsync-ing a running system
+  rsync -axHAWXS --numeric-ids --info=progress2 --no-inc-recursive / "$ROOTMNT" || [ "$?" -eq 24 ]
   echo "RESUME=UUID=$SWAPUUID" >"$ROOTMNT/etc/initramfs-tools/conf.d/resume"
   echo "reform_crypt UUID=$CRYPTUUID none luks,discard,x-initrd.attach" >"$ROOTMNT/etc/crypttab"
   echo "UUID=$SWAPUUID none swap sw 0 0" >>"$ROOTMNT/etc/fstab"
