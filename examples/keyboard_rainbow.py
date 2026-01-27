@@ -1,8 +1,38 @@
 #!/usr/bin/env python3
 # Copyright 2025 Giraut
+# Copyright 2026 Johannes Schauer Marin Rodrigues
 # SPDX-License-Identifier: MIT
 #
 # https://github.com/Giraut/mnt_reform_keyboard_backlight_rainbow
+
+
+### Constants
+keycap_widths = {
+    1: 17.5,
+    1.25: 17.5 * 1.25 + 0.1,  # 21.975
+    1.5: 17.5 * 1.5 + 0.25,  # 26.5
+    1.75: 31.3,
+    2: 17.5 * 2 + 0.5,  # 35.5
+}
+
+classic_kbd_width = 260.65
+classic_sizes = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.5],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.5],
+    [1.5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1.75, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.75],
+    [1.25, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.25],
+    [1.25, 1.5, 1.5, 1.5, 2, 1.5, 1, 1, 1, 1, 1.25],
+]
+
+# ortholinear pocket reform
+# yes, the pocket keyboard only has 5 rows and 12 columns but we need to send
+# the full matrix of the big keyboard
+pocket_sizes = [[1] * 14] * 6
+# this is not the real pocket keyboard width but we make our live easier by
+# re-using the default keycap sizes this way
+pocket_kbd_width = 251.65
+
 
 ### Parameters
 default_backlight_intensity = 50  # %
@@ -18,46 +48,40 @@ try:
 except ModuleNotFoundError:
     setproctitle = lambda a: True
 
-mnt_keyboard4_hidraw_device = None
-# try hidraw devices until one matches
-for g in [
-    "/dev/input/by-id/usb-MNT_Research_MNT_Reform_Keyboard_4.0_*-hidraw",
-    "/dev/input/by-id/usb-MNT_Pocket_Reform_Input_1.0_*-hidraw",
-    "/dev/hidraw1",
-    "/dev/hidraw0",
-]:
-    matches = glob.glob(g)
-    if len(matches) != 1:
-        continue
-    mnt_keyboard4_hidraw_device = matches[0]
-    break
-
-if mnt_keyboard4_hidraw_device is None:
-    print("unable to find hidraw device")
-    exit(1)
-
-
-### Defines
-rainbow_rgb = (
-    (255, 0, 0),  # Red
-    (255, 63, 0),
-    (255, 127, 0),  # Orange
-    (255, 191, 0),
-    (255, 255, 0),  # Yellow
-    (127, 255, 0),
-    (0, 255, 0),  # Green
-    (0, 127, 127),
-    (0, 0, 255),  # Blue
-    (37, 0, 192),
-    (111, 0, 170),
-    (148, 0, 211),  # Indigo
-)
-
-nb_led_rows = 6
-nb_led_cols = 14
-
 
 ### Routines
+def flatten(xss):
+    return [x for xs in xss for x in xs]
+
+
+def hsv_to_bgr(h: float, s: float, v: float) -> list:
+    if not s:
+        return [v, v, v]
+    if h == 1.0:
+        h = 0.0
+    i = int(h * 6.0)
+    f = h * 6.0 - i
+
+    w = int(v * (1.0 - s) * 255)
+    q = int(v * (1.0 - s * f) * 255)
+    t = int(v * (1.0 - s * (1.0 - f)) * 255)
+    v = int(255 * v)
+
+    match i:
+        case 0:
+            return [w, t, v]
+        case 1:
+            return [w, v, q]
+        case 2:
+            return [t, v, w]
+        case 3:
+            return [v, q, w]
+        case 4:
+            return [v, w, t]
+        case 5:
+            return [q, w, v]
+
+
 def argparse_intensity_type(value):
     """Argparse type for a valid backlight intensity"""
 
@@ -114,33 +138,75 @@ def main():
 
     args = argparser.parse_args()
 
-    nb_colors = len(rainbow_rgb)
+    mnt_keyboard4_hidraw_device = None
+    # try hidraw devices until one matches
+    for name, sizes, kbd_width, g in [
+        (
+            "MNT Keyboard v4",
+            classic_sizes,
+            classic_kbd_width,
+            "/dev/input/by-id/usb-MNT_Research_MNT_Reform_Keyboard_4.0_*-hidraw",
+        ),
+        (
+            "MNT Pocket Reform Keyboard",
+            pocket_sizes,
+            pocket_kbd_width,
+            "/dev/input/by-id/usb-MNT_Pocket_Reform_Input_1.0_*-hidraw",
+        ),
+    ]:
+        matches = glob.glob(g)
+        if len(matches) != 1:
+            continue
+        mnt_keyboard4_hidraw_device = matches[0]
+        print(f"Found {name}")
+        break
+
+    if mnt_keyboard4_hidraw_device is None:
+        print("unable to find hidraw device")
+        exit(1)
+
+    offsets = []
+    for row in sizes:
+        row_offsets = []
+        offset_x = -17.5 / 2
+        for u in row:
+            offset_x += keycap_widths[u] / 2
+            row_offsets.append(round(offset_x, 3))
+            offset_x += keycap_widths[u] / 2
+            offset_x += 1.1
+        assert 0 <= offset_x <= kbd_width, offset_x
+        offsets.append(row_offsets)
+
+    max_num_retries = 5
 
     # Set the color of the backlight LEDs then exit, or run the animation
     while True:
         # Set the LEDs
-        for seq in range(nb_colors):
+        num_steps = 1000
+        for seq in range(num_steps):
             start_backlight_change_tstamp = time()
 
-            row_bgr = sum(
-                [
-                    list(reversed(rainbow_rgb[(seq + i) % nb_colors]))
-                    for i in range(nb_led_cols)
-                ],
-                [],
-            )
-
+            num_retries = 0
             row = 0
-            while row < nb_led_rows:
+            while row < len(offsets):
+                row_offsets = offsets[row]
+                data = b"xXRGB" + bytes(
+                    [row]
+                    + flatten(
+                        hsv_to_bgr(
+                            (((offset - 17.5 / 4 * row) / kbd_width) + seq / num_steps)
+                            % 1,
+                            1.0,
+                            args.intensity / 100,
+                        )
+                        for offset in row_offsets
+                    )
+                )
                 try:
                     with open(mnt_keyboard4_hidraw_device, "wb") as k:
-                        k.write(
-                            b"xXRGB"
-                            + bytes(
-                                [row] + [int(v * args.intensity / 100) for v in row_bgr]
-                            )
-                        )
+                        k.write(data)
                     row += 1
+                    num_retries = 0
                 except PermissionError:
                     print(
                         f"Unable to open {mnt_keyboard4_hidraw_device} for writing: permission denied"
@@ -150,9 +216,10 @@ def main():
                     print(
                         f"Unable to write to {mnt_keyboard4_hidraw_device}: broken pipe -- wrong device?"
                     )
-                    exit(1)
-                except:
-                    row = 0  # Redo the entire refresh in case of error
+                    num_retries += 1
+                    if num_retries > max_num_retries:
+                        print("failed too often")
+                        exit(1)
 
                 sleep(0.15)  # Give the keyboard controller a chance to do its thing
 
