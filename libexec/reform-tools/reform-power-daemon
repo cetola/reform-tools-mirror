@@ -14,8 +14,8 @@
 
 set -e
 
-if [ -f "/usr/share/reform-tools/reform-power-daemon.conf" ]; then
-  . "/usr/share/reform-tools/reform-power-daemon.conf"
+if [ -f "/usr/lib/reform-tools/config/reform-power-daemon.conf" ]; then
+  . "/usr/lib/reform-tools/config/reform-power-daemon.conf"
 fi
 
 if [ -f "/etc/reform-tools/reform-power-daemon.conf" ]; then

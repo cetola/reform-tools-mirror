@@ -120,6 +120,8 @@ install: $(MAN1) plymouth/background.png plymouth/monobar.so
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/dracut/dracut.conf.d dracut/20-pocket-reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/sddm/sddm.conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/sddm/sddm.conf.d sddm/10-wayland.conf
+	$(INSTALL)     -d $(DESTDIR)$(libdir)/reform-tools/config
+	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/reform-tools/config/reform-power-daemon.conf etc/reform-power-daemon.conf
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/man/man1
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/man/man1 $(MAN1)
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/rk3588-tlv320ai/
