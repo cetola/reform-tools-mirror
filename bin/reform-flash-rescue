@@ -113,91 +113,7 @@ case $EMMC_USE in
     ;;
 esac
 
-# Only run reform-flash-uboot if u-boot is written to the boot0 partition.
-# If u-boot is on the regular disk, then it will be overwritten by flashing the
-# image later, so we do not need to flash it here.
-if [ "$DEV_MMC_BOOT0" = true ] && [ "$EMMC_BOOT" != false ]; then
-  if [ "$EMMC_BOOT" = warn ]; then
-    echo "W: Flashing u-boot to eMMC on $(cat /proc/device-tree/model) is not without risk." >&2
-    echo "W: If you flash the wrong u-boot or if the flashing process goes wrong, it is" >&2
-    echo "W: possible to soft-brick your board. Restoring it might need some extra hardware." >&2
-    echo "W: Please only proceed if you are sure that the benefits outweigh the risks for you." >&2
-    if [ "$FORCE" = true ]; then
-      echo "Proceeding without user interaction because of --force" >&2
-      response="y"
-    else
-      printf "Are you sure you want to proceed? [y/N] "
-      read -r response
-    fi
-
-    if [ "$response" != "y" ]; then
-      echo "Exiting."
-      exit
-    fi
-  fi
-  if [ ! -e "/sys/class/block/${DEV_MMC}boot0/force_ro" ]; then
-    echo "/sys/class/block/${DEV_MMC}boot0/force_ro doesn't exist" >&2
-    exit 1
-  fi
-
-  if [ ! -w "/sys/class/block/${DEV_MMC}boot0/force_ro" ]; then
-    echo "/sys/class/block/${DEV_MMC}boot0/force_ro is not writable" >&2
-    exit 1
-  fi
-
-  if [ ! -e /boot/flash.bin ]; then
-    echo "/boot/flash.bin doesn't exist" >&2
-    if [ "$FORCE" = true ]; then
-      echo "Running reform-flash-uboot without user interaction because of --force" >&2
-      response="y"
-    else
-      printf "Should reform-flash-uboot be run to download it? [y/N] "
-      read -r response
-    fi
-
-    if [ "$response" != "y" ]; then
-      echo "Exiting."
-      exit 1
-    fi
-    reform-flash-uboot
-  fi
-
-  for p in $(lsblk --list --noheadings --output=NAME "/dev/$DEV_MMC") "${DEV_MMC}boot0" "${DEV_MMC}boot1"; do
-    [ -b "/dev/$p" ] || continue
-    if [ -n "$(lsblk --nodeps --noheadings --output=MOUNTPOINT "/dev/$p")" ]; then
-      echo "/dev/$p is still in use" >&2
-      exit 1
-    fi
-  done
-
-  echo "WARNING: This overwrites the bootloader on the eMMC rescue disk with the" >&2
-  echo "backup stored as /boot/flash.bin!" >&2
-
-  if [ "$FORCE" = true ]; then
-    echo "Proceeding without user interaction because of --force" >&2
-    response="y"
-  else
-    printf "Are you sure you want to proceed? [y/N] "
-    read -r response
-  fi
-
-  if [ "$response" != "y" ]; then
-    echo "Exiting."
-    exit
-  fi
-
-  if [ "$FORCE" = true ]; then
-    reform-flash-uboot --force --offline emmc
-  else
-    reform-flash-uboot --offline emmc
-  fi
-
-  echo "Bootloader was successfully written to /dev/${DEV_MMC}boot0." >&2
-  echo "" >&2
-fi
-
-echo "Do you want to download and install the latest sysimage-v5 to eMMC as well?" >&2
-echo "This step needs a working internet connection and either wget or curl installed." >&2
+echo "Downloading sysimage-v5 needs a working internet connection and either wget or curl installed." >&2
 echo "" >&2
 echo "WARNING: This overwrites partitions on eMMC, deleting all data." >&2
 
@@ -306,6 +222,89 @@ if [ "$FORCE" = true ]; then
   reform-boot-config --force --no-copy-old-boot --emmc emmc
 else
   reform-boot-config --no-copy-old-boot --emmc emmc
+fi
+
+# Only run reform-flash-uboot if u-boot is written to the boot0 partition.
+# If u-boot is on the regular disk, then it will be overwritten by flashing the
+# image later, so we do not need to flash it here.
+if [ "$DEV_MMC_BOOT0" = true ] && [ "$EMMC_BOOT" != false ]; then
+  if [ "$EMMC_BOOT" = warn ]; then
+    echo "W: Flashing u-boot to eMMC on $(cat /proc/device-tree/model) is not without risk." >&2
+    echo "W: If you flash the wrong u-boot or if the flashing process goes wrong, it is" >&2
+    echo "W: possible to soft-brick your board. Restoring it might need some extra hardware." >&2
+    echo "W: Please only proceed if you are sure that the benefits outweigh the risks for you." >&2
+    if [ "$FORCE" = true ]; then
+      echo "Proceeding without user interaction because of --force" >&2
+      response="y"
+    else
+      printf "Are you sure you want to proceed? [y/N] "
+      read -r response
+    fi
+
+    if [ "$response" != "y" ]; then
+      echo "Exiting."
+      exit
+    fi
+  fi
+  if [ ! -e "/sys/class/block/${DEV_MMC}boot0/force_ro" ]; then
+    echo "/sys/class/block/${DEV_MMC}boot0/force_ro doesn't exist" >&2
+    exit 1
+  fi
+
+  if [ ! -w "/sys/class/block/${DEV_MMC}boot0/force_ro" ]; then
+    echo "/sys/class/block/${DEV_MMC}boot0/force_ro is not writable" >&2
+    exit 1
+  fi
+
+  if [ ! -e /boot/flash.bin ]; then
+    echo "/boot/flash.bin doesn't exist" >&2
+    if [ "$FORCE" = true ]; then
+      echo "Running reform-flash-uboot without user interaction because of --force" >&2
+      response="y"
+    else
+      printf "Should reform-flash-uboot be run to download it? [y/N] "
+      read -r response
+    fi
+
+    if [ "$response" != "y" ]; then
+      echo "Exiting."
+      exit 1
+    fi
+    reform-flash-uboot
+  fi
+
+  for p in $(lsblk --list --noheadings --output=NAME "/dev/$DEV_MMC") "${DEV_MMC}boot0" "${DEV_MMC}boot1"; do
+    [ -b "/dev/$p" ] || continue
+    if [ -n "$(lsblk --nodeps --noheadings --output=MOUNTPOINT "/dev/$p")" ]; then
+      echo "/dev/$p is still in use" >&2
+      exit 1
+    fi
+  done
+
+  echo "WARNING: This overwrites the bootloader on the eMMC rescue disk with the" >&2
+  echo "backup stored as /boot/flash.bin!" >&2
+
+  if [ "$FORCE" = true ]; then
+    echo "Proceeding without user interaction because of --force" >&2
+    response="y"
+  else
+    printf "Are you sure you want to proceed? [y/N] "
+    read -r response
+  fi
+
+  if [ "$response" != "y" ]; then
+    echo "Exiting."
+    exit
+  fi
+
+  if [ "$FORCE" = true ]; then
+    reform-flash-uboot --force --offline emmc
+  else
+    reform-flash-uboot --offline emmc
+  fi
+
+  echo "Bootloader was successfully written to /dev/${DEV_MMC}boot0." >&2
+  echo "" >&2
 fi
 
 case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
