@@ -225,14 +225,16 @@ main() {
     exit 1
   fi
 
-  if [ -e "$MOUNTROOT/etc/resolv.conf" ] || [ -L "$MOUNTROOT/etc/resolv.conf" ]; then
-    mv "$MOUNTROOT/etc/resolv.conf" "$MOUNTROOT/etc/resolv.conf.reform-rescue-shell.bak"
+  if [ -e /etc/resolv.conf ]; then
+    if [ -e "$MOUNTROOT/etc/resolv.conf" ] || [ -L "$MOUNTROOT/etc/resolv.conf" ]; then
+      mv "$MOUNTROOT/etc/resolv.conf" "$MOUNTROOT/etc/resolv.conf.reform-rescue-shell.bak"
+    fi
+    cp --dereference /etc/resolv.conf "$MOUNTROOT/etc/resolv.conf"
   fi
-  cp --dereference /etc/resolv.conf "$MOUNTROOT/etc/resolv.conf"
 
   chroot "$MOUNTROOT" "$@"
 
-  if [ -e "$MOUNTROOT/etc/resolv.conf.reform-rescue-shell.bak" ] || [ -L "$MOUNTROOT/etc/resolv.conf.reform-rescue-shell.bak" ]; then
+  if [ -e "$MOUNTROOT/etc/resolv.conf" ] && [ -e "$MOUNTROOT/etc/resolv.conf.reform-rescue-shell.bak" ] || [ -L "$MOUNTROOT/etc/resolv.conf.reform-rescue-shell.bak" ]; then
     rm "$MOUNTROOT/etc/resolv.conf"
     mv "$MOUNTROOT/etc/resolv.conf.reform-rescue-shell.bak" "$MOUNTROOT/etc/resolv.conf"
   fi
