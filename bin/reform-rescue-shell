@@ -187,8 +187,8 @@ MOUNTROOT="$(mktemp --tmpdir --directory reform-emmc-bootstrap.XXXXXXXXXX)"
 
 cleanup() {
   if [ -e "$MOUNTROOT/etc/resolv.conf.reform-rescue-shell.bak" ] || [ -L "$MOUNTROOT/etc/resolv.conf.reform-rescue-shell.bak" ]; then
-    rm "$MOUNTROOT/etc/resolv.conf"
-    mv "$MOUNTROOT/etc/resolv.conf.reform-rescue-shell.bak" "$MOUNTROOT/etc/resolv.conf"
+    rm "$MOUNTROOT/etc/resolv.conf" || echo "W: removal of /etc/resolv.conf failed" >&2
+    mv "$MOUNTROOT/etc/resolv.conf.reform-rescue-shell.bak" "$MOUNTROOT/etc/resolv.conf" || echo "W: restoring /etc/resolv.conf failed" >&2
   fi
   if mountpoint --quiet "$MOUNTROOT"; then
     umount --recursive "$MOUNTROOT"
