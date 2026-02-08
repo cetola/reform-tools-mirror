@@ -97,7 +97,7 @@ if [ -n "$EMMC" ]; then
       ;;
     warn)
       echo "W: Using eMMC on $(cat /proc/device-tree/model) is not without risk." >&2
-      echo "W: For example, flashing the wrong u-boot or if the flashing process goes wrong, it is" >&2
+      echo "W: For example, flashing the wrong bootloader or if the flashing process goes wrong, it is" >&2
       echo "W: possible to soft-brick your board. Restoring it might need some extra hardware." >&2
       echo "W: Please only proceed if you are sure that the benefits outweigh the risks for you." >&2
       printf "Are you sure you want to proceed? [y/N] "

@@ -3,7 +3,7 @@
 # Copyright 2020-2023 Lukas F. Hartmann <lukas@mntre.com>
 # Copyright 2022-2025 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
 #
-# uboot on either emmc or the sd-card (as decided by the position of the DIP
+# The bootloader on either emmc or the sd-card (as decided by the position of the DIP
 # switch) will load the kernel and initramfs from the first /boot partiton
 # where it finds a valid boot.scr (or extlinux.conf). It will attempt to find
 # a boot.scr on the first partition of the sd-card first and then will try
@@ -157,7 +157,7 @@ if [ "$EMMC" = true ]; then
       ;;
     warn)
       echo "W: Using eMMC on $(cat /proc/device-tree/model) is not without risk." >&2
-      echo "W: For example, flashing the wrong u-boot or if the flashing process goes wrong, it is" >&2
+      echo "W: For example, flashing the wrong bootloader or if the flashing process goes wrong, it is" >&2
       echo "W: possible to soft-brick your board. Restoring it might need some extra hardware." >&2
       echo "W: Please only proceed if you are sure that the benefits outweigh the risks for you." >&2
       if [ "$FORCE" = true ]; then
@@ -577,30 +577,30 @@ if [ "$EMMC" = true ]; then
         && [ "$(parted --json --script "/dev/$DEV_MMC" unit B print | jq --raw-output '.disk.partitions | length')" -ne 0 ] \
         && [ "$(parted --json --script "/dev/$DEV_MMC" unit B print | jq --raw-output '.disk.partitions[0].start' | sed 's/B$//')" -lt "16777216" ]; then
         echo "E: The first partition on your eMMC (/dev/$DEV_MMC) starts before 16 MiB" >&2
-        echo "E: This is usually not sufficient space for u-boot (for example on RK3588)" >&2
-        echo "E: If you do not have u-boot on eMMC, then removal of your SD-card will" >&2
+        echo "E: This is usually not sufficient space for the bootloader (for example on RK3588)" >&2
+        echo "E: If you do not have the bootloader on eMMC, then removal of your SD-card will" >&2
         echo "E: likely make your system unbootable but leaving your SD-card plugged in" >&2
-        echo "E: will make u-boot prefer booting the system on SD-card. Best prepare a" >&2
-        echo "E: SD-card containing only u-boot and no bootable system or flash u-boot" >&2
-        echo "E: to emmc using reform-flash-uboot." >&2
+        echo "E: will make your bootloader prefer booting the system on SD-card. Best prepare a" >&2
+        echo "E: SD-card containing only the bootloader and no bootable system or flash the bootloader" >&2
+        echo "E: to emmc using reform-flash-bootloader." >&2
         echo >&2
       fi
       if [ -e /boot/flash.bin ]; then
-        ubootsize=$(stat --format=%s "/boot/flash.bin")
+        bootloadersize=$(stat --format=%s "/boot/flash.bin")
         realdev="/dev/${DEV_MMC}"
         if [ "$DEV_MMC_BOOT0" = true ]; then
           realdev="/dev/${DEV_MMC}boot0"
         fi
-        if cmp --quiet --bytes="$((ubootsize - FLASHBIN_OFFSET))" "--ignore-initial=0:$UBOOT_OFFSET" /dev/zero "$realdev" 2>/dev/null; then
-          echo "E: The space where u-boot would've been on eMMC is all zeroes." >&2
+        if cmp --quiet --bytes="$((bootloadersize - FLASHBIN_OFFSET))" "--ignore-initial=0:$BOOTLOADER_OFFSET" /dev/zero "$realdev" 2>/dev/null; then
+          echo "E: The space where the bootloader would've been on eMMC is all zeroes." >&2
           echo "E: Removal of your SD-card will make your system unbootable but" >&2
-          echo "E: leaving your SD-card plugged in will make u-boot prefer booting" >&2
+          echo "E: leaving your SD-card plugged in will make your bootloader prefer booting" >&2
           echo "E: the system on SD-card. Best prepare a SD-card containing only" >&2
-          echo "E: u-boot and no bootable system or flash u-boot to emmc using" >&2
-          echo "E: reform-flash-uboot" >&2
+          echo "E: the bootloader and no bootable system or flash the bootloader to emmc using" >&2
+          echo "E: reform-flash-bootloader" >&2
         fi
       fi
-      echo "I: u-boot will prefer the first partition on SD-card over the first partition on eMMC" >&2
+      echo "I: The bootloader will prefer the first partition on SD-card over the first partition on eMMC" >&2
       echo "I: Your current system has its /boot mounted from SD-card." >&2
       echo "I: You requested to configure a new /boot on eMMC" >&2
       echo "I: Instead of just rebooting, power off the system." >&2

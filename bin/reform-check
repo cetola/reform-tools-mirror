@@ -386,9 +386,9 @@ if [ -e "/proc/device-tree/chosen/u-boot,version" ]; then
     echo "I: Contents of /proc/device-tree/chosen/u-boot,version: $(cat /proc/device-tree/chosen/u-boot,version)" >&2
     echo "W: Unable to parse contents of /proc/device-tree/chosen/u-boot,version -- U-Boot too old?" >&2
   else
-    if [ "$version" != "$UBOOT_TAG" ]; then
+    if [ "$version" != "$BOOTLOADER_TAG" ]; then
       echo "I: Contents of /proc/device-tree/chosen/u-boot,version: $(cat /proc/device-tree/chosen/u-boot,version)" >&2
-      echo "I: Booting with outdated U-Boot. Local version is $version while latest version is $UBOOT_TAG" >&2
+      echo "I: Booting with outdated U-Boot. Local version is $version while latest version is $BOOTLOADER_TAG" >&2
     fi
     echo "I: Version of MNT U-Boot: $version" >&2
   fi
@@ -991,61 +991,61 @@ else
     echo "deb http://deb.debian.org/debian unstable non-free-firmware" >&2
   fi
 
-  ubooturl="https://source.mnt.re/reform/${UBOOT_PROJECT}/-/jobs/artifacts/${UBOOT_TAG}/raw/$(basename "$DTBPATH" .dtb)-flash.bin?job=build"
-  ubootbin=$(mktemp)
+  bootloaderurl="https://source.mnt.re/reform/${BOOTLOADER_PROJECT}/-/jobs/artifacts/${BOOTLOADER_TAG}/raw/$(basename "$DTBPATH" .dtb)-flash.bin?job=build"
+  bootloaderbin=$(mktemp)
   ret=0
-  /usr/lib/apt/apt-helper download-file "$ubooturl" "$ubootbin" "SHA1:$UBOOT_SHA1" >/dev/null || ret=$?
+  /usr/lib/apt/apt-helper download-file "$bootloaderurl" "$bootloaderbin" "SHA1:$BOOTLOADER_SHA1" >/dev/null || ret=$?
   if [ "$ret" != 0 ]; then
-    echo "E: download of $ubooturl failed" >&2
+    echo "E: download of $bootloaderurl failed" >&2
   else
     if [ ! -e /boot/flash.bin ]; then
       echo "W: /boot/flash.bin doesn't exist" >&2
       echo "W: You can download the latest version by running as root:" >&2
-      echo "reform-flash-uboot" >&2
-    elif ! cmp --quiet /boot/flash.bin "$ubootbin"; then
-      echo "W: /boot/flash.bin is not the latest uboot" >&2
+      echo "reform-flash-bootloader" >&2
+    elif ! cmp --quiet /boot/flash.bin "$bootloaderbin"; then
+      echo "W: /boot/flash.bin is not the latest bootloader" >&2
       echo "W: You can update it to the latest version by running as root:" >&2
-      echo "reform-flash-uboot" >&2
+      echo "reform-flash-bootloader" >&2
     fi
-    ubootsize=$(stat --format=%s "$ubootbin")
+    bootloadersize=$(stat --format=%s "$bootloaderbin")
 
     if [ "$EMMC_BOOT" != false ]; then
       realdev="/dev/${DEV_MMC}"
       if [ "$DEV_MMC_BOOT0" = true ]; then
         realdev="/dev/${DEV_MMC}boot0"
       fi
-      if cmp --quiet --bytes="$((ubootsize - FLASHBIN_OFFSET))" "--ignore-initial=$FLASHBIN_OFFSET:$UBOOT_OFFSET" "$ubootbin" "$realdev" 2>/dev/null; then
-        echo "I: eMMC contains the latest u-boot version ${UBOOT_TAG}" >&2
+      if cmp --quiet --bytes="$((bootloadersize - FLASHBIN_OFFSET))" "--ignore-initial=$FLASHBIN_OFFSET:$BOOTLOADER_OFFSET" "$bootloaderbin" "$realdev" 2>/dev/null; then
+        echo "I: eMMC contains the latest bootloader version ${BOOTLOADER_TAG}" >&2
       else
-        echo "W: eMMC does not contain latest uboot" >&2
+        echo "W: eMMC does not contain latest bootloader" >&2
         echo "W: You can update it to the latest version by running as root:" >&2
-        echo "reform-flash-uboot emmc" >&2
+        echo "reform-flash-bootloader emmc" >&2
         if [ "$EMMC_BOOT" = warn ]; then
-          echo "I: note that updating u-boot on eMMC on your platform is not without risk!" >&2
+          echo "I: note that updating the bootloader on eMMC on your platform is not without risk!" >&2
         fi
-        if cmp --quiet --bytes="$((ubootsize - FLASHBIN_OFFSET))" "--ignore-initial=0:$UBOOT_OFFSET" /dev/zero "$realdev" 2>/dev/null; then
-          echo "I: The space where u-boot would've been on eMMC is all zeroes." >&2
+        if cmp --quiet --bytes="$((bootloadersize - FLASHBIN_OFFSET))" "--ignore-initial=0:$BOOTLOADER_OFFSET" /dev/zero "$realdev" 2>/dev/null; then
+          echo "I: The space where the bootloader would've been on eMMC is all zeroes." >&2
         fi
       fi
     fi
 
     if [ "$SD_BOOT" != false ] && [ -e "/dev/$DEV_SD" ]; then
-      if cmp --quiet --bytes="$((ubootsize - FLASHBIN_OFFSET))" --ignore-initial="$FLASHBIN_OFFSET:$UBOOT_OFFSET" "$ubootbin" "/dev/$DEV_SD" 2>/dev/null; then
-        echo "I: SD-card contains the latest u-boot version ${UBOOT_TAG}" >&2
+      if cmp --quiet --bytes="$((bootloadersize - FLASHBIN_OFFSET))" --ignore-initial="$FLASHBIN_OFFSET:$BOOTLOADER_OFFSET" "$bootloaderbin" "/dev/$DEV_SD" 2>/dev/null; then
+        echo "I: SD-card contains the latest bootloader version ${BOOTLOADER_TAG}" >&2
       else
-        echo "W: SD-Card does not contain latest uboot" >&2
+        echo "W: SD-Card does not contain latest bootloader" >&2
         echo "W: You can update it to the latest version by running as root:" >&2
-        echo "reform-flash-uboot sd" >&2
+        echo "reform-flash-bootloader sd" >&2
         if [ "$SD_BOOT" = warn ]; then
-          echo "I: note that updating u-boot on SD-card on your platform is not without risk!" >&2
+          echo "I: note that updating the bootloader on SD-card on your platform is not without risk!" >&2
         fi
-        if cmp --quiet --bytes="$((ubootsize - FLASHBIN_OFFSET))" "--ignore-initial=0:$UBOOT_OFFSET" /dev/zero "/dev/$DEV_SD" 2>/dev/null; then
-          echo "I: The space where u-boot would've been on SD-Card is all zeroes." >&2
+        if cmp --quiet --bytes="$((bootloadersize - FLASHBIN_OFFSET))" "--ignore-initial=0:$BOOTLOADER_OFFSET" /dev/zero "/dev/$DEV_SD" 2>/dev/null; then
+          echo "I: The space where the bootloader would've been on SD-Card is all zeroes." >&2
         fi
       fi
     fi
   fi
-  rm "$ubootbin"
+  rm "$bootloaderbin"
 
   case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with LS1028A Module")
     mhdpfwbin=$(mktemp)
@@ -1055,11 +1055,11 @@ else
     if [ ! -e /boot/ls1028a-mhdpfw.bin ]; then
       echo "W: /boot/ls1028a-mhdpfw.bin doesn't exist" >&2
       echo "W: You can download the latest version by running as root:" >&2
-      echo "reform-flash-uboot" >&2
+      echo "reform-flash-bootloader" >&2
     elif ! cmp --quiet /boot/ls1028a-mhdpfw.bin "$mhdpfwbin"; then
       echo "W: /boot/ls1028a-mhdpfw.bin is not the latest uboot" >&2
       echo "W: You can update it to the latest version by running as root:" >&2
-      echo "reform-flash-uboot" >&2
+      echo "reform-flash-bootloader" >&2
     fi
     rm "$mhdpfwbin"
     ;;

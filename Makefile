@@ -34,8 +34,9 @@ man/%.1: bin/%
 		config)         echo "select keyboard and timezone" ;;        \
 		display-config) echo "select single/dual display" ;;          \
 		emmc-bootstrap) echo "set up /boot on emmc for / on nvme" ;;  \
+		flash-bootloader) echo "download and flash u-boot" ;;         \
 		flash-rescue)   echo "flash rescue image to eMMC" ;;          \
-		flash-uboot)    echo "download and flash u-boot" ;;           \
+		flash-uboot)    echo "use reform-flash-bootloader" ;;         \
 		gnome-config)   echo "apply default config to GNOME" ;;       \
 		handbook)       echo "show Reform Handbook" ;;                \
 		pocket-reform-handbook) echo "show Pocket Reform Handbook" ;; \

@@ -138,7 +138,7 @@ case $DEVICE_PATH in "/dev/$DEV_MMC"*)
       ;;
     warn)
       echo "W: Using eMMC on $(cat /proc/device-tree/model) is not without risk." >&2
-      echo "W: For example, flashing the wrong u-boot or if the flashing process goes wrong, it is" >&2
+      echo "W: For example, flashing the wrong bootloader or if the flashing process goes wrong, it is" >&2
       echo "W: possible to soft-brick your board. Restoring it might need some extra hardware." >&2
       echo "W: Please only proceed if you are sure that the benefits outweigh the risks for you." >&2
       if [ "$FORCE" = true ]; then
@@ -219,11 +219,11 @@ case $DEVICE_PATH in "/dev/$DEV_MMC" | "/dev/$DEV_SD")
   # u-boot at an offset of 8 MiB and a 4 MiB trust (ATF, OP-TEE)
   # partition after that. So the first partition can only start at byte
   # 16777216 or 16 MiB: https://opensource.rock-chips.com/wiki_Partitions
-  MAX_UBOOT=16
+  MAX_BOOTLOADER=16
   BOOTSIZE=488
   /sbin/parted --script --machine "$DEVICE_PATH" "mklabel msdos"
-  /sbin/parted --script --machine "$DEVICE_PATH" "mkpart primary ext4 ${MAX_UBOOT}MiB $((BOOTSIZE + MAX_UBOOT))MiB"
-  /sbin/parted --script --machine "$DEVICE_PATH" "mkpart primary $((BOOTSIZE + MAX_UBOOT))MiB 100%"
+  /sbin/parted --script --machine "$DEVICE_PATH" "mkpart primary ext4 ${MAX_BOOTLOADER}MiB $((BOOTSIZE + MAX_BOOTLOADER))MiB"
+  /sbin/parted --script --machine "$DEVICE_PATH" "mkpart primary $((BOOTSIZE + MAX_BOOTLOADER))MiB 100%"
   mkfs.ext4 "${DEVICE_PATH}p1"
   case $DEVICE_PATH in
     "/dev/$DEV_MMC") DEVICE_PATH="/dev/${DEV_MMC}p2" ;;

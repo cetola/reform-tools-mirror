@@ -269,5 +269,5 @@ case $disk_label in
 esac
 
 if [ "$EMMC_BOOT" != false ]; then
-  reform-flash-uboot emmc
+  reform-flash-bootloader emmc
 fi

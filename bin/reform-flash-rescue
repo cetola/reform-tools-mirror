@@ -7,7 +7,7 @@ set -eu
 
 usage() {
   echo "Download and flash the latest sysimage-v5 to eMMC." >&2
-  echo "Calls reform-flash-uboot to install u-boot on eMMC, grows the root" >&2
+  echo "Calls reform-flash-bootloader to install the bootloader on eMMC, grows the root" >&2
   echo "filesystem and adjusts filesystem labels." >&2
   echo "Calls reform-boot-config to set up /boot on eMMC to load the rootfs from eMMC." >&2
   echo >&2
@@ -95,7 +95,7 @@ case $EMMC_USE in
     ;;
   warn)
     echo "W: Using eMMC on $(cat /proc/device-tree/model) is not without risk." >&2
-    echo "W: For example, flashing the wrong u-boot or if the flashing process goes wrong, it is" >&2
+    echo "W: For example, flashing the wrong bootloader or if the flashing process goes wrong, it is" >&2
     echo "W: possible to soft-brick your board. Restoring it might need some extra hardware." >&2
     echo "W: Please only proceed if you are sure that the benefits outweigh the risks for you." >&2
     if [ "$FORCE" = true ]; then
@@ -230,8 +230,8 @@ if [ "$SYSIMAGE" != "reform-system-any" ] \
   && [ "$DEV_MMC_BOOT0" = true ] \
   && [ "$EMMC_BOOT" != false ]; then
   if [ "$EMMC_BOOT" = warn ]; then
-    echo "W: Flashing u-boot to eMMC on $(cat /proc/device-tree/model) is not without risk." >&2
-    echo "W: If you flash the wrong u-boot or if the flashing process goes wrong, it is" >&2
+    echo "W: Flashing the bootloader to eMMC on $(cat /proc/device-tree/model) is not without risk." >&2
+    echo "W: If you flash the wrong bootloader or if the flashing process goes wrong, it is" >&2
     echo "W: possible to soft-brick your board. Restoring it might need some extra hardware." >&2
     echo "W: Please only proceed if you are sure that the benefits outweigh the risks for you." >&2
     if [ "$FORCE" = true ]; then
@@ -260,10 +260,10 @@ if [ "$SYSIMAGE" != "reform-system-any" ] \
   if [ ! -e /boot/flash.bin ]; then
     echo "/boot/flash.bin doesn't exist" >&2
     if [ "$FORCE" = true ]; then
-      echo "Running reform-flash-uboot without user interaction because of --force" >&2
+      echo "Running reform-flash-bootloader without user interaction because of --force" >&2
       response="y"
     else
-      printf "Should reform-flash-uboot be run to download it? [y/N] "
+      printf "Should reform-flash-bootloader be run to download it? [y/N] "
       read -r response
     fi
 
@@ -271,7 +271,7 @@ if [ "$SYSIMAGE" != "reform-system-any" ] \
       echo "Exiting."
       exit 1
     fi
-    reform-flash-uboot
+    reform-flash-bootloader
   fi
 
   for p in $(lsblk --list --noheadings --output=NAME "/dev/$DEV_MMC") "${DEV_MMC}boot0" "${DEV_MMC}boot1"; do
@@ -299,9 +299,9 @@ if [ "$SYSIMAGE" != "reform-system-any" ] \
   fi
 
   if [ "$FORCE" = true ]; then
-    reform-flash-uboot --force --offline emmc
+    reform-flash-bootloader --force --offline emmc
   else
-    reform-flash-uboot --offline emmc
+    reform-flash-bootloader --offline emmc
   fi
 
   echo "Bootloader was successfully written to /dev/${DEV_MMC}boot0." >&2
