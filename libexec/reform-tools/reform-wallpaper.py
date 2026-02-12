@@ -154,22 +154,22 @@ class BackgroundWindow(Gtk.Window):
         self.queue_draw()
 
 
-def create_window(monitor):
+def create_window(display, monitor):
     win = BackgroundWindow()
     GtkLayerShell.set_monitor(win, monitor)
     setattr(monitor, "reform-wallpaper", win)
     win.show_all()
 
 
-def destroy_window(monitor):
+def destroy_window(display, monitor):
     getattr(monitor, "reform-wallpaper").destroy()
 
 
 if __name__ == "__main__":
     display = Gdk.Display.get_default()
     for i in range(display.get_n_monitors()):
-        create_window(display.get_monitor(i))
-    display.connect("monitor_added", create_window)
-    display.connect("monitor_removed", destroy_window)
+        create_window(display, display.get_monitor(i))
+    display.connect("monitor-added", create_window)
+    display.connect("monitor-removed", destroy_window)
 
     Gtk.main()
