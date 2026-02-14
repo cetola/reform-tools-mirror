@@ -453,11 +453,11 @@ case $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) in
     pv_device="${pv_device#  }" # remove whitespace prefix
     if [ "$pv_device" = "/dev/mapper/reform_crypt" ]; then
       luks_disk="$(lsblk --json -o PATH,PKNAME | jq --raw-output '.blockdevices[] | select(.path == "/dev/mapper/reform_crypt") | .pkname')"
-      if [ "$luks_disk" = "${DEV_SSD}" ]; then
-        HUMAN_ROOT="LVM vg 'reformvg' on LUKS device 'reform_crypt' on SSD"
-      else
-        echo "W: reform_crypt LUKS device on unusual disk: /dev/$luks_disk" >&2
-      fi
+      case "$luks_disk" in
+        "${DEV_SSD}") HUMAN_ROOT="LVM vg 'reformvg' on LUKS device 'reform_crypt' on SSD" ;;
+        "${DEV_MMC}"*) HUMAN_ROOT="LVM vg 'reformvg' on LUKS device 'reform_crypt' on eMMC" ;;
+        *) echo "W: reform_crypt LUKS device on unusual disk: /dev/$luks_disk" >&2 ;;
+      esac
     else
       echo "W: LVM volume group reformvg on unexpected partition: $pv_device" >&2
     fi
