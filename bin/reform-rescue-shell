@@ -260,6 +260,21 @@ if [ "$response" != "y" ]; then
   exit 1
 fi
 
+# for all cases where SSD is about to be used, check for mounted volumes and
+# attempt to get an exclusive write lock
+case "$mmc_part_types:$ssd_part_types" in "ext4:luks" | "ext4,"*":luks" | "ext4"*":ext4,swap" | "ext4"*":swap,ext4")
+  if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/${DEV_SSD}")" ]; then
+    echo "E: SSD has the following mounted volumes, unmount them before running this tool" >&2
+    lsblk --noheadings --output=MOUNTPOINT "/dev/${DEV_SSD}" | xargs --no-run-if-empty -I '{}' echo "E:   {}" >&2
+    exit 1
+  fi
+  if ! get_exclusive_write_lock "/dev/${DEV_SSD}"; then
+    echo "E: device /dev/${DEV_SSD} (SSD) is still in use" >&2
+    exit 1
+  fi
+  ;;
+esac
+
 case "$mmc_part_types:$ssd_part_types" in
   "ext4:luks" | "ext4,"*":luks")
     cryptsetup luksOpen "/dev/${DEV_SSD}" reform_crypt
