@@ -5,7 +5,7 @@
 # LINUX_KERNEL_CMDLINE in /etc/default/flash-kernel or by setting ${bootargs}
 # in u-boot itself via the setenv command.
 # shellcheck disable=SC2154
-setenv bootargs "ro no_console_suspend cryptomgr.notests plymouth.ignore-serial-consoles ${bootargs}"
+setenv bootargs "ro no_console_suspend cryptomgr.notests plymouth.ignore-serial-consoles pcie_aspm=off ${bootargs}"
 
 # Board-specific bootargs cannot be overwritten by above methods. If you
 # really need to overwrite below lines, create
