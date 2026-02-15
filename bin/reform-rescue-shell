@@ -7,15 +7,15 @@ set -eu
 usage() {
   echo "Run this command from a rescue system on SD-card." >&2
   echo "With no positional arguments, execute a bash shell inside the system" >&2
-  echo "on eMMC/NVMe." >&2
+  echo "on eMMC/SSD." >&2
   echo "With positional arguments, instead of an interactive shell, run the" >&2
   echo "command and its arguments passed as positional arguments to this tool" >&2
-  echo "inside the system on eMMC/NVMe" >&2
+  echo "inside the system on eMMC/SSD" >&2
   echo "This tool takes care of unlocking full disk encryption set up by" >&2
   echo "reform-setup-encrypted-disk and mounts /boot, /sys, /proc and /dev" >&2
   echo "It also copies /etc/resolv.conf from the current system into the" >&2
   echo "chroot, so if you have set up network connection on the outside," >&2
-  echo "then the system on eMMC/NVMe will also have network access" >&2
+  echo "then the system on eMMC/SSD will also have network access" >&2
   echo >&2
   echo "Usage: $0 [--help] [CMD...]" >&2
   echo >&2
@@ -24,11 +24,11 @@ usage() {
   echo >&2
   echo "Examples:" >&2
   echo >&2
-  echo "Get a shell inside the system you have on NVMe or eMMC:" >&2
+  echo "Get a shell inside the system you have on SSD or eMMC:" >&2
   echo >&2
   echo "  $0" >&2
   echo >&2
-  echo "Run reform-check inside the system on NVMe or eMMC" >&2
+  echo "Run reform-check inside the system on SSD or eMMC" >&2
   echo >&2
   echo "  $0 reform-check" >&2
   echo >&2
