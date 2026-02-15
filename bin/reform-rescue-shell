@@ -216,8 +216,12 @@ main() {
 
   if [ ! -d "$MOUNTROOT/boot/extlinux" ] && [ ! -e "$MOUNTROOT/boot/boot.scr" ]; then
     echo "E: Neither extlinux directory nor boot.scr exist in filesystem on $bootdev" >&2
-    echo "I: If this is intentional, touch boot.scr on that partition." >&2
-    exit 1
+    printf "Do you still want to continue with %s mounted as /boot? [y/N] " "$bootdev" >&2
+    read -r response
+    if [ "$response" != "y" ]; then
+      echo "Exiting."
+      exit 1
+    fi
   fi
 
   if [ -e /etc/resolv.conf ]; then
