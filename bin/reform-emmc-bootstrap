@@ -49,136 +49,6 @@ else
   exit 1
 fi
 
-cleanup() {
-  if [ -n "$MOUNTROOT" ]; then
-    if mountpoint --quiet "$MOUNTROOT"; then
-      umount --recursive "$MOUNTROOT"
-    fi
-    rmdir "$MOUNTROOT"
-  fi
-  if ! is_current_root /dev/reformvg/root; then
-    if [ -e /dev/reformvg ]; then
-      vgchange -an reformvg
-    fi
-    if [ -e /dev/mapper/reform_crypt ]; then
-      cryptsetup luksClose reform_crypt
-    fi
-  fi
-}
-
-main() {
-  ROOTPART="$1"
-
-  trap cleanup EXIT INT TERM
-
-  MOUNTROOT="$(lsblk --noheadings --output=MOUNTPOINT "$ROOTPART")"
-  if [ -z "$MOUNTROOT" ]; then
-    if ! get_exclusive_write_lock "$ROOTPART"; then
-      echo "E: device $ROOTPART is still in use" >&2
-      exit 1
-    fi
-    MOUNTROOT="$(mktemp --tmpdir --directory reform-emmc-bootstrap.XXXXXXXXXX)"
-    mount "$ROOTPART" "$MOUNTROOT"
-    for dir in dev sys proc; do
-      if [ ! -d "$MOUNTROOT/$dir" ]; then
-        echo "E: The directory '$dir' does not exist in the filesystem on $ROOTPART" >&2
-        exit 1
-      fi
-    done
-    mount -o bind /dev "$MOUNTROOT/dev/"
-    mount -t sysfs sys "$MOUNTROOT/sys/"
-    mount -t proc proc "$MOUNTROOT/proc/"
-  elif [ -n "$MOUNTROOT" ]; then
-    if [ "$MOUNTROOT" = "/" ]; then
-      if mountpoint --quiet "/boot"; then
-        echo "E: /boot still has something mounted on it" >&2
-        exit 1
-      fi
-    else
-      echo "E: $ROOTPART is still being mounted on $MOUNTROOT -- umount before proceeding" >&2
-      exit 1
-    fi
-  fi
-
-  # comment out old /etc/fstab
-  sed -e 's/^/#/' "$MOUNTROOT/etc/fstab" >"$MOUNTROOT/etc/fstab.new"
-  # write new mountpoints
-  cat <<END >>"$MOUNTROOT/etc/fstab.new"
-$ROOTPART / auto errors=remount-ro 0 1
-/dev/${DEV_MMC}p1 /boot auto errors=remount-ro 0 1
-END
-  cat <<END
-This script will replace the /etc/fstab in the root filesystem on your SSD
-with the following content:
-
-END
-  cat "$MOUNTROOT/etc/fstab.new"
-  cat <<END
-
-WARNING: This script will destroy the contents of your eMMC drive and replace
-it with a /boot partition which is able to boot your system on SSD.
-
-WARNING: This operation needs internet access to your Debian apt mirror. Make
-sure that your system is online before proceeding.
-
-END
-  printf "Are you sure you want to proceed? [y/N] "
-  read -r response
-  if [ "$response" != "y" ]; then
-    echo "Exiting."
-    exit
-  fi
-  mv "$MOUNTROOT/etc/fstab.new" "$MOUNTROOT/etc/fstab"
-  if [ "$MOUNTROOT" != "/" ]; then
-    rm -f "$MOUNTROOT/etc/resolv.conf" # make sure to remove a possible symlink
-    cp --dereference /etc/resolv.conf "$MOUNTROOT/etc/resolv.conf"
-  fi
-
-  # reform-boot-config does the same thing (could share code?)
-  parted --script --machine "/dev/$DEV_MMC" "mklabel msdos"
-  # create two partitions as expected by reform-check (but we only format /boot)
-  # make /boot as big as mkimage.sh would
-  parted --script --machine "/dev/$DEV_MMC" "mkpart primary ext4 16MiB $((16 + 488))MiB"
-  parted --script --machine "/dev/$DEV_MMC" "mkpart primary ext4 $((16 + 488))MiB 100%"
-  udevadm settle
-  partprobe "/dev/$DEV_MMC"
-  mkfs.ext4 -F "/dev/${DEV_MMC}p1"
-  mount "/dev/${DEV_MMC}p1" "$MOUNTROOT/boot/"
-  chroot "$MOUNTROOT" apt-get update --error-on=any
-  if ! chroot "$MOUNTROOT" dpkg-query --search '/boot/vmlinuz*' >/dev/null; then
-    echo "I: No kernel package installed." >&2
-    printf "Do you want this script to install linux-image-mnt-reform-arm64 for you? [y/N] "
-    read -r response
-    if [ "$response" != "y" ]; then
-      echo "E: no kernel packages installed, exiting." >&2
-      exit 1
-    fi
-    chroot "$MOUNTROOT" apt-get install --yes linux-image-mnt-reform-arm64
-  else
-    # upgrade linux-image-mnt-reform-arm64 in case that the installed kernel is
-    # not downloadable anymore
-    chroot "$MOUNTROOT" apt-get install --yes --only-upgrade linux-image-mnt-reform-arm64
-  fi
-  # also regenerate everything for other installed kernel packages
-  chroot "$MOUNTROOT" dpkg-query --search '/boot/vmlinuz*' | sed 's/:.*//' | while read -r pkg; do
-    # if a package cannot be downloaded, apt will still exit
-    # successfully
-    chroot "$MOUNTROOT" apt-get install --yes --reinstall "$pkg"
-  done
-  if [ -z "$(find "$MOUNTROOT/boot" -name 'vmlinuz-*')" ]; then
-    echo "E: no kernel images were installed into /boot" >&2
-    exit 1
-  fi
-  if [ "$MOUNTROOT" != "/" ]; then
-    umount "$MOUNTROOT" --recursive
-  else
-    # if we are working on /, unmount /boot as that is required for reform-boot-config
-    umount /boot
-  fi
-  reform-boot-config --emmc "$ROOTPART"
-  trap - EXIT INT TERM
-}
-
 # eMMC device is being used (case 1): mount points are known, show them. Includes swap.
 if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/${DEV_MMC}")" ]; then
   echo "E: eMMC has the following mounted volumes, unmount them before running this tool" >&2
@@ -210,63 +80,93 @@ if ! get_exclusive_write_lock "/dev/${DEV_MMC}"; then
   exit 1
 fi
 
-MOUNTROOT=
-
-disk_label=$(parted --script --json "/dev/${DEV_SSD}" print 2>/dev/null | jq --raw-output '.disk.label')
-case $disk_label in
-  msdos | gpt)
-    num_parts=$(parted --script --json "/dev/${DEV_SSD}" print 2>/dev/null | jq --raw-output '.disk.partitions | length')
-    DEV_SSD_BASE="$DEV_SSD"
-    if [ "$DEV_SSD" != "sda" ]; then
-      DEV_SSD_BASE="${DEV_SSD}p"
+# This script has two modes: either it is executed from a system on SD-card
+# or from a system on SSD. In the former case, it will run reform-rescue-shell
+# and run the setup code from within a chroot on the SSD. In the latter case,
+# it latter case the setup code will run directly.
+case $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) in
+  "/dev/${DEV_SD}"*) : ;;
+  *)
+    echo "I: Running without chroot isolation of reform-rescue-shell" >&2
+    echo
+    if mountpoint --quiet "/boot"; then
+      echo "E: /boot still has something mounted on it" >&2
+      exit 1
     fi
-    case $num_parts in
-      1)
-        echo "I: assuming root file system on /dev/${DEV_SSD_BASE}1" >&2
-        main "/dev/${DEV_SSD_BASE}1"
-        ;;
-      2)
-        # assume one partition to be swap and the other to be the rootfs
-        part1type=$(lsblk --nodeps --noheadings --output=FSTYPE "/dev/${DEV_SSD_BASE}1")
-        part2type=$(lsblk --nodeps --noheadings --output=FSTYPE "/dev/${DEV_SSD_BASE}2")
-        case "${part1type}_${part2type}" in
-          swap_ext4)
-            echo "I: assuming root file system on /dev/${DEV_SSD_BASE}2" >&2
-            main "/dev/${DEV_SSD_BASE}2"
-            ;;
-          ext4_swap)
-            echo "I: assuming root file system on /dev/${DEV_SSD_BASE}1" >&2
-            main "/dev/${DEV_SSD_BASE}1"
-            ;;
-          *)
-            echo "E: no support for partitions other than one swap and one ext4" >&2
-            exit 1
-            ;;
-        esac
-        ;;
-      *)
-        echo "E: more than 2 partitions not implemented yet" >&2
-        exit 1
-        ;;
-    esac
+    # we leave this mounted even after the script has finished, no need for an exit trap
+    mount "/dev/${DEV_MMC}p1" /boot
     ;;
-  unknown)
-    echo "I: no partition table found trying to open LUKS device" >&2
-    if ! is_current_root /dev/reformvg/root; then
-      if [ "$(lsblk --nodeps --noheadings --output=FSTYPE "/dev/${DEV_SSD}")" != "crypto_LUKS" ]; then
-        echo "W: SSD (/dev/${DEV_SSD}) does not look like a LUKS device" >&2
-      fi
-      cryptsetup luksOpen "/dev/${DEV_SSD}" reform_crypt
-      vgchange -ay reformvg
-    fi
-    main /dev/reformvg/root
-    if ! is_current_root /dev/reformvg/root; then
-      vgchange -an reformvg
-      cryptsetup luksClose reform_crypt
-    fi
-    ;;
-  *) ;;
 esac
+
+cat <<END
+
+WARNING: This script will destroy the contents of your eMMC drive and replace
+it with a /boot partition which is able to boot your system on SSD.
+
+WARNING: This operation needs internet access to your Debian apt mirror. Make
+sure that your system is online before proceeding.
+
+END
+printf "Are you sure you want to proceed? [y/N] "
+read -r response
+if [ "$response" != "y" ]; then
+  echo "Exiting."
+  exit
+fi
+
+# reform-boot-config does the same thing (could share code?)
+parted --script --machine "/dev/$DEV_MMC" "mklabel msdos"
+# create two partitions as expected by reform-check (but we only format /boot)
+# make /boot as big as mkimage.sh would
+parted --script --machine "/dev/$DEV_MMC" "mkpart primary ext4 16MiB $((16 + 488))MiB"
+parted --script --machine "/dev/$DEV_MMC" "mkpart primary ext4 $((16 + 488))MiB 100%"
+udevadm settle
+partprobe "/dev/$DEV_MMC"
+mkfs.ext4 -F "/dev/${DEV_MMC}p1"
+# create extlinux directory to make reform-rescue-shell recognize this as a
+# /boot partiton
+debugfs -w "/dev/${DEV_MMC}p1" -R "mkdir /extlinux"
+
+set --
+
+# If this is run from an SD-card, run with the isolation from reform-rescue-shell
+case $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) in
+  "/dev/${DEV_SD}"*) set -- "reform-rescue-shell" ;;
+esac
+
+# Pass script as string argument with -c instead of sending it to standard input
+# of sh because we need stdin of sh connected to the current interactive tty
+# or otherwise the user will be unable to send keys to interactive prompts.
+# shellcheck disable=SC2016
+"$@" sh -c '
+set -exuo pipefail
+apt-get update --error-on=any
+if ! dpkg-query --search "/boot/vmlinuz*" >/dev/null; then
+  echo "I: No kernel package installed." >&2
+  printf "Do you want this script to install linux-image-mnt-reform-arm64 for you? [y/N] "
+  read -r response
+  if [ "$response" != "y" ]; then
+    echo "E: no kernel packages installed, exiting." >&2
+    exit 1
+  fi
+  apt-get install --yes linux-image-mnt-reform-arm64
+else
+  # upgrade linux-image-mnt-reform-arm64 in case that the installed kernel is
+  # not downloadable anymore
+  apt-get install --yes --only-upgrade linux-image-mnt-reform-arm64
+fi
+# also regenerate everything for other installed kernel packages
+dpkg-query --search "/boot/vmlinuz*" | sed "s/:.*//" | while read -r pkg; do
+  # if a package cannot be downloaded, apt will still exit
+  # successfully
+  apt-get install --yes --reinstall "$pkg"
+done
+if [ -z "$(find "/boot" -name "vmlinuz-*")" ]; then
+  echo "E: no kernel images were installed into /boot" >&2
+  exit 1
+fi
+reform-boot-config --emmc "$(findmnt --noheadings --evaluate --mountpoint / --output SOURCE)"
+'
 
 if [ "$EMMC_BOOT" != false ]; then
   reform-flash-bootloader emmc
