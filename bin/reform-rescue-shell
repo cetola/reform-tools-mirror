@@ -190,7 +190,7 @@ cleanup() {
   fi
   rmdir "$MOUNTROOT"
   if [ -e /dev/reformvg ]; then
-    vgchange -an reformvg
+    vgchange -an reformvg >&2
   fi
   if [ -e /dev/mapper/reform_crypt ]; then
     cryptsetup luksClose reform_crypt
@@ -278,11 +278,11 @@ esac
 case "$mmc_part_types:$ssd_part_types" in
   "ext4:luks" | "ext4,"*":luks")
     cryptsetup luksOpen "/dev/${DEV_SSD}" reform_crypt
-    vgchange -ay reformvg
+    vgchange -ay reformvg >&2
 
     main /dev/reformvg/root "/dev/${DEV_MMC}p1" "$@"
 
-    vgchange -an reformvg
+    vgchange -an reformvg >&2
     cryptsetup luksClose reform_crypt
     ;;
   "ext4,ext4:") main "/dev/${DEV_MMC}p2" "/dev/${DEV_MMC}p1" ;;

@@ -198,7 +198,7 @@ else
   exit 1
 fi
 
-cleanupvg() { vgchange -an reformvg; }
+cleanupvg() { vgchange -an reformvg >&2; }
 cleanupluks() { cryptsetup luksClose reform_crypt; }
 error() { echo "$0 FAILED to run" >&2; }
 

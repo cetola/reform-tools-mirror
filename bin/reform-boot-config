@@ -315,7 +315,7 @@ cleanup() {
   fi
   if [ "${MOUNTROOT-}" != "/" ] && [ "$ROOTPART" = "reformvg/root" ] && [ "$ARGV1" != "/dev/reformvg/root" ]; then
     if [ -e /dev/reformvg ]; then
-      vgchange -an reformvg
+      vgchange -an reformvg >&2
     fi
     if [ -e /dev/mapper/reform_crypt ]; then
       cryptsetup luksClose reform_crypt
@@ -353,7 +353,7 @@ if [ "$MOUNTROOT" != "/" ] && [ "$ROOTPART" = "reformvg/root" ] && [ "$ARGV1" !=
     echo "W: SSD (/dev/${DEV_SSD}) does not look like a LUKS device" >&2
   fi
   cryptsetup luksOpen "/dev/${DEV_SSD}" reform_crypt
-  vgchange -ay reformvg
+  vgchange -ay reformvg >&2
 fi
 
 # mount the desired root partition somewhere if it isn't mounted yet
@@ -521,7 +521,7 @@ fi
 trap - EXIT INT TERM
 
 if [ "$MOUNTROOT" != "/" ] && [ "$ROOTPART" = "reformvg/root" ] && [ "$ARGV1" != "/dev/reformvg/root" ]; then
-  vgchange -an reformvg
+  vgchange -an reformvg >&2
   cryptsetup luksClose reform_crypt
 fi
 
