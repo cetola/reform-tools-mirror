@@ -530,12 +530,12 @@ fi
 # rescue system on sd-card or emmc, respectively
 case "$BOOTPART" in
   "${DEV_SD}p1")
-    if [ "$(lsblk --nodeps --noheadings --output=LABEL "/dev/$BOOTPART")" = "reformsdboot" ]; then
+    if [ "$(lsblk --nodeps --noheadings --properties-by=blkid --output=LABEL "/dev/$BOOTPART")" = "reformsdboot" ]; then
       e2label "/dev/$BOOTPART" ""
     fi
     ;;
   "${DEV_MMC}p1")
-    if [ "$(lsblk --nodeps --noheadings --output=LABEL "/dev/$BOOTPART")" = "reformemmcboot" ]; then
+    if [ "$(lsblk --nodeps --noheadings --properties-by=blkid --output=LABEL "/dev/$BOOTPART")" = "reformemmcboot" ]; then
       e2label "/dev/$BOOTPART" ""
     fi
     ;;

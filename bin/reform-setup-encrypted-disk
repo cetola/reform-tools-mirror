@@ -249,7 +249,7 @@ fi
 if [ -f "$DEVICE_PATH" ]; then
   disksize="$(stat -c %s "$DEVICE_PATH")"
 else
-  disksize=$(lsblk --nodeps --bytes --noheadings --output=SIZE "$DEVICE_PATH" | head -1)
+  disksize=$(lsblk --nodeps --bytes --noheadings --properties-by=blkid --output=SIZE "$DEVICE_PATH" | head -1)
   case "$disksize" in *[!0123456789]* | 0?* | "")
     echo "E: unable to acquire disk size of $DEVICE_PATH" >&2
     exit 1
