@@ -305,6 +305,8 @@ lvcreate --name swap --size "${mem}G" reformvg
 mkswap /dev/reformvg/swap
 lvcreate --name root --extents 100%FREE reformvg
 mkfs.ext4 /dev/reformvg/root
+# lsblk queries udev by default, so make sure udev information is up-to-date
+udevadm settle
 SWAPUUID=$(lsblk --nodeps --noheadings --output=UUID /dev/reformvg/swap)
 CRYPTUUID=$(cryptsetup luksUUID "$DEVICE_PATH")
 
