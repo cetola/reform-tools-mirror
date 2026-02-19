@@ -249,7 +249,7 @@ case $ARGV1 in
     fi
     if [ ! -e "/dev/$ROOTPART" ]; then
       echo "W: First partition on SSD (/dev/$ROOTPART) does not exist." >&2
-      if [ "$(lsblk --nodeps --noheadings --output=FSTYPE "/dev/${DEV_SSD}")" = "crypto_LUKS" ]; then
+      if cryptsetup isLuks "/dev/${DEV_SSD}"; then
         echo "I: Assuming full disk encryption with LUKS on /dev/reformvg/root" >&2
         ROOTPART="reformvg/root"
       else
@@ -349,7 +349,7 @@ fi
 #  - the user explicitly selected /dev/reformvg/root as the rootfs in which
 #    case we assume it is already unlocked by the user
 if [ "$MOUNTROOT" != "/" ] && [ "$ROOTPART" = "reformvg/root" ] && [ "$ARGV1" != "/dev/reformvg/root" ]; then
-  if [ "$(lsblk --nodeps --noheadings --output=FSTYPE "/dev/${DEV_SSD}")" != "crypto_LUKS" ]; then
+  if ! cryptsetup isLuks "/dev/${DEV_SSD}"; then
     echo "W: SSD (/dev/${DEV_SSD}) does not look like a LUKS device" >&2
   fi
   cryptsetup luksOpen "/dev/${DEV_SSD}" reform_crypt
