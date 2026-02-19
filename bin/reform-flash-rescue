@@ -274,14 +274,6 @@ if [ "$SYSIMAGE" != "reform-system-any" ] \
     reform-flash-bootloader
   fi
 
-  for p in $(lsblk --list --noheadings --output=NAME "/dev/$DEV_MMC") "${DEV_MMC}boot0" "${DEV_MMC}boot1"; do
-    [ -b "/dev/$p" ] || continue
-    if [ -n "$(lsblk --nodeps --noheadings --output=MOUNTPOINT "/dev/$p")" ]; then
-      echo "/dev/$p is still in use" >&2
-      exit 1
-    fi
-  done
-
   echo "WARNING: This overwrites the bootloader on the eMMC rescue disk with the" >&2
   echo "backup stored as /boot/flash.bin!" >&2
 
