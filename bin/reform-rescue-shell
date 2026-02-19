@@ -138,43 +138,22 @@ if ! get_exclusive_write_lock "/dev/${DEV_MMC}"; then
   exit 1
 fi
 
-mmc_part_types=
-mmc_disk_label=$(parted --script --json "/dev/${DEV_MMC}" print 2>/dev/null | jq --raw-output '.disk.label')
-case $mmc_disk_label in
-  msdos | gpt)
-    mmc_num_parts=$(parted --script --json "/dev/${DEV_MMC}" print 2>/dev/null | jq --raw-output '.disk.partitions | length')
-    mmc_part_types=$(for i in $(seq "$mmc_num_parts"); do lsblk --nodeps --noheadings --output=FSTYPE "/dev/${DEV_MMC}p${i}"; done | tr '\n' ',')
-    ;;
-  unknown)
-    # could be luks
-    if cryptsetup isLuks "/dev/${DEV_MMC}"; then
-      mmc_part_types=luks
-    fi
-    ;;
-  *) : ;; # ignore unknown labels
-esac
+mmc_part_types="parted --script --json /dev/${DEV_MMC} print 2>/dev/null | jq --compact-output '[ .disk.partitions.[]? | .filesystem ]'"
+if [ "$mmc_part_types" = "[]" ] && cryptsetup isLuks "/dev/${DEV_MMC}"; then
+  mmc_part_types=luks
+fi
+
+ssd_part_types="[]"
+if [ -b "/dev/${DEV_SSD}" ]; then
+  ssd_part_types="parted --script --json /dev/${DEV_SSD} print 2>/dev/null | jq --compact-output '[ .disk.partitions.[]? | .filesystem ]'"
+  if [ "$ssd_part_types" = "[]" ] && cryptsetup isLuks "/dev/${DEV_SSD}"; then
+    ssd_part_types=luks
+  fi
+fi
 
 DEV_SSD_BASE="$DEV_SSD"
 if [ "$DEV_SSD" != "sda" ]; then
   DEV_SSD_BASE="${DEV_SSD}p"
-fi
-
-ssd_part_types=
-if [ -b "/dev/${DEV_SSD}" ]; then
-  ssd_disk_label=$(parted --script --json "/dev/${DEV_SSD}" print 2>/dev/null | jq --raw-output '.disk.label')
-  case $ssd_disk_label in
-    msdos | gpt)
-      ssd_num_parts=$(parted --script --json "/dev/${DEV_SSD}" print 2>/dev/null | jq --raw-output '.disk.partitions | length')
-      ssd_part_types=$(for i in $(seq "$ssd_num_parts"); do lsblk --nodeps --noheadings --output=FSTYPE "/dev/${DEV_SSD_BASE}${i}"; done | tr '\n' ',')
-      ;;
-    unknown)
-      # could be luks
-      if cryptsetup isLuks "/dev/${DEV_SSD}"; then
-        ssd_part_types=luks
-      fi
-      ;;
-    *) : ;; # ignore unknown labels
-  esac
 fi
 
 trap cleanup EXIT INT TERM
@@ -241,14 +220,13 @@ main() {
   umount --recursive "$MOUNTROOT"
 }
 
-case "$mmc_part_types:$ssd_part_types" in
-  "ext4:luks") echo "I: Assuming /boot on eMMC and root filesystem on encrypted SSD." >&2 ;;
-  "ext4,"*":luks") echo "I: Assuming /boot on first partition of eMMC and root filesystem on encrypted SSD." >&2 ;;
-  "ext4,ext4:") echo "I: Assuming both /boot and root filesystem on eMMC." >&2 ;;
-  "ext4"*":ext4,swap") echo "I: Assuming /boot on eMMC and root filesystem on first partition of SSD" >&2 ;;
-  "ext4"*":swap,ext4") echo "I: Assuming /boot on eMMC and root filesystem on second partition of SSD" >&2 ;;
+case "$mmc_part_types;$ssd_part_types" in
+  '["ext4"'*'];luks') echo "I: Assuming /boot on first partition of eMMC and root filesystem on encrypted SSD." >&2 ;;
+  '["ext4","ext4"];[]') echo "I: Assuming both /boot and root filesystem on eMMC." >&2 ;;
+  '["ext4"'*'];["ext4","swap"]') echo "I: Assuming /boot on eMMC and root filesystem on first partition of SSD" >&2 ;;
+  '["ext4"'*'];["swap","ext4"]') echo "I: Assuming /boot on eMMC and root filesystem on second partition of SSD" >&2 ;;
   *)
-    echo "E: your configuration $mmc_part_types:$ssd_part_types is currently unsupported, please file a ticket with details of your setup to get it supported" >&2
+    echo "E: your configuration $mmc_part_types;$ssd_part_types is currently unsupported, please file a ticket with details of your setup to get it supported" >&2
     exit 1
     ;;
 esac
@@ -262,7 +240,7 @@ fi
 
 # for all cases where SSD is about to be used, check for mounted volumes and
 # attempt to get an exclusive write lock
-case "$mmc_part_types:$ssd_part_types" in "ext4:luks" | "ext4,"*":luks" | "ext4"*":ext4,swap" | "ext4"*":swap,ext4")
+case "$mmc_part_types;$ssd_part_types" in '["ext4"'*'];luks' | '["ext4"'*'];["ext4","swap"]' | '["ext4"'*'];["swap","ext4"]')
   if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/${DEV_SSD}")" ]; then
     echo "E: SSD has the following mounted volumes, unmount them before running this tool" >&2
     lsblk --noheadings --output=MOUNTPOINT "/dev/${DEV_SSD}" | xargs --no-run-if-empty -I '{}' echo "E:   {}" >&2
@@ -275,8 +253,8 @@ case "$mmc_part_types:$ssd_part_types" in "ext4:luks" | "ext4,"*":luks" | "ext4"
   ;;
 esac
 
-case "$mmc_part_types:$ssd_part_types" in
-  "ext4:luks" | "ext4,"*":luks")
+case "$mmc_part_types;$ssd_part_types" in
+  '["ext4"'*'];luks')
     cryptsetup luksOpen "/dev/${DEV_SSD}" reform_crypt
     vgchange -ay reformvg >&2
 
@@ -285,9 +263,9 @@ case "$mmc_part_types:$ssd_part_types" in
     vgchange -an reformvg >&2
     cryptsetup luksClose reform_crypt
     ;;
-  "ext4,ext4:") main "/dev/${DEV_MMC}p2" "/dev/${DEV_MMC}p1" ;;
-  "ext4"*":ext4,swap") main "/dev/${DEV_SSD_BASE}1" "/dev/${DEV_MMC}p1" ;;
-  "ext4"*":swap,ext4") main "/dev/${DEV_SSD_BASE}2" "/dev/${DEV_MMC}p1" ;;
+  '["ext4","ext4"];[]') main "/dev/${DEV_MMC}p2" "/dev/${DEV_MMC}p1" ;;
+  '["ext4"'*'];["ext4","swap"]') main "/dev/${DEV_SSD_BASE}1" "/dev/${DEV_MMC}p1" ;;
+  '["ext4"'*'];["swap","ext4"]') main "/dev/${DEV_SSD_BASE}2" "/dev/${DEV_MMC}p1" ;;
 esac
 
 rmdir "$MOUNTROOT"
