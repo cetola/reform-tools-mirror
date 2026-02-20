@@ -138,14 +138,14 @@ if ! get_exclusive_write_lock "/dev/${DEV_MMC}"; then
   exit 1
 fi
 
-mmc_part_types="parted --script --json /dev/${DEV_MMC} print 2>/dev/null | jq --compact-output '[ .disk.partitions.[]? | .filesystem ]'"
+mmc_part_types="$(parted --script --json "/dev/${DEV_MMC}" print 2>/dev/null | jq --compact-output '[ .disk.partitions.[]? | .filesystem ]')"
 if [ "$mmc_part_types" = "[]" ] && cryptsetup isLuks "/dev/${DEV_MMC}"; then
   mmc_part_types=luks
 fi
 
 ssd_part_types="[]"
 if [ -b "/dev/${DEV_SSD}" ]; then
-  ssd_part_types="parted --script --json /dev/${DEV_SSD} print 2>/dev/null | jq --compact-output '[ .disk.partitions.[]? | .filesystem ]'"
+  ssd_part_types="$(parted --script --json "/dev/${DEV_SSD}" print 2>/dev/null | jq --compact-output '[ .disk.partitions.[]? | .filesystem ]')"
   if [ "$ssd_part_types" = "[]" ] && cryptsetup isLuks "/dev/${DEV_SSD}"; then
     ssd_part_types=luks
   fi
