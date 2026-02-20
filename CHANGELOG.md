@@ -1,3 +1,23 @@
+1.85 (2026-02-20)
+=================
+
+ * rename reform-flash-uboot to reform-flash-bootloader
+ * add pcie_aspm=off to kernel cmdline
+ * reform-wallpaper.py: handle additional monitors being added or removed
+ * bin/reform-rescue-shell:
+    - only copy (and restore) /etc/resolv.conf if it exists
+    - make sure SSD is not in use by getting exclusive write lock
+    - use part types instead of number of partitions as heuristic
+    - replace running lsblk in a loop with 'parted --script --json'
+ * bin/reform-check: support encrypted eMMC
+ * bin/reform-emmc-bootstrap: refactor using reform-rescue-shell
+ * bin/reform-flash-rescue: allow emmc being in use before calling
+   reform-flash-bootloader
+ * bin/reform-boot-config:
+    - replace lsblk with 'cryptsetup isLuks'
+    - run lsblk --properties-by=blkid to force it to read directly from disk
+ * bin/reform-setup-encrypted-disk: run 'udevadm settle' before calling lsblk
+
 1.84 (2026-01-28)
 =================
 
