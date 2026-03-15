@@ -8,17 +8,17 @@
  */
 
 #include <asm-generic/errno-base.h>
-#include <linux/module.h>
-#include <linux/slab.h>
-#include <linux/math.h>
-#include <linux/mutex.h>
-#include <linux/spi/spi.h>
-#include <linux/delay.h>
-#include <linux/power_supply.h>
-#include <linux/of.h>
 #include <linux/backlight.h>
-#include <linux/version.h>
+#include <linux/delay.h>
+#include <linux/math.h>
+#include <linux/module.h>
+#include <linux/mutex.h>
+#include <linux/of.h>
+#include <linux/power_supply.h>
 #include <linux/reboot.h>
+#include <linux/slab.h>
+#include <linux/spi/spi.h>
+#include <linux/version.h>
 
 #define MNTRE_LPC_API_UNKNOWN 0
 #define MNTRE_LPC_API_V1 1
@@ -133,7 +133,7 @@ int (*__mnt_pocket_reform_get_panel_version)(void);
 static uint8_t lpc_calc_checksum(uint8_t *buffer, int len)
 {
 	uint8_t sum = 0;
-	for (int i=0; i<len-1; i++) {
+	for (int i = 0; i < len - 1; i++) {
 		sum = sum ^ buffer[i];
 	}
 	return sum;
@@ -141,7 +141,7 @@ static uint8_t lpc_calc_checksum(uint8_t *buffer, int len)
 
 static int lpc_confirm_checksum(uint8_t *buffer, int len)
 {
-	return (buffer[len-1] == lpc_calc_checksum(buffer,len));
+	return (buffer[len - 1] == lpc_calc_checksum(buffer, len));
 }
 
 static uint32_t lpc_get_api_version(struct device *dev)
@@ -164,10 +164,11 @@ static uint32_t lpc_get_api_version(struct device *dev)
 	} else if (version >= 20250526 && version < 20260315) {
 		ret = MNTRE_LPC_API_V2;
 	} else if (version < 20200000 ||
-						 (version >= 20260315 && version <= 30000101)) {
+		   (version >= 20260315 && version <= 30000101)) {
 		ret = MNTRE_LPC_API_V3;
 	}
-	dev_info(dev, "raw version: %u (%s), LPC API version: %d\n", version, str, ret);
+	dev_info(dev, "raw version: %u (%s), LPC API version: %d\n", version,
+		 str, ret);
 	return ret;
 }
 
@@ -199,23 +200,28 @@ static int lpc_probe(struct spi_device *spi)
 
 	ret = device_create_file(&spi->dev, &dev_attr_status);
 	if (ret)
-		dev_err(&spi->dev, "device_create_file dev_attr_status failed.\n");
+		dev_err(&spi->dev,
+			"device_create_file dev_attr_status failed.\n");
 
 	ret = device_create_file(&spi->dev, &dev_attr_cells);
 	if (ret)
-		dev_err(&spi->dev, "device_create_file dev_attr_cells failed.\n");
+		dev_err(&spi->dev,
+			"device_create_file dev_attr_cells failed.\n");
 
 	ret = device_create_file(&spi->dev, &dev_attr_firmware);
 	if (ret)
-		dev_err(&spi->dev, "device_create_file dev_attr_firmware failed.\n");
+		dev_err(&spi->dev,
+			"device_create_file dev_attr_firmware failed.\n");
 
 	ret = device_create_file(&spi->dev, &dev_attr_capacity);
 	if (ret)
-		dev_err(&spi->dev, "device_create_file dev_attr_capacity failed.\n");
+		dev_err(&spi->dev,
+			"device_create_file dev_attr_capacity failed.\n");
 
 	ret = device_create_file(&spi->dev, &dev_attr_uart);
 	if (ret)
-		dev_err(&spi->dev, "device_create_file dev_attr_uart failed.\n");
+		dev_err(&spi->dev,
+			"device_create_file dev_attr_uart failed.\n");
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 17, 0)
 	psy_cfg.fwnode = dev_fwnode(&spi->dev);
@@ -240,9 +246,9 @@ static int lpc_probe(struct spi_device *spi)
 	}
 
 	/* for MNT Pocket Reform with Display Version 2, the
-	   system controller has to control the backlight
-	   directly via PWM, but it must not do that on
-	   other versions of the display. */
+     system controller has to control the backlight
+     directly via PWM, but it must not do that on
+     other versions of the display. */
 	__mnt_pocket_reform_get_panel_version =
 		(void *)__symbol_get("mnt_pocket_reform_get_panel_version");
 
@@ -250,7 +256,8 @@ static int lpc_probe(struct spi_device *spi)
 	    __mnt_pocket_reform_get_panel_version() == 2) {
 		dev_info(
 			&spi->dev,
-			"enabling backlight control for MNT Pocket Reform with Display Version 2.\n");
+			"enabling backlight control for MNT Pocket Reform with "
+			"Display Version 2.\n");
 		data->backlight = lpc_create_backlight(&spi->dev, data);
 		if (IS_ERR(data->backlight)) {
 			dev_err(&spi->dev, "lpc_create_backlight failed.\n");
@@ -272,7 +279,7 @@ static void lpc_remove(struct spi_device *spi)
 	device_remove_file(&spi->dev, &dev_attr_capacity);
 	device_remove_file(&spi->dev, &dev_attr_uart);
 
-	//spi_controller_put(spi->controller);
+	// spi_controller_put(spi->controller);
 }
 
 /* response[] has to have a size of at least 8 bytes! */
@@ -299,8 +306,9 @@ static ssize_t lpc_command(struct lpc_driver_data *lpc, char command,
 	msleep(delays[0]);
 	ret = spi_write(lpc->spi, cmd, 4);
 	if (ret) {
-		dev_err(&lpc->spi->dev, "lpc_command: %c/%d spi_write failed.\n",
-			command, arg1);
+		dev_err(&lpc->spi->dev,
+			"lpc_command: %c/%d spi_write failed.\n", command,
+			arg1);
 		mutex_unlock(&lpc->lock);
 		return ret;
 	}
@@ -318,7 +326,7 @@ static ssize_t lpc_command(struct lpc_driver_data *lpc, char command,
 		dev_err(&lpc->spi->dev,
 			"lpc_command: %c/%d checksum mismatch: %x expected, %x received.\n",
 			command, arg1, lpc_calc_checksum(response, LPC_RES_SZ),
-						response[LPC_RES_SZ - 1]);
+			response[LPC_RES_SZ - 1]);
 		return -EINVAL;
 	}
 	return ret;
@@ -522,7 +530,7 @@ static int get_bat_property(struct power_supply *psy,
 		}
 
 		/* system controller and linux disagree on which sign
-		 * means charging and which means discharging */
+     * means charging and which means discharging */
 		val->intval = -milliamp * 1000;
 
 		break;
@@ -533,8 +541,8 @@ static int get_bat_property(struct power_supply *psy,
 			return -EBUSY;
 
 		/* don't trigger upower emergency shutdown in case
-		 * of faulty data
-		 * (normally happens at 5% or less) */
+     * of faulty data
+     * (normally happens at 5% or less) */
 		int gauge = buffer[4];
 		if (gauge < 6)
 			gauge = 6;
@@ -597,11 +605,12 @@ MODULE_DEVICE_TABLE(spi, g_spi_dev_id_list);
 static struct spi_driver g_spi_driver = {
     .probe = lpc_probe,
     .remove = lpc_remove,
-    .driver = {
-        .of_match_table = of_match_ptr(of_tis_spi_match),
-        .owner = THIS_MODULE,
-        .name = "reform2_lpc",
-    },
+    .driver =
+        {
+            .of_match_table = of_match_ptr(of_tis_spi_match),
+            .owner = THIS_MODULE,
+            .name = "reform2_lpc",
+        },
     .id_table = g_spi_dev_id_list,
 };
 module_spi_driver(g_spi_driver);
