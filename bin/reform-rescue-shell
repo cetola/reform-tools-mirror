@@ -16,11 +16,18 @@ usage() {
   echo "It also copies /etc/resolv.conf from the current system into the" >&2
   echo "chroot, so if you have set up network connection on the outside," >&2
   echo "then the system on eMMC/SSD will also have network access" >&2
+  echo "Unless you pass the --root and --boot options, this tool will try to" >&2
+  echo "figure out your configuration automatically." >&2
+  echo "Guessing the configuration only works when running a system from SD-card" >&2
   echo >&2
   echo "Usage: $0 [--help] [CMD...]" >&2
   echo >&2
   echo "Options:" >&2
   echo "  -h, --help       Display this help and exit." >&2
+  echo " --boot PATH       Device/partition with /boot on it" >&2
+  echo " --root PATH       Device/partition with / on it. If you pass a luks" >&2
+  echo "                   device, it will be assumed to have been set up with" >&2
+  echo "                   an LVM2 volume group reformvg inside of it."
   echo >&2
   echo "Examples:" >&2
   echo >&2
@@ -34,6 +41,13 @@ usage() {
   echo >&2
 }
 
+nth_arg() {
+  shift "$1"
+  printf "%s" "$1"
+}
+
+ROOT=
+BOOT=
 while getopts :h-: OPTCHAR; do
   case "$OPTCHAR" in
     h)
@@ -45,6 +59,22 @@ while getopts :h-: OPTCHAR; do
         help)
           usage
           exit 0
+          ;;
+        boot)
+          if [ "$OPTIND" -gt "$#" ]; then
+            echo "E: missing argument for --boot" >&2
+            exit 1
+          fi
+          BOOT="$(nth_arg "$OPTIND" "$@")"
+          OPTIND=$((OPTIND + 1))
+          ;;
+        root)
+          if [ "$OPTIND" -gt "$#" ]; then
+            echo "E: missing argument for --root" >&2
+            exit 1
+          fi
+          ROOT="$(nth_arg "$OPTIND" "$@")"
+          OPTIND=$((OPTIND + 1))
           ;;
         *)
           echo "E: unrecognized option: --$OPTARG" >&2
@@ -67,6 +97,16 @@ while getopts :h-: OPTCHAR; do
   esac
 done
 shift "$((OPTIND - 1))"
+
+if [ -n "$BOOT" ] && [ -z "$ROOT" ]; then
+  echo "E: setting --boot also requires --root to be set" >&2
+  exit 1
+fi
+
+if [ -n "$ROOT" ] && [ -z "$BOOT" ]; then
+  echo "E: setting --root also requires --boot to be set" >&2
+  exit 1
+fi
 
 # by default, if no positional arguments were passed, run bash inside the chroot
 if [ "$#" -eq 0 ]; then
@@ -97,23 +137,6 @@ else
   exit 1
 fi
 
-# We need to wrap findmnt output in realpath because if the SD-card was mounted
-# via its label, then we need to resolve /dev/disk/by-label to the device name
-case "$(realpath "$(findmnt --noheadings --evaluate --mountpoint / --output SOURCE)")" in
-  "/dev/${DEV_SD}p"*) : ;;
-  *)
-    echo "E: This script is meant to be run from a rescue system from SD-card" >&2
-    exit 1
-    ;;
-esac
-
-# eMMC device is being used (case 1): mount points are known, show them. Includes swap.
-if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/${DEV_MMC}")" ]; then
-  echo "E: eMMC has the following mounted volumes, unmount them before running this tool" >&2
-  lsblk --noheadings --output=MOUNTPOINT "/dev/${DEV_MMC}" | xargs --no-run-if-empty -I '{}' echo "E:   {}" >&2
-  exit 1
-fi
-
 # eMMC device is being used (case 2): there are not file systems directly mounted on the block device
 # but it is opened by consumers like device-mapper, raid or luks, to name some examples. In this situation
 # it is not trivial to locate the consumer.
@@ -131,49 +154,6 @@ except OSError as e:
     raise
 EOF
   return $ret
-}
-
-if ! get_exclusive_write_lock "/dev/${DEV_MMC}"; then
-  echo "E: device /dev/${DEV_MMC} (eMMC) is still in use" >&2
-  exit 1
-fi
-
-mmc_part_types="$(parted --script --json "/dev/${DEV_MMC}" print 2>/dev/null | jq --compact-output '[ .disk.partitions.[]? | .filesystem ]')"
-if [ "$mmc_part_types" = "[]" ] && cryptsetup isLuks "/dev/${DEV_MMC}"; then
-  mmc_part_types=luks
-fi
-
-ssd_part_types="[]"
-if [ -b "/dev/${DEV_SSD}" ]; then
-  ssd_part_types="$(parted --script --json "/dev/${DEV_SSD}" print 2>/dev/null | jq --compact-output '[ .disk.partitions.[]? | .filesystem ]')"
-  if [ "$ssd_part_types" = "[]" ] && cryptsetup isLuks "/dev/${DEV_SSD}"; then
-    ssd_part_types=luks
-  fi
-fi
-
-DEV_SSD_BASE="$DEV_SSD"
-if [ "$DEV_SSD" != "sda" ]; then
-  DEV_SSD_BASE="${DEV_SSD}p"
-fi
-
-trap cleanup EXIT INT TERM
-MOUNTROOT="$(mktemp --tmpdir --directory reform-emmc-bootstrap.XXXXXXXXXX)"
-
-cleanup() {
-  if [ -e "$MOUNTROOT/etc/resolv.conf.reform-rescue-shell.bak" ] || [ -L "$MOUNTROOT/etc/resolv.conf.reform-rescue-shell.bak" ]; then
-    rm "$MOUNTROOT/etc/resolv.conf" || echo "W: removal of /etc/resolv.conf failed" >&2
-    mv "$MOUNTROOT/etc/resolv.conf.reform-rescue-shell.bak" "$MOUNTROOT/etc/resolv.conf" || echo "W: restoring /etc/resolv.conf failed" >&2
-  fi
-  if mountpoint --quiet "$MOUNTROOT"; then
-    umount --recursive "$MOUNTROOT"
-  fi
-  rmdir "$MOUNTROOT"
-  if [ -e /dev/reformvg ]; then
-    vgchange -an reformvg >&2
-  fi
-  if [ -e /dev/mapper/reform_crypt ]; then
-    cryptsetup luksClose reform_crypt
-  fi
 }
 
 main() {
@@ -220,53 +200,139 @@ main() {
   umount --recursive "$MOUNTROOT"
 }
 
-case "$mmc_part_types;$ssd_part_types" in
-  '["ext4"'*'];luks') echo "I: Assuming /boot on first partition of eMMC and root filesystem on encrypted SSD." >&2 ;;
-  '["ext4","ext4"];[]') echo "I: Assuming both /boot and root filesystem on eMMC." >&2 ;;
-  '["ext4"'*'];["ext4","swap"]') echo "I: Assuming /boot on eMMC and root filesystem on first partition of SSD" >&2 ;;
-  '["ext4"'*'];["swap","ext4"]') echo "I: Assuming /boot on eMMC and root filesystem on second partition of SSD" >&2 ;;
-  *)
-    echo "E: your configuration $mmc_part_types;$ssd_part_types is currently unsupported, please file a ticket with details of your setup to get it supported" >&2
-    exit 1
-    ;;
-esac
+# if --root and --boot were not specified, try to guess the setup
+if [ -z "$ROOT" ] && [ -z "$BOOT" ]; then
+  # We need to wrap findmnt output in realpath because if the SD-card was mounted
+  # via its label, then we need to resolve /dev/disk/by-label to the device name
+  case "$(realpath "$(findmnt --noheadings --evaluate --mountpoint / --output SOURCE)")" in
+    "/dev/${DEV_SD}p"*) : ;;
+    *)
+      echo "E: When not running from SD-card, the --root and --boot options are required." >&2
+      exit 1
+      ;;
+  esac
 
-printf "Does that sound right? [y/N] " >&2
-read -r response
-if [ "$response" != "y" ]; then
-  echo "Exiting."
-  exit 1
+  mmc_part_types="$(parted --script --json "/dev/${DEV_MMC}" print 2>/dev/null | jq --compact-output '[ .disk.partitions.[]? | .filesystem ]')"
+
+  ssd_part_types="[]"
+  if [ -b "/dev/${DEV_SSD}" ]; then
+    ssd_part_types="$(parted --script --json "/dev/${DEV_SSD}" print 2>/dev/null | jq --compact-output '[ .disk.partitions.[]? | .filesystem ]')"
+    if [ "$ssd_part_types" = "[]" ] && cryptsetup isLuks "/dev/${DEV_SSD}"; then
+      ssd_part_types=luks
+    fi
+  fi
+
+  case "$mmc_part_types;$ssd_part_types" in
+    '["ext4"'*'];luks')
+      echo "I: Assuming /boot on first partition of eMMC and root filesystem on encrypted SSD." >&2
+      BOOT="/dev/${DEV_MMC}p1"
+      ROOT="/dev/${DEV_SSD}"
+      ;;
+    '["ext4","ext4"];[]')
+      echo "I: Assuming both /boot and root filesystem on eMMC." >&2
+      BOOT="/dev/${DEV_MMC}p1"
+      ROOT="/dev/${DEV_MMC}p2"
+      ;;
+    '["ext4"'*'];["ext4","swap"]')
+      echo "I: Assuming /boot on eMMC and root filesystem on first partition of SSD" >&2
+      BOOT="/dev/${DEV_MMC}p1"
+      ROOT="/dev/${DEV_SSD_BASE}1"
+      ;;
+    '["ext4"'*'];["swap","ext4"]')
+      echo "I: Assuming /boot on eMMC and root filesystem on second partition of SSD" >&2
+      BOOT="/dev/${DEV_MMC}p1"
+      ROOT="/dev/${DEV_SSD_BASE}2"
+      ;;
+    *)
+      echo "E: your configuration $mmc_part_types;$ssd_part_types is currently unsupported, please file a ticket with details of your setup to get it supported" >&2
+      exit 1
+      ;;
+  esac
+
+  printf "Does that sound right? [y/N] " >&2
+  read -r response
+  if [ "$response" != "y" ]; then
+    echo "Exiting."
+    exit 1
+  fi
 fi
 
-# for all cases where SSD is about to be used, check for mounted volumes and
-# attempt to get an exclusive write lock
-case "$mmc_part_types;$ssd_part_types" in '["ext4"'*'];luks' | '["ext4"'*'];["ext4","swap"]' | '["ext4"'*'];["swap","ext4"]')
-  if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/${DEV_SSD}")" ]; then
-    echo "E: SSD has the following mounted volumes, unmount them before running this tool" >&2
-    lsblk --noheadings --output=MOUNTPOINT "/dev/${DEV_SSD}" | xargs --no-run-if-empty -I '{}' echo "E:   {}" >&2
+for device in "$ROOT" "$BOOT"; do
+  if [ ! -e "$device" ]; then
+    echo "E: $device does not exist" >&2
     exit 1
   fi
-  if ! get_exclusive_write_lock "/dev/${DEV_SSD}"; then
-    echo "E: device /dev/${DEV_SSD} (SSD) is still in use" >&2
+
+  if [ ! -b "$device" ]; then
+    echo "E: $device is not a block device" >&2
     exit 1
   fi
-  ;;
-esac
 
-case "$mmc_part_types;$ssd_part_types" in
-  '["ext4"'*'];luks')
-    cryptsetup luksOpen "/dev/${DEV_SSD}" reform_crypt
-    vgchange -ay reformvg >&2
+  if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "$device")" ]; then
+    echo "E: $device has the following mounted volumes, unmount them before running this tool" >&2
+    lsblk --noheadings --output=MOUNTPOINT "$device" | xargs --no-run-if-empty -I '{}' echo "E:   {}" >&2
+    exit 1
+  fi
 
-    main /dev/reformvg/root "/dev/${DEV_MMC}p1" "$@"
+  if ! get_exclusive_write_lock "$device"; then
+    echo "E: unable to get exclusive write lock for $device" >&2
+    exit 1
+  fi
+done
 
+DEV_SSD_BASE="$DEV_SSD"
+if [ "$DEV_SSD" != "sda" ]; then
+  DEV_SSD_BASE="${DEV_SSD}p"
+fi
+
+cleanup() {
+  if [ -e "$MOUNTROOT/etc/resolv.conf.reform-rescue-shell.bak" ] || [ -L "$MOUNTROOT/etc/resolv.conf.reform-rescue-shell.bak" ]; then
+    rm "$MOUNTROOT/etc/resolv.conf" || echo "W: removal of /etc/resolv.conf failed" >&2
+    mv "$MOUNTROOT/etc/resolv.conf.reform-rescue-shell.bak" "$MOUNTROOT/etc/resolv.conf" || echo "W: restoring /etc/resolv.conf failed" >&2
+  fi
+  if mountpoint --quiet "$MOUNTROOT"; then
+    umount --recursive "$MOUNTROOT"
+  fi
+  rmdir "$MOUNTROOT"
+}
+
+cleanup_luks() {
+  cleanup
+  if [ -e /dev/reformvg ]; then
     vgchange -an reformvg >&2
+  fi
+  if [ -e /dev/mapper/reform_crypt ]; then
     cryptsetup luksClose reform_crypt
-    ;;
-  '["ext4","ext4"];[]') main "/dev/${DEV_MMC}p2" "/dev/${DEV_MMC}p1" ;;
-  '["ext4"'*'];["ext4","swap"]') main "/dev/${DEV_SSD_BASE}1" "/dev/${DEV_MMC}p1" ;;
-  '["ext4"'*'];["swap","ext4"]') main "/dev/${DEV_SSD_BASE}2" "/dev/${DEV_MMC}p1" ;;
-esac
+  fi
+}
+
+if cryptsetup isLuks "$ROOT"; then
+  if [ -e /dev/mapper/reform_crypt ]; then
+    echo "E: /dev/mapper/reform_crypt already exists" >&2
+    exit 1
+  fi
+
+  if [ -e /dev/reformvg/root ]; then
+    echo "E: /dev/reformvg/root already exists" >&2
+    exit 1
+  fi
+
+  trap cleanup_luks EXIT INT TERM
+  MOUNTROOT="$(mktemp --tmpdir --directory reform-emmc-bootstrap.XXXXXXXXXX)"
+
+  cryptsetup luksOpen "$ROOT" reform_crypt
+  vgchange -ay reformvg >&2
+
+  main /dev/reformvg/root "$BOOT" "$@"
+
+  vgchange -an reformvg >&2
+  cryptsetup luksClose reform_crypt
+else
+  trap cleanup EXIT INT TERM
+  MOUNTROOT="$(mktemp --tmpdir --directory reform-emmc-bootstrap.XXXXXXXXXX)"
+
+  main "$ROOT" "$BOOT" "$@"
+fi
 
 rmdir "$MOUNTROOT"
 
