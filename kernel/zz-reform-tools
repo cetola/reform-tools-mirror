@@ -37,6 +37,14 @@ dtb_required() {
     echo "I: chroot environment detected, dropping dtb requirement" >&2
     return 1
   fi
+  if [ -s /etc/flash-kernel/machine ]; then
+    # the presence of non-empty /etc/flash-kernel/machine overrides /proc/device-tree/model
+    if [ "$(cat /etc/flash-kernel/machine)" = "$(basename "$config" .conf)" ]; then
+      return 0
+    else
+      return 1
+    fi
+  fi
   if [ ! -e /proc/device-tree/model ]; then
     return 1
   fi
