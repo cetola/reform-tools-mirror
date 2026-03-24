@@ -33,6 +33,10 @@ set -u
 
 dtb_required() {
   config="$1"
+  if ischroot; then
+    echo "I: chroot environment detected, dropping dtb requirement" >&2
+    return 1
+  fi
   if [ ! -e /proc/device-tree/model ]; then
     return 1
   fi
