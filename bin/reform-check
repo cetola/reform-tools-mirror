@@ -514,6 +514,10 @@ for META in reform-desktop-full reform-desktop-minimal; do
     for PKG in $(apt-cache show --no-all-versions $META | sed -ne 's/^'"$REL"': \(.*\)/\1/p'); do
       PKG="${PKG## }" # strip whitespace
       if ! dpkg-query --showformat '${db:Status-Status}\n' --show "$PKG" 2>/dev/null | grep -q '^installed$'; then
+        # do not give conflicting info about ezurio-qcacld-2.0-dkms or reform-qcacld2
+        if [ "$PKG" = "ezurio-qcacld-2.0-dkms" ] || [ "$PKG" = "reform-qcacld2" ]; then
+          case "$(cat /proc/device-tree/model)" in "MNT Pocket Reform with i.MX8MP Module" | "MNT Reform 2 with i.MX8MP Module") continue ;; esac
+        fi
         echo "I: $REL of $META is not installed: $PKG" >&2
       fi
     done
