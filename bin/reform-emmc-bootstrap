@@ -156,6 +156,8 @@ else
   apt-get install --yes --only-upgrade linux-image-mnt-reform-arm64
 fi
 # also regenerate everything for other installed kernel packages
+# This will find the linux-binary-${kver}-mnt-reform-arm64 package or for
+# kernel versions of 6.18 or older linux-image-${kver}-mnt-reform-arm64
 dpkg-query --search "/boot/vmlinuz*" | sed "s/:.*//" | while read -r pkg; do
   # if a package cannot be downloaded, apt will still exit
   # successfully
