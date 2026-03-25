@@ -1,3 +1,14 @@
+1.86 (2026-03-25)
+=================
+
+ * lpc/reform2_lpc.c:
+    - add apiv3 support with checksumming
+    - filter some noise when fully charged on AC
+ * bin/reform-rescue-shell: add --root and --boot options
+ * bin/reform-hw-setup: print an error if mdio_mux_meson_g12a is not a module
+ * kernel/zz-reform-tools: respect /etc/flash-kernel/machine
+ * bin/reform-check: also check for the presence of mdio-mux-meson-g12a.ko
+
 1.85 (2026-02-20)
 =================
 
