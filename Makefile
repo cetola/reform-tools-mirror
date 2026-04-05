@@ -21,7 +21,13 @@ MAN1=$(patsubst bin/%,man/%.1,$(BINPROGS))
 
 
 .PHONY: all
-all: $(MAN1) plymouth/background.png plymouth/monobar.so
+all: man plymouth
+
+.PHONY: man
+man: $(MAN1)
+
+.PHONY: plymouth
+plymouth: plymouth/background.png plymouth/monobar.so
 
 man/%.1: bin/%
 	set -e;                                                               \
@@ -69,7 +75,33 @@ plymouth/background.png: ./share/backgrounds/mnt-reform-next-y2k.jpg
 	convert $< -resize 1920x1080 $@
 
 .PHONY: install
-install: $(MAN1) plymouth/background.png plymouth/monobar.so
+install: install-arch install-indep
+
+.PHONY: install-arch
+install-arch: plymouth/background.png plymouth/monobar.so
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/initramfs-tools/hooks
+	$(INSTALL)     -t $(DESTDIR)$(datadir)/initramfs-tools/hooks initramfs-tools/hooks/reform-plymouth
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k
+	set -e; for f in bullet capslock entry keyboard keymap-render lock; do \
+		ln --force --symbolic --no-target-directory ../spinner/$${f}.png $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/$${f}.png; \
+	done
+	set -e; for i in $$(seq 1 36); do \
+		filename=$$(printf "animation-%04d.png" "$$i"); \
+		ln --force --symbolic --no-target-directory ../spinner/$$filename $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/$$filename; \
+	done
+	set -e; for i in $$(seq 1 30); do \
+		filename=$$(printf "throbber-%04d.png" "$$i"); \
+		ln --force --symbolic --no-target-directory ../spinner/$$filename $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/$$filename; \
+	done
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k plymouth/background.png
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k plymouth/reform-y2k.plymouth
+	$(INSTALL)     -d $(DESTDIR)$(libdirarch)/plymouth
+	$(INSTALLDATA) -t $(DESTDIR)$(libdirarch)/plymouth plymouth/monobar.so
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/plymouth/themes/monobar/
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/monobar/ plymouth/monobar.plymouth
+
+.PHONY: install-indep
+install-indep: $(MAN1)
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/NetworkManager/conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/NetworkManager/conf.d NetworkManager/default-wifi-powersave-off.conf
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/udev/rules.d
@@ -89,7 +121,6 @@ install: $(MAN1) plymouth/background.png plymouth/monobar.so
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/flash-kernel/ubootenv.d flash-kernel/ubootenv.d/00reform2_ubootenv
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/initramfs-tools/hooks
 	$(INSTALL)     -t $(DESTDIR)$(datadir)/initramfs-tools/hooks initramfs-tools/hooks/reform
-	$(INSTALL)     -t $(DESTDIR)$(datadir)/initramfs-tools/hooks initramfs-tools/hooks/reform-plymouth
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/initramfs-tools/modules.d
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/initramfs-tools/modules.d initramfs-tools/reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/initramfs-tools/scripts/init-top
@@ -127,23 +158,6 @@ install: $(MAN1) plymouth/background.png plymouth/monobar.so
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/rk3588-tlv320ai/
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/rk3588-tlv320ai/ audio/ucm2.conf.d/rk3588-tlv320ai/rk3588-tlv320aic3100.conf
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/rk3588-tlv320ai/ audio/ucm2.conf.d/rk3588-tlv320ai/HiFi.conf
-	$(INSTALL)     -d $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k
-	set -e; for f in bullet capslock entry keyboard keymap-render lock; do \
-		ln --force --symbolic --no-target-directory ../spinner/$${f}.png $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/$${f}.png; \
-	done
-		#$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/ "plymouth/$${f}.png";
-	set -e; for i in $$(seq 1 36); do \
-		filename=$$(printf "animation-%04d.png" "$$i"); \
-		ln --force --symbolic --no-target-directory ../spinner/$$filename $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/$$filename; \
-	done
-		#$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/ "plymouth/$$filename";
-	set -e; for i in $$(seq 1 30); do \
-		filename=$$(printf "throbber-%04d.png" "$$i"); \
-		ln --force --symbolic --no-target-directory ../spinner/$$filename $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/$$filename; \
-	done
-		#$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k/ "plymouth/$$filename";
-	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k plymouth/background.png
-	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k plymouth/reform-y2k.plymouth
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/wireplumber/wireplumber.conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/wireplumber/wireplumber.conf.d audio/reform-hdmi-audio-priority.conf
 	$(INSTALL)     -d $(DESTDIR)$(sysconfdir)/profile.d
@@ -151,10 +165,6 @@ install: $(MAN1) plymouth/background.png plymouth/monobar.so
 	$(INSTALLDATA) -t $(DESTDIR)$(sysconfdir)/profile.d etc/profile.d/reform-mali.sh
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/doc/reform-tools/examples
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/doc/reform-tools/examples examples/keyboard_rainbow.py
-	$(INSTALL)     -d $(DESTDIR)$(libdirarch)/plymouth
-	$(INSTALLDATA) -t $(DESTDIR)$(libdirarch)/plymouth plymouth/monobar.so
-	$(INSTALL)     -d $(DESTDIR)$(datadir)/plymouth/themes/monobar/
-	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/plymouth/themes/monobar/ plymouth/monobar.plymouth
 
 .PHONY: clean
 clean:
