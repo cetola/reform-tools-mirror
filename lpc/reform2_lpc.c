@@ -163,11 +163,10 @@ static uint32_t lpc_get_api_version(struct device *dev)
 		ret = MNTRE_LPC_API_V1;
 	} else if (version >= 20250526 && version < 20260315) {
 		ret = MNTRE_LPC_API_V2;
-	} else if (version < 20200000 ||
-						 (version >= 20260315 && version <= 30000101)) {
+	} else if (version >= 20260315 && version <= 30000101) {
 		ret = MNTRE_LPC_API_V3;
 	}
-	dev_info(dev, "raw version: %u (%s), LPC API version: %d\n", version, str, ret);
+	dev_info(dev, "raw version: %u (%s), LPC API version: %d.\n", version, str, ret);
 	return ret;
 }
 
