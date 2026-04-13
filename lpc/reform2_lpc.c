@@ -157,6 +157,8 @@ static uint32_t lpc_get_api_version(struct device *dev)
 		return MNTRE_LPC_API_UNKNOWN;
 
 	ret = kstrtou32(str, 10, &version);
+	if (ret)
+		return MNTRE_LPC_API_UNKNOWN;
 
 	ret = MNTRE_LPC_API_UNKNOWN;
 	if (version > 20200000 && version < 20250526) {
