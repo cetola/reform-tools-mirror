@@ -7,8 +7,20 @@
 # - avoiding SoC resets due to current spikes causing voltage dips on 5V rail, on low battery voltage
 # - prolonging runtime on battery
 #
+# The following can be configured by updating /etc/reform-tools/reform-power-daemon.conf
+#
+# Configure whether the power daemon should set the keyboard backlight
+#   MANAGED_BACKLIGHT=<true|false>
 
 set -e
+
+if [ -f "/usr/lib/reform-tools/config/reform-power-daemon.conf" ]; then
+  . "/usr/lib/reform-tools/config/reform-power-daemon.conf"
+fi
+
+if [ -f "/etc/reform-tools/reform-power-daemon.conf" ]; then
+  . "/etc/reform-tools/reform-power-daemon.conf"
+fi
 
 if ! grep -q "MNT Pocket Reform with RCORE RK3588 Module" /proc/device-tree/model; then
   echo "Fatal: reform-power-daemon currently supports only MNT Pocket Reform with RCORE RK3588 Module." >&2
@@ -54,6 +66,19 @@ ac_max_gpu_freq="1000000000"
 ac_cpu_governor="schedutil" # TODO could also be: "performance", especially on Classic Reform
 ac_keyboard_backlight='xLBRT\x30'
 
+set_keyboard_backlight () {
+  keyboard_backlight="$1"
+
+  if [ "$MANAGED_BACKLIGHT" == "false" ]; then
+	  return
+  fi
+
+  for hidraw in /dev/input/by-id/usb-MNT_Pocket_Reform_Input_*hidraw; do
+    [ -e "$hidraw" ] || continue
+    printf "%b" "$keyboard_backlight" >"$hidraw"
+  done
+}
+
 while sleep 1; do
   bat_status=$(cat $bat_path/status)
 
@@ -74,10 +99,7 @@ while sleep 1; do
     #brightnessctl set "$ac_display_backlight_level"
 
     # apply keyboard brightness. requires firmware 20251118+
-    for hidraw in /dev/input/by-id/usb-MNT_Pocket_Reform_Input_*hidraw; do
-      [ -e "$hidraw" ] || continue
-      printf "%b" "$ac_keyboard_backlight" >"$hidraw"
-    done
+    set_keyboard_backlight "$ac_keyboard_backlight"
 
     for i in 0 4 6; do
       echo "$ac_cpu_governor" >"$cpu_path/policy$i/scaling_governor"
@@ -95,10 +117,7 @@ while sleep 1; do
     #brightnessctl set "$bat_display_backlight_level"
 
     # apply keyboard brightness. requires firmware 20251118+
-    for hidraw in /dev/input/by-id/usb-MNT_Pocket_Reform_Input_*hidraw; do
-      [ -e "$hidraw" ] || continue
-      printf "%b" "$bat_keyboard_backlight" >"$hidraw"
-    done
+    set_keyboard_backlight "$bat_keyboard_backlight"
 
     for i in 0 4 6; do
       echo "powersave" >"$cpu_path/policy$i/scaling_governor"

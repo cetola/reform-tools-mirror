@@ -134,6 +134,7 @@ install-indep: $(MAN1)
 	$(INSTALL)     -t $(DESTDIR)$(libexecdir)/reform-tools libexec/reform-tools/reform-power-daemon
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/reform-tools/machines
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/reform-tools/machines machines/*
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/reform-tools/reform-power-daemon.conf etc/reform-power-daemon.conf
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/modprobe.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/modprobe.d modprobe.d/reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/glib-2.0/schemas
@@ -153,6 +154,8 @@ install-indep: $(MAN1)
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/dracut/dracut.conf.d dracut/20-pocket-reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/sddm/sddm.conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/sddm/sddm.conf.d sddm/10-wayland.conf
+	$(INSTALL)     -d $(DESTDIR)$(libdir)/reform-tools/config
+	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/reform-tools/config/reform-power-daemon.conf etc/reform-power-daemon.conf
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/man/man1
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/man/man1 $(MAN1)
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/rk3588-tlv320ai/
