@@ -17,6 +17,8 @@ sysconfdir = /etc
 
 BINPROGS=$(wildcard bin/*)
 MAN1=$(patsubst bin/%,man/%.1,$(BINPROGS))
+REFORM_CHECK_INSTALLED_DISTRO ?= $(shell sh -ec 'if [ -r /etc/os-release ]; then . /etc/os-release; case "$${ID:-}" in debian) echo debian ;; arch|archlinux|archarm) echo arch ;; *) case " $${ID_LIKE:-} " in *" debian "*) echo debian ;; *" arch "*) echo arch ;; *) echo unknown ;; esac ;; esac; else echo unknown; fi')
+REFORM_CHECK_INSTALLED_BACKEND=reform-check/distro/$(REFORM_CHECK_INSTALLED_DISTRO).sh
 
 
 
@@ -134,6 +136,10 @@ install-indep: $(MAN1)
 	$(INSTALL)     -t $(DESTDIR)$(libexecdir)/reform-tools libexec/reform-tools/reform-power-daemon
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/reform-tools/machines
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/reform-tools/machines machines/*
+	test -r $(REFORM_CHECK_INSTALLED_BACKEND)
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/reform-tools/reform-check
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/reform-tools/reform-check reform-check/common.sh
+	$(INSTALLDATA) $(REFORM_CHECK_INSTALLED_BACKEND) $(DESTDIR)$(datadir)/reform-tools/reform-check/distro.sh
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/modprobe.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/modprobe.d modprobe.d/reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/glib-2.0/schemas
@@ -173,13 +179,13 @@ clean:
 .PHONY: lint
 lint:
 	clang-format lpc/reform2_lpc.c | diff -u lpc/reform2_lpc.c -
-	shfmt --posix --simplify --binary-next-line --case-indent --indent 2 --diff \
-		bin kernel/* initramfs-tools/*/* flash-kernel/*/*
+		shfmt --posix --simplify --binary-next-line --case-indent --indent 2 --diff \
+		bin kernel/* initramfs-tools/*/* flash-kernel/*/* reform-check/*.sh reform-check/distro/*.sh
 	shfmt --language-dialect=bash --simplify --binary-next-line --case-indent --indent 2 --diff \
 		libexec/reform-tools/reform-power-daemon
 	black --check --diff bin/reform-compstat libexec/reform-tools/reform-tray.py libexec/reform-tools/reform-wallpaper.py examples/keyboard_rainbow.py
 	black --line-length 120 --check --diff bin/reform-mcu-tool
-	shellcheck bin/* kernel/* initramfs-tools/*/* flash-kernel/*/* libexec/reform-tools/reform-power-daemon
+	shellcheck bin/* kernel/* initramfs-tools/*/* flash-kernel/*/* reform-check/*.sh reform-check/distro/*.sh libexec/reform-tools/reform-power-daemon
 
 test:
 	# check the validity of gschema overrides
@@ -188,3 +194,43 @@ test:
 	echo '<schemalist></schemalist>' > schemas/dummy.gschema.xml
 	glib-compile-schemas --dry-run --strict schemas
 	rm schemas/dummy.gschema.xml
+	set -e; for backend in reform-check/distro/*.sh; do \
+		backend_name=$$(basename "$$backend"); \
+		backend_dir=$$(dirname "$$backend"); \
+		BACKEND="$$backend" BACKEND_DIR="$$backend_dir" sh -ec '\
+			. reform-check/common.sh; \
+			. "$$BACKEND"; \
+			# BACKEND_MAIN_FLOW_READY marks that this backend is wired into \
+			# the shared reform-check flow and expected to implement the full \
+			# backend interface below. Experimental backends can leave this \
+			# unset or set it to no until they are ready. \
+			test "$${BACKEND_MAIN_FLOW_READY:-no}" = yes; \
+			for backend_fn in \
+				backend_name \
+				backend_validate_options \
+				backend_preflight_checks \
+				backend_pkg_installed \
+				backend_pkg_version \
+				backend_pkg_verify \
+				backend_kernel_pkg_name \
+				backend_kernel_headers_pkg_name \
+				backend_tools_pkg_name \
+				backend_fwupd_pkg_name \
+				backend_jq_pkg_name \
+				backend_mcu_tool_pkg_name \
+				backend_running_kernel_pkg_installed \
+				backend_running_kernel_headers_pkg_installed \
+				backend_running_kernel_matches_main_pkg \
+				backend_kernel_artifact_checks \
+				backend_skel_profile_checks \
+				backend_repo_checks \
+				backend_repo_online_checks \
+				backend_boot_tool_checks \
+				backend_modules_check \
+				backend_initramfs_checks; do \
+				command -v "$$backend_fn" >/dev/null 2>&1 || { \
+					echo "$$BACKEND: missing $$backend_fn" >&2; \
+					exit 1; \
+				}; \
+			done'; \
+	done
