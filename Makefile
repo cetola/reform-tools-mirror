@@ -17,7 +17,7 @@ sysconfdir = /etc
 
 BINPROGS=$(wildcard bin/*)
 MAN1=$(patsubst bin/%,man/%.1,$(BINPROGS))
-REFORM_CHECK_INSTALLED_DISTRO ?= $(shell sh -ec 'if [ -r /etc/os-release ]; then . /etc/os-release; case "$${ID:-}" in debian) echo debian ;; arch|archlinux|archarm) echo arch ;; *) case " $${ID_LIKE:-} " in *" debian "*) echo debian ;; *" arch "*) echo arch ;; *) echo unknown ;; esac ;; esac; else echo unknown; fi')
+REFORM_CHECK_INSTALLED_DISTRO ?= $(shell sh -c .\ reform-check/common.sh\;\ detect_backend_from_os_release)
 REFORM_CHECK_INSTALLED_BACKEND=reform-check/distro/$(REFORM_CHECK_INSTALLED_DISTRO).sh
 
 
