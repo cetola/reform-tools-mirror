@@ -40,32 +40,44 @@ bat_path="/sys/class/power_supply/BAT0"
 gpu_path="/sys/devices/platform/fb000000.gpu/devfreq/fb000000.gpu"
 cpu_path="/sys/devices/system/cpu/cpufreq"
 min_gpu_freq="300000000"
-prev_status=""
+power_state=""
+prev_power_state=""
 
 # Policy when powered by batteries
 #bat_display_backlight_level="40%"
 bat_max_gpu_freq="300000000"
-#bat_cpu_governor="powersave"
+bat_cpu_governor="schedutil"
 bat_keyboard_backlight='xLBRT\x05'
+bat_nvme_pstate="2"
 
-# Policy when powered by AC adapter
+# Policy when powered by AC adapter and battery have enough charge
 #ac_display_backlight_level="70%"
 ac_max_gpu_freq="1000000000"
 ac_cpu_governor="schedutil" # TODO could also be: "performance", especially on Classic Reform
 ac_keyboard_backlight='xLBRT\x30'
+ac_nvme_pstate="0"
+ac_min_capacity="50" # minimum battery percentage to allow full power mode
 
-while sleep 1; do
+while sleep 0.5; do
   bat_status=$(cat $bat_path/status)
+  bat_capacity=$(cat $bat_path/capacity)
 
-  if [ "$bat_status" = "$prev_status" ]; then
+  if [[ "$bat_status" == "Charging" && "$bat_capacity" -ge "$ac_min_capacity" ]]; then
+    power_state="high"
+  fi
+
+  if [[ "$bat_status" == "Discharging" || "$bat_capacity" -lt "$ac_min_capacity" ]]; then
+    power_state="low"
+  fi
+
+  if [[ "$power_state" == "$prev_power_state" ]]; then
     continue
   fi
 
-  echo "Battery status changed to $bat_status."
+  echo "Power state changed to $power_state ($bat_status / $bat_capacity%)."
 
   # on AC power?
-  if [ "$bat_status" == "Charging" ]; then
-    echo "Charging"
+  if [[ "$power_state" == "high" ]]; then
     echo "simple_ondemand" >"$gpu_path/governor"
     echo "$min_gpu_freq" >"$gpu_path/min_freq"
     echo "$ac_max_gpu_freq" >"$gpu_path/max_freq"
@@ -73,11 +85,7 @@ while sleep 1; do
     # that makes everything crash/freeze, so commented out for now
     #brightnessctl set "$ac_display_backlight_level"
 
-    # apply keyboard brightness. requires firmware 20251118+
-    for hidraw in /dev/input/by-id/usb-MNT_Pocket_Reform_Input_*hidraw; do
-      [ -e "$hidraw" ] || continue
-      printf "%b" "$ac_keyboard_backlight" >"$hidraw"
-    done
+    nvme set-feature /dev/nvme0 --feature-id=2 --value=$ac_nvme_pstate
 
     for i in 0 4 6; do
       echo "$ac_cpu_governor" >"$cpu_path/policy$i/scaling_governor"
@@ -85,25 +93,21 @@ while sleep 1; do
   fi
 
   # on battery power?
-  if [ "$bat_status" == "Discharging" ]; then
-    echo "Discharging"
+  if [[ "$power_state" == "low" ]]; then
     echo "userspace" >"$gpu_path/governor"
     echo "$min_gpu_freq" >"$gpu_path/min_freq"
     echo "$bat_max_gpu_freq" >"$gpu_path/max_freq"
+
+    nvme set-feature /dev/nvme0 --feature-id=2 --value=$bat_nvme_pstate
+
     # FIXME this triggers a bug in the panel driver when panel v1 is turned off (i.e. on HDMI)
     # that makes everything crash/freeze, so commented out for now
     #brightnessctl set "$bat_display_backlight_level"
-
-    # apply keyboard brightness. requires firmware 20251118+
-    for hidraw in /dev/input/by-id/usb-MNT_Pocket_Reform_Input_*hidraw; do
-      [ -e "$hidraw" ] || continue
-      printf "%b" "$bat_keyboard_backlight" >"$hidraw"
-    done
 
     for i in 0 4 6; do
       echo "powersave" >"$cpu_path/policy$i/scaling_governor"
     done
   fi
 
-  prev_status="$bat_status"
+  prev_power_state="$power_state"
 done
