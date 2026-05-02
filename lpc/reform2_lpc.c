@@ -1,5 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0-only
 /*
- * SPDX-License-Identifier: GPL-2.0
+ * MNT Reform System Controller
+ *
  * Copyright 2022 nanocodebug <nanocodebug@gmail.com>
  * Copyright 2023 Michael Fincham <michael@hotplate.co.nz>
  * Copyright 2024 Michal Suchánek <hramrach@gmail.com>
@@ -7,8 +9,10 @@
  * Copyright 2023-2025 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
  */
 
-#include <asm-generic/errno-base.h>
+#define DEBUG
+
 #include <linux/module.h>
+#include <linux/gpio/driver.h>
 #include <linux/slab.h>
 #include <linux/math.h>
 #include <linux/mutex.h>
@@ -20,25 +24,24 @@
 #include <linux/version.h>
 #include <linux/reboot.h>
 
-#define MNTRE_LPC_API_UNKNOWN 0
-#define MNTRE_LPC_API_V1 1
-#define MNTRE_LPC_API_V2 2
-#define MNTRE_LPC_API_V3 3
+#define MNTSC_API_UNKNOWN 0
+#define MNTSC_API_V1 1
+#define MNTSC_API_V2 2
+#define MNTSC_API_V3 3
 
-/* array size for lpc response buffers */
-#define LPC_RES_SZ 9
+/* array size for mntsc response buffers */
+#define MNTSC_RESP_SZ 8
 
-typedef struct lpc_driver_data {
+struct mntsc_driver_data {
 	struct spi_device *spi;
 	struct power_supply *bat;
 	struct mutex lock;
 	struct backlight_device *backlight;
+	struct gpio_chip gc;
 	uint32_t api_version;
-} lpc_driver_data;
+};
 
-static int lpc_probe(struct spi_device *spi);
-static void lpc_remove(struct spi_device *spi);
-static int lpc_power_off(struct sys_off_data *data);
+static int mntsc_power_off(struct sys_off_data *data);
 static ssize_t show_status(struct device *dev, struct device_attribute *attr,
 			   char *buf);
 static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
@@ -51,11 +54,14 @@ static ssize_t show_uart(struct device *dev, struct device_attribute *attr,
 			 char *buf);
 static ssize_t store_uart(struct device *dev, struct device_attribute *attr,
 			  const char *buf, size_t count);
-static ssize_t lpc_command(struct lpc_driver_data *lpc, char command,
+static ssize_t sc_cmdresp(struct mntsc_driver_data *mntsc, char command,
 			   uint8_t arg1, uint8_t *response);
 static int get_bat_property(struct power_supply *psy,
 			    enum power_supply_property psp,
 			    union power_supply_propval *val);
+
+// Send a command and discard the response
+#define sc_cmd(mntsc, cmd, arg1) sc_cmdresp(mntsc, cmd, arg1, NULL)
 
 static DEVICE_ATTR(status, 0444, show_status, NULL);
 static DEVICE_ATTR(cells, 0444, show_cells, NULL);
@@ -63,8 +69,8 @@ static DEVICE_ATTR(firmware, 0444, show_firmware, NULL);
 static DEVICE_ATTR(capacity, 0444, show_capacity, NULL);
 static DEVICE_ATTR(uart, 0644, show_uart, store_uart);
 
-static struct spi_board_info g_spi_board_info = {
-	.modalias = "reform2_lpc",
+static struct spi_board_info mntsc_board_info = {
+	.modalias = "mntsc",
 	.max_speed_hz = 4000000,
 	.bus_num = 0,
 	.chip_select = 0,
@@ -102,18 +108,18 @@ static int bl_get_brightness(struct backlight_device *bl)
 
 static int bl_update_status(struct backlight_device *bl)
 {
-	struct lpc_driver_data *lpc = (struct lpc_driver_data *)bl_get_data(bl);
-	uint8_t buffer[LPC_RES_SZ];
-	lpc_command(lpc, 'b', bl->props.brightness, buffer);
+	struct mntsc_driver_data *mntsc = (struct mntsc_driver_data *)bl_get_data(bl);
+
+	sc_cmd(mntsc, 'b', bl->props.brightness);
 	return 0;
 }
 
-static const struct backlight_ops lpc_bl_ops = {
+static const struct backlight_ops mntsc_bl_ops = {
 	.update_status = bl_update_status,
 	.get_brightness = bl_get_brightness,
 };
 
-static struct backlight_device *lpc_create_backlight(struct device *dev,
+static struct backlight_device *mntsc_create_backlight(struct device *dev,
 						     void *data)
 {
 	struct backlight_properties props;
@@ -124,59 +130,81 @@ static struct backlight_device *lpc_create_backlight(struct device *dev,
 	props.max_brightness = 100;
 
 	return devm_backlight_device_register(dev,
-					      "mnt_pocket_reform_backlight",
-					      dev, data, &lpc_bl_ops, &props);
+					      "mntsc_backlight",
+					      dev, data, &mntsc_bl_ops, &props);
 }
 
-int (*__mnt_pocket_reform_get_panel_version)(void);
-
-static uint8_t lpc_calc_checksum(uint8_t *buffer, int len)
+static uint8_t mntsc_calc_checksum(uint8_t *buffer, int len)
 {
 	uint8_t sum = 0;
-	for (int i=0; i<len-1; i++) {
+	for (int i = 0; i < len - 1; i++) {
 		sum = sum ^ buffer[i];
 	}
 	return sum;
 }
 
-static int lpc_confirm_checksum(uint8_t *buffer, int len)
+static int mntsc_confirm_checksum(uint8_t *buffer, int len)
 {
-	return (buffer[len-1] == lpc_calc_checksum(buffer,len));
+	return (buffer[len - 1] == mntsc_calc_checksum(buffer, len));
 }
 
-static uint32_t lpc_get_api_version(struct device *dev)
+static uint32_t mntsc_get_api_version(struct device *dev)
 {
 	int ret;
 	uint32_t version;
-	uint8_t str[LPC_RES_SZ];
-	struct lpc_driver_data *lpc =
-		(struct lpc_driver_data *)dev_get_drvdata(dev);
+	uint8_t str[MNTSC_RESP_SZ + 1] = { 0 };
+	struct mntsc_driver_data *mntsc =
+		(struct mntsc_driver_data *)dev_get_drvdata(dev);
 
-	ret = lpc_command(lpc, 'f', 2, str);
+	ret = sc_cmdresp(mntsc, 'f', 2, str);
 	if (ret)
-		return MNTRE_LPC_API_UNKNOWN;
+		return MNTSC_API_UNKNOWN;
 
 	ret = kstrtou32(str, 10, &version);
 
-	ret = MNTRE_LPC_API_UNKNOWN;
+	ret = MNTSC_API_UNKNOWN;
 	if (version > 20200000 && version < 20250526) {
-		ret = MNTRE_LPC_API_V1;
+		ret = MNTSC_API_V1;
 	} else if (version >= 20250526 && version < 20260315) {
-		ret = MNTRE_LPC_API_V2;
+		ret = MNTSC_API_V2;
 	} else if (version >= 20260315 && version <= 30000101) {
-		ret = MNTRE_LPC_API_V3;
+		ret = MNTSC_API_V3;
 	}
-	dev_info(dev, "raw version: %u (%s), LPC API version: %d.\n", version, str, ret);
+	dev_dbg(dev, "raw version: %u (%s), mntsc API version: %d.\n", version,
+		 str, ret);
 	return ret;
 }
 
-static int lpc_probe(struct spi_device *spi)
+static int mntsc_gpio_set(struct gpio_chip *gc, unsigned int offset, int value)
 {
-	struct lpc_driver_data *data;
+	int ret;
+	struct mntsc_driver_data *mntsc =
+		(struct mntsc_driver_data *)dev_get_drvdata(gc->parent);
+
+	dev_info(gc->parent, "%s: %s <- %d\n", __func__, gc->names[offset], value);
+	ret = sc_cmd(mntsc, value ? 'G' : 'g', offset);
+	if (ret) {
+		dev_err(gc->parent, "%s: %d <- %d error %d\n", __func__, offset,
+			value, ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+static int mntsc_gpio_get_direction(struct gpio_chip *gc, unsigned int offset)
+{
+	return GPIO_LINE_DIRECTION_OUT;
+}
+
+static int mntsc_probe(struct spi_device *spi)
+{
+	struct mntsc_driver_data *data;
+	struct device_node *backlight;
 	int ret;
 
-	spi->max_speed_hz = g_spi_board_info.max_speed_hz;
-	spi->mode = g_spi_board_info.mode;
+	spi->max_speed_hz = mntsc_board_info.max_speed_hz;
+	spi->mode = mntsc_board_info.mode;
 	spi->bits_per_word = 8;
 
 	ret = spi_setup(spi);
@@ -185,7 +213,7 @@ static int lpc_probe(struct spi_device *spi)
 		return -ENODEV;
 	}
 
-	data = devm_kzalloc(&spi->dev, sizeof(struct lpc_driver_data),
+	data = devm_kzalloc(&spi->dev, sizeof(struct mntsc_driver_data),
 			    GFP_KERNEL);
 	if (data == NULL) {
 		dev_err(&spi->dev, "devm_kzalloc failed.\n");
@@ -197,30 +225,44 @@ static int lpc_probe(struct spi_device *spi)
 	spi_set_drvdata(spi, data);
 
 	ret = device_create_file(&spi->dev, &dev_attr_status);
-	if (ret)
-		dev_err(&spi->dev, "device_create_file dev_attr_status failed.\n");
+	if (ret) {
+		dev_err(&spi->dev,
+			"device_create_file dev_attr_status failed.\n");
+		return ret;
+	}
 
 	ret = device_create_file(&spi->dev, &dev_attr_cells);
-	if (ret)
-		dev_err(&spi->dev, "device_create_file dev_attr_cells failed.\n");
+	if (ret) {
+		dev_err(&spi->dev,
+			"device_create_file dev_attr_cells failed.\n");
+		return ret;
+	}
 
 	ret = device_create_file(&spi->dev, &dev_attr_firmware);
-	if (ret)
-		dev_err(&spi->dev, "device_create_file dev_attr_firmware failed.\n");
+	if (ret) {
+		dev_err(&spi->dev,
+			"device_create_file dev_attr_firmware failed.\n");
+		return ret;
+	}
 
 	ret = device_create_file(&spi->dev, &dev_attr_capacity);
-	if (ret)
-		dev_err(&spi->dev, "device_create_file dev_attr_capacity failed.\n");
+	if (ret) {
+		dev_err(&spi->dev,
+			"device_create_file dev_attr_capacity failed.\n");
+		return ret;
+	}
 
 	ret = device_create_file(&spi->dev, &dev_attr_uart);
-	if (ret)
-		dev_err(&spi->dev, "device_create_file dev_attr_uart failed.\n");
+	if (ret) {
+		dev_err(&spi->dev,
+			"device_create_file dev_attr_uart failed.\n");
+		return ret;
+	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 17, 0)
+	data->api_version = mntsc_get_api_version(&spi->dev);
+	dev_info(&spi->dev, "MNT System Controller v%d\n", data->api_version);
+
 	psy_cfg.fwnode = dev_fwnode(&spi->dev);
-#else
-	psy_cfg.of_node = spi->dev.of_node;
-#endif
 	psy_cfg.drv_data = data;
 	data->bat = devm_power_supply_register(&spi->dev, &bat_desc, &psy_cfg);
 	if (IS_ERR(data->bat)) {
@@ -228,98 +270,100 @@ static int lpc_probe(struct spi_device *spi)
 		return PTR_ERR(data->bat);
 	}
 
-	/* register lpc as poweroff handler */
+	/* register mntsc as poweroff handler */
 	ret = devm_register_sys_off_handler(&spi->dev,
 					    SYS_OFF_MODE_POWER_OFF_PREPARE,
 					    SYS_OFF_PRIO_FIRMWARE,
-					    lpc_power_off, data);
+					    mntsc_power_off, data);
 	if (ret) {
 		dev_err(&spi->dev, "devm_register_sys_off_handler failed.\n");
 		return ret;
 	}
 
-	/* for MNT Pocket Reform with Display Version 2, the
-	   system controller has to control the backlight
-	   directly via PWM, but it must not do that on
-	   other versions of the display. */
-	__mnt_pocket_reform_get_panel_version =
-		(void *)__symbol_get("mnt_pocket_reform_get_panel_version");
-
-	if (__mnt_pocket_reform_get_panel_version &&
-	    __mnt_pocket_reform_get_panel_version() == 2) {
-		dev_info(
+	/* Register backlight device if we have a backlight node */
+	backlight = of_get_child_by_name(spi->dev.of_node, "backlight");
+	if (backlight && of_device_is_available(backlight)) {
+		dev_dbg(
 			&spi->dev,
 			"enabling backlight control for MNT Pocket Reform with Display Version 2.\n");
-		data->backlight = lpc_create_backlight(&spi->dev, data);
+		data->backlight = mntsc_create_backlight(&spi->dev, data);
 		if (IS_ERR(data->backlight)) {
-			dev_err(&spi->dev, "lpc_create_backlight failed.\n");
+			dev_err(&spi->dev, "mntsc_create_backlight failed.\n");
 		}
 	}
 
-	data->api_version = lpc_get_api_version(&spi->dev);
-
-	spi_controller_get(spi->controller);
+	data->gc.request = gpiochip_generic_request;
+	data->gc.free = gpiochip_generic_free;
+	data->gc.base = -1;
+	data->gc.set = mntsc_gpio_set;
+	data->gc.get_direction = mntsc_gpio_get_direction;
+	data->gc.ngpio = 3;
+	data->gc.label = dev_name(&spi->dev);
+	data->gc.parent = &spi->dev;
+	data->gc.owner = THIS_MODULE;
+	data->gc.can_sleep = true;
+	data->gc.names =
+		(const char *const[]){ "disp_reset", "3v3_en", "1v1_en" };
 
 	return ret;
 }
 
-static void lpc_remove(struct spi_device *spi)
+static void mntsc_remove(struct spi_device *spi)
 {
 	device_remove_file(&spi->dev, &dev_attr_status);
 	device_remove_file(&spi->dev, &dev_attr_firmware);
 	device_remove_file(&spi->dev, &dev_attr_cells);
 	device_remove_file(&spi->dev, &dev_attr_capacity);
 	device_remove_file(&spi->dev, &dev_attr_uart);
-
-	//spi_controller_put(spi->controller);
 }
 
-/* response[] has to have a size of at least 8 bytes! */
-static ssize_t lpc_command(struct lpc_driver_data *lpc, char command,
+static ssize_t sc_cmdresp(struct mntsc_driver_data *mntsc, char command,
 			   uint8_t arg1, uint8_t *response)
 {
-	int ret = 0;
-	memset(response, 0, LPC_RES_SZ);
-
-	int delays[3] = { 50, 50, 50 };
-	if (lpc->api_version >= MNTRE_LPC_API_V2) {
-		/* newer LPC firmware doesn't need huge delays */
-		/* because the response time is minimized */
-		delays[0] = 2;
-		delays[1] = 3;
-		delays[2] = 0;
-	}
+	static int delays[3] = { 2, 3, 0 };
+	u8 resp[MNTSC_RESP_SZ] = { 0 };
+	int ret;
 
 	uint8_t cmd[4] = { 0xb5, command, arg1, 0x0 };
-	cmd[3] = lpc_calc_checksum(cmd, 4);
+	cmd[3] = mntsc_calc_checksum(cmd, 4);
 
-	mutex_lock(&lpc->lock);
+	mutex_lock(&mntsc->lock);
 
 	msleep(delays[0]);
-	ret = spi_write(lpc->spi, cmd, 4);
+	ret = spi_write(mntsc->spi, cmd, 4);
 	if (ret) {
-		dev_err(&lpc->spi->dev, "lpc_command: %c/%d spi_write failed.\n",
-			command, arg1);
-		mutex_unlock(&lpc->lock);
+		dev_err(&mntsc->spi->dev,
+			"sc_command: %c/%d spi_write failed.\n", command,
+			arg1);
+		mutex_unlock(&mntsc->lock);
 		return ret;
 	}
 
 	msleep(delays[1]);
-	ret = spi_read(lpc->spi, response, 8);
+	ret = spi_read(mntsc->spi, resp, 8);
 	if (ret) {
-		dev_err(&lpc->spi->dev, "lpc_command: %c/%d spi_read failed.\n",
+		dev_err(&mntsc->spi->dev, "sc_command: %c/%d spi_read failed.\n",
 			command, arg1);
 	}
 	msleep(delays[2]);
-	mutex_unlock(&lpc->lock);
-	if (lpc->api_version >= MNTRE_LPC_API_V3 &&
-	    !lpc_confirm_checksum(response, LPC_RES_SZ)) {
-		dev_err(&lpc->spi->dev,
-			"lpc_command: %c/%d checksum mismatch: %x expected, %x received.\n",
-			command, arg1, lpc_calc_checksum(response, LPC_RES_SZ),
-						response[LPC_RES_SZ - 1]);
+	mutex_unlock(&mntsc->lock);
+
+	if (!mntsc_confirm_checksum(resp, MNTSC_RESP_SZ)) {
+		dev_err(&mntsc->spi->dev,
+			"sc_command: %c/%d checksum mismatch: %02x!=%02x | %02x%02x%02x%02x %02x%02x%02x%02x\n",
+			command, arg1, mntsc_calc_checksum(resp, MNTSC_RESP_SZ),
+			resp[MNTSC_RESP_SZ - 1], resp[0], resp[1], resp[2], resp[3], resp[4], resp[5], resp[6], resp[7]);
 		return -EINVAL;
+	} else {
+		dev_err(&mntsc->spi->dev,
+			"sc_command: %c/%d checksum match: %02x==%02x | %02x%02x%02x%02x %02x%02x%02x%02x\n",
+			command, arg1, mntsc_calc_checksum(resp, MNTSC_RESP_SZ),
+			resp[MNTSC_RESP_SZ - 1], resp[0], resp[1], resp[2], resp[3], resp[4], resp[5], resp[6], resp[7]);
 	}
+
+	if (response)
+		memcpy(response, resp, MNTSC_RESP_SZ);
+
 	return ret;
 }
 
@@ -330,15 +374,14 @@ static ssize_t show_uart(struct device *dev, struct device_attribute *attr,
 	return 0;
 }
 
-/* let LPC output bytes over UART to MNT Desktop Reform control panel */
+/* let mntsc output bytes over UART to MNT Desktop Reform control panel */
 static ssize_t store_uart(struct device *dev, struct device_attribute *attr,
 			  const char *buf, size_t count)
 {
-	struct lpc_driver_data *lpc =
-		(struct lpc_driver_data *)dev_get_drvdata(dev);
-	uint8_t discard[8];
+	struct mntsc_driver_data *mntsc =
+		(struct mntsc_driver_data *)dev_get_drvdata(dev);
 	for (size_t i = 0; i < count; i++) {
-		lpc_command(lpc, 'z', buf[i], discard);
+		sc_cmd(mntsc, 'z', buf[i]);
 	}
 	return count;
 }
@@ -352,10 +395,10 @@ static ssize_t show_status(struct device *dev, struct device_attribute *attr,
 	int16_t amps;
 	uint8_t percentage;
 	uint8_t status;
-	struct lpc_driver_data *lpc =
-		(struct lpc_driver_data *)dev_get_drvdata(dev);
+	struct mntsc_driver_data *mntsc =
+		(struct mntsc_driver_data *)dev_get_drvdata(dev);
 
-	ret = lpc_command(lpc, 'q', 0, buffer);
+	ret = sc_cmdresp(mntsc, 'q', 0, buffer);
 	if (ret)
 		return 0;
 
@@ -367,7 +410,7 @@ static ssize_t show_status(struct device *dev, struct device_attribute *attr,
 	return snprintf(buf, PAGE_SIZE,
 			"%d.%dV %d.%dA %2d%% [status=%d] [API=%d]\n",
 			voltage / 1000, voltage % 1000, amps / 1000,
-			abs(amps % 1000), percentage, status, lpc->api_version);
+			abs(amps % 1000), percentage, status, mntsc->api_version);
 
 	return snprintf(buf, PAGE_SIZE, "ok\n");
 }
@@ -376,15 +419,15 @@ static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
 			  char *buf)
 {
 	int ret = 0;
-	uint8_t buffer[LPC_RES_SZ * 2];
+	uint8_t buffer[MNTSC_RESP_SZ * 2];
 	uint16_t cells[16];
-	struct lpc_driver_data *lpc =
-		(struct lpc_driver_data *)dev_get_drvdata(dev);
+	struct mntsc_driver_data *mntsc =
+		(struct mntsc_driver_data *)dev_get_drvdata(dev);
 
-	ret = lpc_command(lpc, 'v', 0, buffer);
+	ret = sc_cmdresp(mntsc, 'v', 0, buffer);
 	if (ret)
 		return 0;
-	ret = lpc_command(lpc, 'v', 1, &buffer[8]);
+	ret = sc_cmdresp(mntsc, 'v', 1, &buffer[8]);
 	if (ret)
 		return 0;
 
@@ -408,17 +451,17 @@ static ssize_t show_firmware(struct device *dev, struct device_attribute *attr,
 			     char *buf)
 {
 	int ret = 0;
-	uint8_t str1[LPC_RES_SZ], str2[LPC_RES_SZ], str3[LPC_RES_SZ];
-	struct lpc_driver_data *lpc =
-		(struct lpc_driver_data *)dev_get_drvdata(dev);
+	uint8_t str1[MNTSC_RESP_SZ], str2[MNTSC_RESP_SZ], str3[MNTSC_RESP_SZ];
+	struct mntsc_driver_data *mntsc =
+		(struct mntsc_driver_data *)dev_get_drvdata(dev);
 
-	ret = lpc_command(lpc, 'f', 0, str1);
+	ret = sc_cmdresp(mntsc, 'f', 0, str1);
 	if (ret)
 		return 0;
-	ret = lpc_command(lpc, 'f', 1, str2);
+	ret = sc_cmdresp(mntsc, 'f', 1, str2);
 	if (ret)
 		return 0;
-	ret = lpc_command(lpc, 'f', 2, str3);
+	ret = sc_cmdresp(mntsc, 'f', 2, str3);
 	if (ret)
 		return 0;
 
@@ -428,12 +471,12 @@ static ssize_t show_firmware(struct device *dev, struct device_attribute *attr,
 static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 			     char *buf)
 {
-	uint8_t buffer[LPC_RES_SZ];
+	uint8_t buffer[MNTSC_RESP_SZ];
 	uint16_t cap_acc_mah, cap_min_mah, cap_max_mah;
-	struct lpc_driver_data *lpc =
-		(struct lpc_driver_data *)dev_get_drvdata(dev);
+	struct mntsc_driver_data *mntsc =
+		(struct mntsc_driver_data *)dev_get_drvdata(dev);
 
-	lpc_command(lpc, 'c', 0, buffer);
+	sc_cmdresp(mntsc, 'c', 0, buffer);
 
 	cap_acc_mah = buffer[0] | (buffer[1] << 8);
 	cap_min_mah = buffer[2] | (buffer[3] << 8);
@@ -443,14 +486,13 @@ static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 			cap_acc_mah, cap_min_mah, cap_max_mah);
 }
 
-static int lpc_power_off(struct sys_off_data *data)
+static int mntsc_power_off(struct sys_off_data *data)
 {
-	uint8_t buffer[LPC_RES_SZ];
-	struct lpc_driver_data *lpc = (struct lpc_driver_data *)data->cb_data;
+	struct mntsc_driver_data *mntsc = (struct mntsc_driver_data *)data->cb_data;
 
 	/* try to shut down power, forever */
 	while (true) {
-		lpc_command(lpc, 'p', 1, buffer);
+		sc_cmd(mntsc, 'p', 1);
 		msleep(100);
 	}
 	return 0;
@@ -461,15 +503,15 @@ static int get_bat_property(struct power_supply *psy,
 			    union power_supply_propval *val)
 {
 	int ret = 0;
-	uint8_t buffer[LPC_RES_SZ];
+	uint8_t buffer[MNTSC_RESP_SZ];
 	int milliamp, millivolt;
-	struct lpc_driver_data *lpc =
-		(struct lpc_driver_data *)power_supply_get_drvdata(psy);
+	struct mntsc_driver_data *mntsc =
+		(struct mntsc_driver_data *)power_supply_get_drvdata(psy);
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
 		val->intval = POWER_SUPPLY_STATUS_UNKNOWN;
-		ret = lpc_command(lpc, 'q', 0, buffer);
+		ret = sc_cmdresp(mntsc, 'q', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -494,7 +536,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-		ret = lpc_command(lpc, 'q', 0, buffer);
+		ret = sc_cmdresp(mntsc, 'q', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -506,7 +548,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
-		ret = lpc_command(lpc, 'q', 0, buffer);
+		ret = sc_cmdresp(mntsc, 'q', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -523,29 +565,19 @@ static int get_bat_property(struct power_supply *psy,
 		/* system controller and linux disagree on which sign
 		 * means charging and which means discharging */
 		val->intval = -milliamp * 1000;
-
 		break;
 
 	case POWER_SUPPLY_PROP_CAPACITY:
-		ret = lpc_command(lpc, 'q', 0, buffer);
+		ret = sc_cmdresp(mntsc, 'q', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
-		/* don't trigger upower emergency shutdown in case
-		 * of faulty data
-		 * (normally happens at 5% or less) */
-		int gauge = buffer[4];
-		if (gauge < 6)
-			gauge = 6;
-		if (gauge > 100)
-			gauge = 100;
-
-		val->intval = gauge;
+		val->intval = buffer[4] > 6 ? buffer[4] : 6;
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_FULL:
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
-		ret = lpc_command(lpc, 'c', 0, buffer);
+		ret = sc_cmdresp(mntsc, 'c', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -554,7 +586,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
-		ret = lpc_command(lpc, 'c', 0, buffer);
+		ret = sc_cmdresp(mntsc, 'c', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -562,7 +594,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_EMPTY:
-		ret = lpc_command(lpc, 'c', 0, buffer);
+		ret = sc_cmdresp(mntsc, 'c', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -578,32 +610,34 @@ static int get_bat_property(struct power_supply *psy,
 		ret = -EINVAL;
 		break;
 	}
+
 	return ret;
 }
 
-static const struct of_device_id of_tis_spi_match[] = {
+static const struct of_device_id of_mntre_sc_match[] = {
 	{ .compatible = "mntre,lpc11u24", .data = 0 },
 	{}
 };
-MODULE_DEVICE_TABLE(of, of_tis_spi_match);
+MODULE_DEVICE_TABLE(of, of_mntre_sc_match);
 
-static struct spi_device_id g_spi_dev_id_list[] = {
-	{ "lpc11u24", 0 },
+static struct spi_device_id mntsc_spi_dev_id[] = {
+	{ "mntre-system-controller", 0 },
 	{},
 };
-MODULE_DEVICE_TABLE(spi, g_spi_dev_id_list);
+MODULE_DEVICE_TABLE(spi, mntsc_spi_dev_id);
 
-static struct spi_driver g_spi_driver = {
-    .probe = lpc_probe,
-    .remove = lpc_remove,
-    .driver = {
-        .of_match_table = of_match_ptr(of_tis_spi_match),
-        .owner = THIS_MODULE,
-        .name = "reform2_lpc",
-    },
-    .id_table = g_spi_dev_id_list,
+static struct spi_driver mntre_sc = {
+	.probe = mntsc_probe,
+	.remove = mntsc_remove,
+	.driver = {
+		.of_match_table = of_match_ptr(of_mntre_sc_match),
+		.owner = THIS_MODULE,
+		.name = "mnt_syscon",
+	},
+	.id_table = mntsc_spi_dev_id,
 };
-module_spi_driver(g_spi_driver);
+module_spi_driver(mntre_sc);
 
-MODULE_DESCRIPTION("Reform 2 LPC Driver");
+MODULE_DESCRIPTION("Reform 2 mntsc Driver");
 MODULE_LICENSE("GPL");
+
