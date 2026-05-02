@@ -15,9 +15,27 @@
 # /etc/skel and those in your $HOME. Running this script as root performs the
 # system-wide checks.
 #
-# shellcheck disable=SC2059
+# shellcheck disable=SC2059,SC1091,SC2034
 
 set -eu
+
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+
+COMMON_LIB=
+for candidate in \
+  "$SCRIPT_DIR/../reform-check/common.sh" \
+  "/usr/share/reform-tools/common.sh"; do
+  if [ -r "$candidate" ]; then
+    COMMON_LIB="$candidate"
+    break
+  fi
+done
+if [ -z "$COMMON_LIB" ]; then
+  echo "E: unable to locate reform-check/common.sh" >&2
+  exit 1
+fi
+# shellcheck source=../reform-check/common.sh
+. "$COMMON_LIB"
 
 usage() {
   echo "This script checks the integrity of your MNT reform setup. It is meant for" >&2
@@ -34,11 +52,12 @@ usage() {
   echo '/etc/skel and those in your $HOME. Running this script as root performs the' >&2
   echo "system-wide checks." >&2
   echo >&2
-  echo "Usage: $0 [--help] [--mirror={mntre.com,reform.debian.net}] [--offline]" >&2
+  echo "Usage: $0 [--help] [--mirror={mntre.com,reform.debian.net,archlinuxarm.org}] [--offline]" >&2
   echo >&2
   echo "Options:" >&2
   echo "  --help           Display this help and exit." >&2
-  echo "  --mirror=MIRROR  Force MIRROR, either mntre.com or reform.debian.net" >&2
+  echo "  --mirror=MIRROR  Force MIRROR, currently mntre.com, reform.debian.net" >&2
+  echo "                   or archlinuxarm.org" >&2
   echo "  --offline        Disable all checks that require an internet connection" >&2
   echo "                   and a filled apt cache." >&2
 }
@@ -49,6 +68,8 @@ nth_arg() {
 }
 
 OFFLINE=
+# Read by distro.sh and backend scripts to select and validate the package
+# mirror, which is set via --mirror option below.
 MIRROR=
 
 while getopts :h-: OPTCHAR; do
@@ -102,8 +123,33 @@ if [ "$#" -gt 0 ]; then
   exit 1
 fi
 
-if [ -n "$MIRROR" ] && [ "$MIRROR" != "mntre.com" ] && [ "$MIRROR" != "reform.debian.net" ]; then
-  echo "E: invalid value for --mirror: $MIRROR -- only mntre.com and reform.debian.net are supported" >&2
+DISTRO_LIB=
+for candidate in \
+  "$SCRIPT_DIR/../reform-check/distro.sh" \
+  "/usr/share/reform-tools/distro.sh"; do
+  if [ -r "$candidate" ]; then
+    DISTRO_LIB="$candidate"
+    break
+  fi
+done
+if [ -z "$DISTRO_LIB" ]; then
+  echo "E: distro backend loader is missing or unreadable" >&2
+  exit 1
+fi
+# Read by distro.sh to construct the path to the distro-specific backend file.
+DISTRO_LIB_DIR=$(CDPATH='' cd -- "$(dirname -- "$DISTRO_LIB")" && pwd)
+# shellcheck source=../reform-check/distro.sh
+. "$DISTRO_LIB"
+
+PKG_KERNEL_MAIN="$(backend_kernel_pkg_name || true)"
+PKG_KERNEL_HEADERS="$(backend_kernel_headers_pkg_name || true)"
+PKG_REFORM_TOOLS="$(backend_tools_pkg_name || true)"
+PKG_FWUPD="$(backend_fwupd_pkg_name || true)"
+PKG_JQ="$(backend_jq_pkg_name || true)"
+PKG_REFORM_MCU_TOOL="$(backend_mcu_tool_pkg_name || true)"
+
+if ! backend_validate_options; then
+  echo "E: validating distro backend options failed" >&2
   exit 1
 fi
 
@@ -118,7 +164,8 @@ if [ "$(id -u)" -ne 0 ]; then
     echo 'if [ "$(whoami)" = "root" ]; then reform-help --root; elif [ -z "$WAYLAND_DISPLAY" ]; then reform-help; fi' >&2
   fi
 
-  python3 - /usr/share/glib-2.0/schemas/20_reform.gschema.override <<'END'
+  if [ -e /usr/share/glib-2.0/schemas/20_reform.gschema.override ]; then
+    if ! python3 - /usr/share/glib-2.0/schemas/20_reform.gschema.override <<'END'; then
 import gi
 from gi.repository import GLib, Gio
 import sys
@@ -147,6 +194,11 @@ if not suggestions:
 print("I: the following commands return the respective settings to their defaults")
 print("    " + "\n    ".join(suggestions))
 END
+      echo "I: unable to run gsettings defaults check, skipping." >&2
+    fi
+  else
+    echo "I: /usr/share/glib-2.0/schemas/20_reform.gschema.override does not exist, skipping gsettings defaults check." >&2
+  fi
 
   for path in $(cd /etc/skel && find . -type f); do
     if [ ! -e "$HOME/$path" ]; then
@@ -163,43 +215,31 @@ END
   exit 0
 fi
 
-if [ -z "$MIRROR" ] && grep --silent '^URIs: https://reform.debian.net/debian/\?$' /etc/apt/sources.list.d/reform*.sources 2>/dev/null; then
-  echo "I: reform.debian.net is configured as a mirror in /etc/apt/sources.list.d" >&2
-  echo "I: Assuming reform.debian.net stable mirror for this script" >&2
-  echo "I: If this is incorrect, you can set the mirror to its default by re-running this script with --mirror=mntre.com"
-  MIRROR="reform.debian.net"
-fi
-
-if [ -z "$MIRROR" ]; then
-  MIRROR="mntre.com"
-fi
-
-if [ -z "$(apt-get indextargets)" ] && [ "$OFFLINE" != "yes" ]; then
-  echo "E: reform-check needs a populated apt cache for some of its operation." >&2
-  echo "E: re-run with --offline (disabling some checks) or choose to run 'apt update' now." >&2
-  printf "Should reform-check run 'apt update' for you? [y/N] " >&2
-  read -r response
-  if [ "$response" != "y" ]; then
-    echo "Exiting."
-    exit 1
-  fi
-  apt-get update --error-on=any
-fi
-
-# shellcheck source=/dev/null
-if [ -e "./machines/$(cat /proc/device-tree/model).conf" ]; then
-  . "./machines/$(cat /proc/device-tree/model).conf"
-elif [ -e "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf" ]; then
-  . "/usr/share/reform-tools/machines/$(cat /proc/device-tree/model).conf"
-else
-  echo "E: unable to find config for $(cat /proc/device-tree/model)" >&2
+if ! backend_preflight_checks; then
+  echo "E: running distro backend preflight checks failed" >&2
   exit 1
 fi
 
-echo "I: Contents of /proc/device-tree/model: $(cat /proc/device-tree/model)" >&2
+if [ ! -e /proc/device-tree/model ]; then
+  echo "E: /proc/device-tree/model does not exist" >&2
+  exit 1
+fi
+MODEL="$(read_nul_terminated_file /proc/device-tree/model)"
+
+# shellcheck source=/dev/null
+if [ -e "./machines/$MODEL.conf" ]; then
+  . "./machines/$MODEL.conf"
+elif [ -e "/usr/share/reform-tools/machines/$MODEL.conf" ]; then
+  . "/usr/share/reform-tools/machines/$MODEL.conf"
+else
+  echo "E: unable to find config for $MODEL" >&2
+  exit 1
+fi
+
+echo "I: Contents of /proc/device-tree/model: $MODEL" >&2
 echo "I: \`uname -a\` output: $(uname -a)" >&2
-if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-mnt-reform-arm64" 2>/dev/null | grep -q '^installed$'; then
-  echo "I: Version of linux-image-mnt-reform-arm64: $(dpkg-query --show --showformat '${Version}' linux-image-mnt-reform-arm64)" >&2
+if [ -n "$PKG_KERNEL_MAIN" ] && backend_pkg_installed "$PKG_KERNEL_MAIN"; then
+  echo "I: Version of $PKG_KERNEL_MAIN: $(backend_pkg_version "$PKG_KERNEL_MAIN")" >&2
 else
   # The error message below is not quite correct. dpkg *will* tell us a version
   # even when a package was removed (but not purged). But showing a version
@@ -207,9 +247,13 @@ else
   # into believing that the package is actually installed (or why else would
   # it show the version of the package?). Thus, when the package is not
   # installed, we forcefully do not show the version even though we could.
-  echo "E: Cannot get version of linux-image-mnt-reform-arm64 as it is not installed" >&2
+  echo "E: Cannot get version of ${PKG_KERNEL_MAIN:-main kernel package} as it is not installed" >&2
 fi
-echo "I: Version of reform-tools: $(dpkg-query --show --showformat '${Version}' reform-tools)" >&2
+if backend_pkg_installed "$PKG_REFORM_TOOLS"; then
+  echo "I: Version of $PKG_REFORM_TOOLS: $(backend_pkg_version "$PKG_REFORM_TOOLS")" >&2
+else
+  echo "E: $PKG_REFORM_TOOLS is not installed" >&2
+fi
 
 if grep --quiet "System Image " /etc/motd; then
   echo "I: Version of system image: $(grep --only-matching "System Image .*" /etc/motd)" >&2
@@ -217,43 +261,55 @@ else
   echo "W: Unable to infer version of system image from /etc/motd" >&2
 fi
 
-case "$(cat /proc/device-tree/model)" in
+case "$MODEL" in
   "MNT Pocket Reform with "*" Module")
     if [ "$OFFLINE" != "yes" ] && [ ! -e /var/cache/fwupd/metadata.xmlb ] && command -v fwupdtool >/dev/null; then
       echo "I: running fwupdtool refresh" >&2
       fwupdtool refresh
     fi
-    # fwupd might add functionality in the future to perform the below for us
-    # https://github.com/fwupd/fwupd/issues/9192
     LATEST_SYS_VER=""
-    if command -v xb-tool >/dev/null && [ -e /var/cache/fwupd/metadata.xmlb ]; then
-      LATEST_SYS_VER=$(xb-tool query /var/cache/fwupd/metadata.xmlb "components/component/id[text()='com.mntre.pocket_reform.sysctl10.firmware']/../releases/release[1]")
+    # fwupdmgr search was added in fwupd 2.0.16 (commit b2d8491); older
+    # fwupd versions need to fall back to xb-tool against the cached metadata
+    FWUPD_VERSION=""
+    if have_cmd fwupdmgr; then
+      FWUPD_VERSION="$(fwupdmgr --version 2>/dev/null | awk '/^runtime[[:space:]]+org\.freedesktop\.fwupd/ {print $3; exit}')"
+    fi
+    if have_cmd jq && [ -n "$FWUPD_VERSION" ] && version_ge "$FWUPD_VERSION" "2.0.16"; then
+      LATEST_SYS_VER="$(fwupdmgr search --json com.mntre.pocket_reform.sysctl10.firmware 2>/dev/null \
+        | jq --raw-output '.Releases[0].Version // empty' 2>/dev/null || true)"
+    elif have_cmd xb-tool && [ -e /var/cache/fwupd/metadata.xmlb ]; then
+      LATEST_SYS_VER="$(xb-tool query /var/cache/fwupd/metadata.xmlb "components/component/id[text()='com.mntre.pocket_reform.sysctl10.firmware']/../releases/release[1]" 2>/dev/null || true)"
     elif [ "$OFFLINE" != "yes" ] && command -v unxz >/dev/null && command -v curl >/dev/null && command -v xmllint >/dev/null; then
-      LATEST_SYS_VER=$(curl --silent https://fwupd.org//downloads/firmware.xml.xz | unxz | xmllint --xpath "string(/components/component[id[text()='com.mntre.pocket_reform.sysctl10.firmware']]/releases/release[1]/@version)" -)
+      LATEST_SYS_VER="$(curl --silent https://fwupd.org//downloads/firmware.xml.xz | unxz | xmllint --xpath "string(/components/component[id[text()='com.mntre.pocket_reform.sysctl10.firmware']]/releases/release[1]/@version)" - || true)"
     fi
     if [ -z "$LATEST_SYS_VER" ]; then
-      echo "I: To retrieve the latest sysctl and keyboard firmware versions either install libxmlb-utils or install curl, xz-utils and libxml2-utils" >&2
+      echo "I: To retrieve the latest sysctl and keyboard firmware versions install ${PKG_FWUPD:-fwupd} (>= 2.0.16) and ${PKG_JQ:-jq}, install xb-tool, or install curl, xz-utils and libxml2-utils" >&2
     fi
 
-    SYS_VER="$(reform-mcu-tool list --json | jq --raw-output 'map(select(.device.name == "pocket-sysctl-1.0")) | .[] | .version')"
-    if [ -n "$SYS_VER" ]; then
-      echo "I: Version of system controller firmware: $SYS_VER" >&2
-      if [ -n "$LATEST_SYS_VER" ] && [ "$LATEST_SYS_VER" != "$SYS_VER" ]; then
-        echo "I: Latest version of system controller firmware: $LATEST_SYS_VER" >&2
+    if have_cmd reform-mcu-tool && have_cmd jq; then
+      MCU_LIST_JSON="$(reform-mcu-tool list --json 2>/dev/null || true)"
+      SYS_VER="$(printf '%s' "$MCU_LIST_JSON" | jq --raw-output 'map(select(.device.name == "pocket-sysctl-1.0")) | .[] | .version' 2>/dev/null || true)"
+      if [ -n "$SYS_VER" ]; then
+        echo "I: Version of system controller firmware: $SYS_VER" >&2
+        if [ -n "$LATEST_SYS_VER" ] && [ "$LATEST_SYS_VER" != "$SYS_VER" ]; then
+          echo "I: Latest version of system controller firmware: $LATEST_SYS_VER" >&2
+        fi
+      else
+        echo "W: unable to obtain version of system controller firmware -- firmware too old?" >&2
+      fi
+      KBD_VER="$(printf '%s' "$MCU_LIST_JSON" | jq --raw-output 'map(select(.device.name == "pocket-input-1.0")) | .[] | .version' 2>/dev/null || true)"
+      if [ -n "$KBD_VER" ]; then
+        echo "I: Version of keyboard firmware: $KBD_VER" >&2
+      else
+        echo "W: unable to obtain version of keyboard firmware -- firmware too old?" >&2
       fi
     else
-      echo "W: unable to obtain version of system controller firmware -- firmware too old?" >&2
-    fi
-    KBD_VER="$(reform-mcu-tool list --json | jq --raw-output 'map(select(.device.name == "pocket-input-1.0")) | .[] | .version')"
-    if [ -n "$KBD_VER" ]; then
-      echo "I: Version of keyboard firmware: $KBD_VER" >&2
-    else
-      echo "W: unable to obtain version of keyboard firmware -- firmware too old?" >&2
+      echo "I: Install ${PKG_REFORM_MCU_TOOL:-reform-tools} and ${PKG_JQ:-jq} to query Pocket controller and keyboard firmware versions" >&2
     fi
     ;;
 esac
 
-case "$(cat /proc/device-tree/model)" in
+case "$MODEL" in
   "MNT Reform Next with "*) : ;; # not implemented for Reform Next yet
   "MNT Reform 2 with LS1028A Module" | \
     "MNT Reform 2 with BPI-CM4 Module" | \
@@ -278,116 +334,18 @@ case "$(cat /proc/device-tree/model)" in
       echo "W: /sys/bus/spi/drivers/reform2_lpc/spi1.0/firmware does not exist -- is the reform2_lpc module loaded?" >&2
     fi
     ;;
-  *) echo "E: unexpected content in /proc/device-tree/model: $(cat /proc/device-tree/model)" >&2 ;;
+  *) echo "E: unexpected content in /proc/device-tree/model: $MODEL" >&2 ;;
 esac
 
-parse_uboot_version() {
-  version=$1
-  # MNT u-boot version starts with upstream u-boot version
-  case $version in
-    [0-9][0-9][0-9][0-9].[0-9][0-9]" MNT "*) : ;;
-    *)
-      echo "E: expected u-boot version string to start with upstream version but got: $version" >&2
-      return
-      ;;
-  esac
-  # Strip off everything following the first space for the upstream version
-  upstream_version=${version%% *}
-  echo "I: Version of upstream U-Boot: $upstream_version" >&2
-  # Remove the upstream version to parse the remainder
-  version=${version#[0-9][0-9][0-9][0-9].[0-9][0-9] }
-  # After the upstream version comes the machine name
-  # The part after the machine name does not contain any spaces, so we can
-  # split the version again here
-  machine=${version% *}
-  case $machine in
-    "MNT Pocket Reform with BPI-CM4 Module" | \
-      "MNT Pocket Reform with i.MX8MP Module" | \
-      "MNT Pocket Reform with RCORE RK3588 Module" | \
-      "MNT Reform 2" | \
-      "MNT Reform 2 HDMI" | \
-      "MNT Reform 2 with BPI-CM4 Module" | \
-      "MNT Reform 2 with i.MX8MP Module" | \
-      "MNT Reform 2 with LS1028A Module" | \
-      "MNT Reform 2 with QUASAR 8550 Module" | \
-      "MNT Reform 2 with RCORE-DSI RK3588 Module" | \
-      "MNT Reform 2 with RCORE RK3588 Module" | \
-      "MNT Reform Next with RCORE RK3588 Module") : ;;
-    *)
-      echo "E: unknown machine name in u-boot version string: $machine"
-      return
-      ;;
-  esac
-  if [ "$machine" != "$(cat /proc/device-tree/model)" ]; then
-    case "$(cat /proc/device-tree/model)" in
-      "MNT Reform 2" | "MNT Reform 2 HDMI")
-        case $machine in "MNT Reform 2" | "MNT Reform 2 HDMI") : ;;
-        *)
-          echo "E: machine name in u-boot version does not match system: $machine != $(cat /proc/device-tree/model)"
-          return
-          ;;
-        esac
-        ;;
-      *)
-        echo "E: machine name in u-boot version does not match system: $machine != $(cat /proc/device-tree/model)"
-        return
-        ;;
-    esac
-  fi
-  version=${version##* }
-  # The remaining version was generated from a "git describe" from the MNT
-  # u-boot project together with "git describe" from upstream u-boot.
-  # The latter will likely be suffixed with "-dirty" because we applied
-  # patches, strip that off
-  version=${version%-dirty}
-  # The remaining version should start with the latest MNT u-boot git tag
-  # which is a ISO8601 date
-  case $version in
-    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9])
-      # In case of i.MX8MQ u-boot, upstream u-boot is not a sub-project and thus,
-      # there is no additional content after the date
-      # In this case, we are done.
-      echo "$version"
-      return
-      ;;
-    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*) : ;;
-    *)
-      echo "E: unable to parse U-Boot version git suffix: $version" >&2
-      return
-      ;;
-  esac
-  year=${version%%-*}
-  version=${version#*-}
-  month=${version%%-*}
-  version=${version#*-}
-  day=${version%%-*}
-  version=${version#*-}
-  # If the remaining version contains no hyphen, then that should be the
-  # abbreviated git object name and should start with a g.
-  case $version in
-    - | -* | *- | *-*)
-      # If there is a hyphen in the remainder, then the U-Boot build is not
-      # from a tag but contains changes
-      echo "W: U-Boot version not from tagged commit but with local changes: $version" >&2
-      ;;
-    g*) : ;;
-    *)
-      echo "E: Unable to parse U-Boot version git suffix: $version" >&2
-      return
-      ;;
-  esac
-  # Finally, if successful, print the MNT U-Boot version for the caller
-  echo "$year-$month-$day"
-}
-
 if [ -e "/proc/device-tree/chosen/u-boot,version" ]; then
-  version=$(parse_uboot_version "$(cat /proc/device-tree/chosen/u-boot,version)")
+  UBOOT_VERSION_RAW="$(read_nul_terminated_file /proc/device-tree/chosen/u-boot,version)"
+  version="$(parse_uboot_version "$UBOOT_VERSION_RAW" "$MODEL")"
   if [ -z "$version" ]; then
-    echo "I: Contents of /proc/device-tree/chosen/u-boot,version: $(cat /proc/device-tree/chosen/u-boot,version)" >&2
+    echo "I: Contents of /proc/device-tree/chosen/u-boot,version: $UBOOT_VERSION_RAW" >&2
     echo "W: Unable to parse contents of /proc/device-tree/chosen/u-boot,version -- U-Boot too old?" >&2
   else
     if [ "$version" != "$BOOTLOADER_TAG" ]; then
-      echo "I: Contents of /proc/device-tree/chosen/u-boot,version: $(cat /proc/device-tree/chosen/u-boot,version)" >&2
+      echo "I: Contents of /proc/device-tree/chosen/u-boot,version: $UBOOT_VERSION_RAW" >&2
       echo "I: Booting with outdated U-Boot. Local version is $version while latest version is $BOOTLOADER_TAG" >&2
     fi
     echo "I: Version of MNT U-Boot: $version" >&2
@@ -396,63 +354,23 @@ else
   echo "W: /proc/device-tree/chosen/u-boot,version does not exist -- U-Boot version too old?" >&2
 fi
 
-HAVE_BOOTSCR=no
-if test -e /boot/boot.scr; then
-  HAVE_BOOTSCR=yes
-fi
-HAVE_EXTLINUX=no
-if test -e /boot/extlinux/extlinux.conf; then
-  HAVE_EXTLINUX=yes
-fi
-HAVE_FLASH_KERNEL=no
-if dpkg-query --showformat '${db:Status-Status}\n' --show "flash-kernel" 2>/dev/null | grep -q '^installed$'; then
-  HAVE_FLASH_KERNEL=yes
-fi
-HAVE_U_BOOT_MENU=no
-if dpkg-query --showformat '${db:Status-Status}\n' --show "u-boot-menu" 2>/dev/null | grep -q '^installed$'; then
-  HAVE_U_BOOT_MENU=yes
+if ! BOOT_METHOD="$(backend_boot_tool_checks)"; then
+  echo "E: running distro backend boot tool checks failed" >&2
+  exit 1
 fi
 
-case "$HAVE_BOOTSCR$HAVE_EXTLINUX" in
-  nono)
-    echo "W: neither /boot/boot.scr nor /boot/extlinux/extlinux.conf exists" >&2
-    case "$HAVE_FLASH_KERNEL$HAVE_U_BOOT_MENU" in
-      nono) echo "E: neither flash-kernel nor u-boot-menu are installed" >&2 ;;
-      noyes) echo "E: /boot/extlinux/extlinux.conf should exist because u-boot-menu is installed" >&2 ;;
-      yesno) echo "E: /boot/boot.scr should exist because flash-kernel is installed" >&2 ;;
-      yesyes) echo "E: both files should exist as both flash-kernel and u-boot-menu are installed" >&2 ;;
-    esac
-    ;;
-  noyes)
-    echo "I: probably booting via /boot/extlinux/extlinux.conf (/boot/boot.scr does not exist)" >&2
-    if [ "$HAVE_U_BOOT_MENU" = "no" ]; then
-      echo "W: /boot/extlinux/extlinux.conf is not managed by u-boot-menu (not installed)" >&2
-    fi
-    ;;
-  yesno)
-    echo "I: probably booting via /boot/boot.scr (/boot/extlinux/extlinux.conf does not exist)" >&2
-    if [ "$HAVE_FLASH_KERNEL" = "no" ]; then
-      echo "W: /boot/boot.scr is not managed by flash-kernel (not installed)" >&2
-    fi
-    ;;
-  yesyes)
-    echo "I: probably booting via /boot/extlinux/extlinux.conf (/boot/boot.scr also exists)" >&2
-    if [ "$HAVE_U_BOOT_MENU" = "no" ]; then
-      echo "W: /boot/extlinux/extlinux.conf is not managed by u-boot-menu (not installed)" >&2
-    fi
-    if [ "$HAVE_FLASH_KERNEL" = "no" ]; then
-      echo "W: /boot/boot.scr is not managed by flash-kernel (not installed)" >&2
-    fi
-    ;;
-esac
+ROOT_SOURCE="$(findmnt --noheadings --evaluate --mountpoint / --output SOURCE)"
+BOOT_SOURCE="$(findmnt --noheadings --evaluate --mountpoint /boot --output SOURCE)"
+ROOT_FSTAB_SOURCE="$(findmnt --fstab --noheadings --evaluate --mountpoint / --output SOURCE)"
+BOOT_FSTAB_SOURCE="$(findmnt --fstab --noheadings --evaluate --mountpoint /boot --output SOURCE)"
 
 HUMAN_ROOT=
-case $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) in
+case "$ROOT_SOURCE" in
   "/dev/reformvg/root")
-    pv_device="$(pvdisplay --noheadings --select vgname=reformvg --columns --options pv_name)"
+    pv_device="$(pvdisplay --noheadings --select vgname=reformvg --columns --options pv_name || true)"
     pv_device="${pv_device#  }" # remove whitespace prefix
     if [ "$pv_device" = "/dev/mapper/reform_crypt" ]; then
-      luks_disk="$(lsblk --json -o PATH,PKNAME | jq --raw-output '.blockdevices[] | select(.path == "/dev/mapper/reform_crypt") | .pkname')"
+      luks_disk="$(lsblk --json -o PATH,PKNAME | jq --raw-output '.blockdevices[] | select(.path == "/dev/mapper/reform_crypt") | .pkname' || true)"
       case "$luks_disk" in
         "${DEV_SSD}") HUMAN_ROOT="LVM vg 'reformvg' on LUKS device 'reform_crypt' on SSD" ;;
         "${DEV_MMC}"*) HUMAN_ROOT="LVM vg 'reformvg' on LUKS device 'reform_crypt' on eMMC" ;;
@@ -466,83 +384,27 @@ case $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) in
   "/dev/${DEV_SD}"*) HUMAN_ROOT="SD-card" ;;
   "/dev/${DEV_SSD}"*) HUMAN_ROOT="SSD" ;;
 esac
-echo "I: Mount source of /: $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) (${HUMAN_ROOT:-n.a.})" >&2
+echo "I: Mount source of /: $ROOT_SOURCE (${HUMAN_ROOT:-n.a.})" >&2
 HUMAN_BOOT=
-case $(findmnt --noheadings --evaluate --mountpoint /boot --output SOURCE) in
+case "$BOOT_SOURCE" in
   "/dev/${DEV_MMC}"*) HUMAN_BOOT="eMMC" ;;
   "/dev/${DEV_SD}"*) HUMAN_BOOT="SD-card" ;;
 esac
-echo "I: Mount source of /boot: $(findmnt --noheadings --evaluate --mountpoint /boot --output SOURCE) (${HUMAN_BOOT})" >&2
+echo "I: Mount source of /boot: $BOOT_SOURCE (${HUMAN_BOOT})" >&2
 
-if [ ! -e "/proc/device-tree/model" ]; then
-  echo "E: /proc/device-tree/model does not exist" >&2
+if ! backend_repo_checks; then
+  echo "E: running distro backend repository checks failed" >&2
+  exit 1
 fi
 
-if [ -e "/etc/flash-kernel/machine" ] && [ -e "/proc/device-tree/model" ] && [ "$(cat /proc/device-tree/model)" != "$(cat /etc/flash-kernel/machine)" ]; then
-  echo "E: your currently loaded dtb is not the one referenced by flash-kernel" >&2
-  echo "E: contents of /proc/device-tree/model: $(cat /proc/device-tree/model)" >&2
-  echo "E: contents of /etc/flash-kernel/machine: $(cat /etc/flash-kernel/machine)" >&2
-fi
-
-case "$MIRROR" in
-  mntre.com) aptprefcontent="Package: *\nPin: release n=reform, l=reform\nPin-Priority: 990\n" ;;
-  reform.debian.net) aptprefcontent="Package: *\nPin: origin \"reform.debian.net\"\nPin-Priority: 999\n" ;;
-esac
-if [ ! -e /etc/apt/preferences.d/reform.pref ]; then
-  echo "E: /etc/apt/preferences.d/reform.pref doesn't exist" >&2
-  echo "E: you should not install packages on this system unless you know what you are doing" >&2
-  echo "E: /etc/apt/preferences.d/reform.pref should contain the following lines:" >&2
-  printf "$aptprefcontent" >&2
-else
-  if ! printf "$aptprefcontent" | cmp --quiet - /etc/apt/preferences.d/reform.pref; then
-    echo "W: unexpected content in /etc/apt/preferences.d/reform.pref:" >&2
-    printf "$aptprefcontent" | diff -u - /etc/apt/preferences.d/reform.pref || true
-    echo "W: you should not install packages on this system unless you know what you are doing" >&2
-  fi
-fi
-
-for META in reform-desktop-full reform-desktop-minimal; do
-  # if meta package is installed, we don't need to check its Depends
-  RELATIONS="Recommends Suggests"
-  if ! dpkg-query --showformat '${db:Status-Status}\n' --show "$META" 2>/dev/null | grep -q '^installed$'; then
-    echo "I: MNT Reform Desktop meta-package is not installed: $META" >&2
-    RELATIONS="Depends $RELATIONS"
-  fi
-  for REL in $RELATIONS; do
-    OIFS=$IFS
-    IFS=',' # split field by comma
-    for PKG in $(apt-cache show --no-all-versions $META | sed -ne 's/^'"$REL"': \(.*\)/\1/p'); do
-      PKG="${PKG## }" # strip whitespace
-      if ! dpkg-query --showformat '${db:Status-Status}\n' --show "$PKG" 2>/dev/null | grep -q '^installed$'; then
-        # do not give conflicting info about ezurio-qcacld-2.0-dkms or reform-qcacld2
-        if [ "$PKG" = "ezurio-qcacld-2.0-dkms" ] || [ "$PKG" = "reform-qcacld2" ]; then
-          case "$(cat /proc/device-tree/model)" in "MNT Pocket Reform with i.MX8MP Module" | "MNT Reform 2 with i.MX8MP Module") continue ;; esac
-        fi
-        echo "I: $REL of $META is not installed: $PKG" >&2
-      fi
-    done
-    IFS=$OIFS
-  done
-done
-
-if ! dpkg-query --showformat '${db:Status-Status}\n' --show "reform-branding" 2>/dev/null | grep -q '^installed$'; then
-  case "$MIRROR" in mntre.com) echo "W: reform-branding (non-free) is not installed" >&2 ;;
-  reform.debian.net) echo "I: reform-branding (non-free) is not installed" >&2 ;;
-  *)
-    echo "invalid mirror: $MIRROR" >&2
-    exit 1
-    ;;
-  esac
-fi
-
-if [ -z "$(findmnt --fstab --noheadings --evaluate --mountpoint / --output SOURCE)" ]; then
+if [ -z "$ROOT_FSTAB_SOURCE" ]; then
   echo "E: your /etc/fstab does not have an entry for /" >&2
-  echo "E: your / device probably is: $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE)" >&2
+  echo "E: your / device probably is: $ROOT_SOURCE" >&2
   echo "E: add this to your /etc/fstab:" >&2
-  echo "$(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) / auto errors=remount-ro 0 1" >&2
+  echo "$ROOT_SOURCE / auto errors=remount-ro 0 1" >&2
 fi
 
-if [ -z "$(findmnt --fstab --noheadings --evaluate --mountpoint /boot --output SOURCE)" ]; then
+if [ -z "$BOOT_FSTAB_SOURCE" ]; then
   echo "E: your /etc/fstab does not have an entry for /boot" >&2
   if [ "$EMMC_USE" = true ]; then
     echo "E: for eMMC booting, add:" >&2
@@ -558,100 +420,9 @@ fi
 
 if [ "$EMMC_USE" = true ] && [ ! -e "/dev/${DEV_MMC}p2" ]; then
   echo "W: /dev/${DEV_MMC}p2 doesn't exist." >&2
-  echo "W: To update your eMMC to sysimage-v5 you can run reform-flash-rescue" >&2
+  echo "W: To update your eMMC to Debian sysimage-v5 you can run reform-flash-rescue" >&2
   echo "W: Only run reform-flash-rescue if you intend a factory-reset of your eMMC" >&2
   echo "W: Do not use reform-flash-rescue if you boot from eMMC because this will overwrite your /boot partition" >&2
-fi
-
-if [ ! -e /etc/flash-kernel/machine ]; then
-  # /etc/flash-kernel/machine not existing is only a potential problem
-  # on imx8mq
-  case "$(cat /proc/device-tree/model)" in
-    "MNT Reform 2" | "MNT Reform 2 HDMI")
-      echo "E: /etc/flash-kernel/machine doesn't exist" >&2
-      echo "E: It should contain either 'MNT Reform 2' (for single display) or 'MNT Reform 2 HDMI' (for dual display)." >&2
-      echo "E: You can run reform-display-config as root to create a working version." >&2
-      ;;
-  esac
-else
-  # we can check only /etc/flash-kernel/machine and not /proc/device-tree/model
-  # as well because above we check (and print) if their contents diff
-  case "$(cat /etc/flash-kernel/machine)" in
-    "MNT Reform 2") : ;;
-    "MNT Reform 2 HDMI") : ;;
-    "MNT Pocket Reform with BPI-CM4 Module.conf" | \
-      "MNT Pocket Reform with i.MX8MP Module.conf" | \
-      "MNT Pocket Reform with RCORE RK3588 Module.conf" | \
-      "MNT Reform 2 with BPI-CM4 Module.conf" | \
-      "MNT Reform 2 with i.MX8MP Module.conf" | \
-      "MNT Reform 2 with LS1028A Module.conf" | \
-      "MNT Reform 2 with QUASAR 8550 Module" | \
-      "MNT Reform 2 with RCORE-DSI RK3588 Module.conf" | \
-      "MNT Reform 2 with RCORE RK3588 Module.conf" | \
-      "MNT Reform Next with RCORE RK3588 Module.conf")
-      echo "W: /etc/flash-kernel/machine is not needed on $(cat /etc/flash-kernel/machine). Consider removing it." >&2
-      ;;
-    *) echo "E: unexpected content in /etc/flash-kernel/machine" >&2 ;;
-  esac
-fi
-
-flashkerneldefaultcontent="LINUX_KERNEL_CMDLINE=\"\"\nLINUX_KERNEL_CMDLINE_DEFAULTS=\"\"\n"
-if [ ! -e /etc/default/flash-kernel ]; then
-  echo "E: /etc/default/flash-kernel doesn't exist" >&2
-  echo "E: /etc/default/flash-kernel should contain the following lines:" >&2
-  printf "$flashkerneldefaultcontent" >&2
-else
-  if ! printf "$flashkerneldefaultcontent" | cmp --quiet - /etc/default/flash-kernel; then
-    echo "W: unexpected content in /etc/default/flash-kernel:" >&2
-    printf "$flashkerneldefaultcontent" | diff -u - /etc/default/flash-kernel || true
-  fi
-fi
-
-if [ -e /etc/flash-kernel/preboot.d/00reform2_preboot ]; then
-  if printf "# place here any u-boot commands to be executed before boot\n" | cmp --quiet - /etc/flash-kernel/preboot.d/00reform2_preboot; then
-    echo "E: /etc/flash-kernel/preboot.d/00reform2_preboot contains default content overriding /usr/share/flash-kernel/preboot.d/00reform2_preboot" >&2
-    echo "E: consider deleting /etc/flash-kernel/preboot.d/00reform2_preboot in favour of /usr/share/flash-kernel/preboot.d/00reform2_preboot" >&2
-  else
-    echo "W: your custom /etc/flash-kernel/preboot.d/00reform2_preboot is overriding /usr/share/flash-kernel/preboot.d/00reform2_preboot" >&2
-  fi
-fi
-
-if [ -e /etc/flash-kernel/ubootenv.d/00reform2_ubootenv ]; then
-  if printf '# setenv bootpart "1"\n# setenv prefix "/"\n# setenv kernel_addr_r "0x40480000"\n# setenv fdt_addr_r "0x50000000"\n# setenv ramdisk_addr_r "0x51000000"\n' | cmp --quiet - /etc/flash-kernel/ubootenv.d/00reform2_ubootenv; then
-    echo "E: /etc/flash-kernel/ubootenv.d/00reform2_ubootenv contains default content overriding /usr/share/flash-kernel/ubootenv.d/00reform2_ubootenv" >&2
-    echo "E: consider deleting /etc/flash-kernel/ubootenv.d/00reform2_ubootenv in favour of /usr/share/flash-kernel/ubootenv.d/00reform2_ubootenv" >&2
-  else
-    echo "W: your custom /etc/flash-kernel/ubootenv.d/00reform2_ubootenv is overriding /usr/share/flash-kernel/ubootenv.d/00reform2_ubootenv"
-  fi
-fi
-
-if command -v systemctl >/dev/null 2>&1 \
-  && systemctl is-active --quiet greetd \
-  && test -e /etc/greetd/config.toml \
-  && grep --quiet '^ *command *= *["'"'"']/usr/bin/tuigreet *' /etc/greetd/config.toml; then
-  if [ -e /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel ]; then
-    # shellcheck disable=SC2016
-    if ! echo 'setenv bootargs "${bootargs} loglevel=3"' | cmp --quiet - /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel; then
-      echo "I: /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel exists but with the wrong content." >&2
-      echo 'I: it should contain this: setenv bootargs "${bootargs} loglevel=3"'
-    fi
-  else
-    # shellcheck disable=SC2016
-    echo 'I: your system is booting using greetd with tuigreet. You may want to put the following line into your /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel: setenv bootargs "${bootargs} loglevel=3' >&2
-    echo "I: Then run 'sudo flash-kernel' to regenerate your /boot/boot.scr. This will do away with your kernel overwriting your login prompt" >&2
-  fi
-else
-  # shellcheck disable=SC2016
-  if [ -e /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel ] && echo 'setenv bootargs "${bootargs} loglevel=3"' | cmp --quiet - /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel; then
-    echo "W: you do not seem to boot using tuigreet but the following file sets your loglevel to 3: /etc/flash-kernel/ubootenv.d/00reform2_tuigreet_loglevel -- you may consider removing it and re-running 'sudo flash-kernel'" >&2
-  fi
-fi
-
-initramfstoolsmodulescontent="pwm_imx27\nnwl-dsi\nti-sn65dsi86\nimx-dcss\npanel-edp\nmux-mmio\nmxsfb\nusbhid\nimx8mq-interconnect\n"
-if [ -e /etc/initramfs-tools/modules ] && printf "$initramfstoolsmodulescontent" | cmp --quiet - /etc/initramfs-tools/modules; then
-  echo "W: /etc/initramfs-tools/modules contains default content superseded by /usr/share/initramfs-tools/modules.d/reform.conf" >&2
-  echo "W: consider restoring /etc/initramfs-tools/modules to its original state by running:" >&2
-  echo "sed '/^###/d' /usr/share/initramfs-tools/modules | sudo tee /etc/initramfs-tools/modules" >&2
 fi
 
 if [ ! -e /etc/motd ]; then
@@ -662,128 +433,30 @@ elif [ "$(readlink /etc/motd)" != "motd-rescue" ] && [ "$(readlink /etc/motd)" !
   echo "I: /etc/motd does neither point to motd-rescue nor to motd-full" >&2
 fi
 
-if grep --quiet '^root::' /etc/shadow; then
-  echo "E: root account has no password (maybe run passwd -l root)" >&2
+backend_skel_profile_checks
+
+pkg_verify_output="$(backend_pkg_verify "$PKG_REFORM_TOOLS" 2>/dev/null || true)"
+if [ -n "$pkg_verify_output" ]; then
+  echo "I: the following files differ from how they are shipped by $PKG_REFORM_TOOLS (ignore /var/lib/alsa/asound.state):" >&2
+  printf '%s\n' "$pkg_verify_output" >&2
 fi
 
-if [ ! -e /etc/skel/.profile ]; then
-  echo "E: /etc/skel/.profile doesn't exist" >&2
-  echo "E: install the package bash to create it" >&2
-else
-  # shellcheck disable=SC2016
-  skelprofilecontent='if [ "$(whoami)" = "root" ]; then reform-help --root; elif [ -z "$WAYLAND_DISPLAY" ]; then reform-help; fi'
-  if [ "$(tail -1 /etc/skel/.profile)" != "$skelprofilecontent" ]; then
-    echo "E: unexpected last line in /etc/skel/.profile, should be:" >&2
-    echo "$skelprofilecontent" >&2
-  fi
+if [ -n "$PKG_KERNEL_MAIN" ] && ! backend_pkg_installed "$PKG_KERNEL_MAIN"; then
+  echo "E: $PKG_KERNEL_MAIN is not installed" >&2
 fi
 
-if [ -n "$(dpkg --verify reform-tools)" ]; then
-  echo "I: the following files differ from how they are shipped by reform-tools (ignore /var/lib/alsa/asound.state):" >&2
-  dpkg --verify reform-tools
+if [ -n "$PKG_KERNEL_HEADERS" ] && ! backend_pkg_installed "$PKG_KERNEL_HEADERS"; then
+  echo "E: $PKG_KERNEL_HEADERS is not installed (cannot compile reform2_lpc.ko DKMS module for battery status)" >&2
 fi
 
-if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-arm64" 2>/dev/null | grep -q '^installed$'; then
-  echo "W: The deprecated meta-package linux-image-arm64 is installed." >&2
-  if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-mnt-reform-arm64" 2>/dev/null | grep -q '^installed$'; then
-    echo "W: Since the new meta-package linux-image-mnt-reform-arm64 is installed," >&2
-    echo "W: the old meta-package linux-image-arm64 should be removed." >&2
-  else
-    echo "W: Please install the new meta-package linux-image-mnt-reform-arm64" >&2
-    echo "W: and remove the old meta-package linux-image-arm64." >&2
-  fi
-  if ! dpkg-query --showformat '${Version}' --show linux-image-arm64 | grep --quiet reform; then
-    echo "E: the currently installed package linux-image-arm64 does not come with Reform patches" >&2
-  fi
-fi
+backend_kernel_artifact_checks
 
-if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-mnt-reform-arm64" 2>/dev/null | grep -q '^installed$'; then
-  echo "E: linux-image-mnt-reform-arm64 is not installed" >&2
-fi
-
-if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-headers-mnt-reform-arm64" 2>/dev/null | grep -q '^installed$'; then
-  echo "E: linux-headers-mnt-reform-arm64 is not installed (cannot compile reform2_lpc.ko DKMS module for battery status)" >&2
-fi
-
-for file in /boot/initrd.img-*-reform2-arm64 /boot/vmlinuz-*-reform2-arm64; do
-  if [ ! -e "$file" ]; then
-    continue
-  fi
-  echo "I: file from deprecated kernel flavour found: $file" >&2
-done
-
-for file in /boot/initrd.img-*-mnt-reform-arm64 /boot/vmlinuz-*-mnt-reform-arm64; do
-  suffix="${file##/boot/}"
-  suffix="${suffix##initrd.img-}"
-  suffix="${suffix##vmlinuz-}"
-  if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-$suffix" 2>/dev/null | grep -q '^installed$'; then
-    echo "I: $file does not belong to any installed kernel package" >&2
-  fi
-done
-
-if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-$(uname -r)" 2>/dev/null | grep -q '^installed$'; then
+if ! backend_running_kernel_pkg_installed; then
   echo "E: the currently running kernel is not installed as a package" >&2
 fi
-if ! uname --kernel-version | grep --quiet --fixed-strings " $(dpkg-query --show --showformat '${Version}' linux-image-mnt-reform-arm64) "; then
-  echo "E: the currently running kernel is not the one provided by linux-image-mnt-reform-arm64" >&2
-fi
-
-if [ "$MIRROR" = "reform.debian.net" ] && dpkg-query --showformat '${db:Status-Status}\n' --show "reform-qcacld2" 2>/dev/null | grep -q '^installed$'; then
-  echo "E: Having reform-qcacld2 on a system configured to use packages for Debian stable from reform.debian.net will attempt installing the kernel package from the MNT repositories in the kernel postinstallation hook" >&2
-  echo "W: Consider replacing reform-qcacld2 with ezurio-qcacld-2.0-dkms for Debian stable and stable-backports kernels from reform.debian.net" >&2
-fi
-
-if [ "$MIRROR" = "mntre.com" ]; then
-  if dpkg-query --showformat '${db:Status-Status}\n' --show "reform-qcacld2" 2>/dev/null | grep -q '^installed$'; then
-    case "$(cat /proc/device-tree/model)" in "MNT Pocket Reform with i.MX8MP Module" | "MNT Reform 2 with i.MX8MP Module")
-      :
-      ;; # this is imx8m+, nothing to do
-    *)
-      echo "I: the reform-qcacld2 package is only required for wifi on the Pocket Reform with i.MX8MP, you can safely remove it unless you plan to go back to the imx8m+" >&2
-      ;;
-    esac
-  else
-    case "$(cat /proc/device-tree/model)" in "MNT Pocket Reform with i.MX8MP Module.conf")
-      echo "E: For the official MNT Debian on Pocket Reform with i.MX8MP, the reform-qcacld2 package needs to be installed for working wifi" >&2
-      ;;
-    *)
-      :
-      ;; # this is not imx8m+, nothing to do
-    esac
-  fi
-fi
-
-if [ -e /boot/boot.scr ]; then
-  if ! grep --quiet "setenv fk_kvers '$(uname -r)'" /boot/boot.scr; then
-    echo "E: /boot/boot.scr doesn't reference the currently running kernel" >&2
-  fi
-  if command -v shellcheck >/dev/null; then
-    tail -n +2 /boot/boot.scr | shellcheck --shell sh --exclude=SC2086,SC2154 -
-  else
-    echo "I: Install the package shellcheck for checking /boot/boot.scr for problems" >&2
-  fi
-else
-  echo "E: /boot/boot.scr doesn't exist" >&2
-  echo "E: run 'sudo flash-kernel' to create it" >&2
-fi
-
-if [ ! -e "/boot/vmlinuz-$(uname -r)" ]; then
-  echo "E: no vmlinuz in /boot for the currently running kernel" >&2
-fi
-
-if [ ! -e "/boot/initrd.img-$(uname -r)" ]; then
-  echo "E: no initrd.img in /boot for the currently running kernel" >&2
-fi
-
-if [ ! -e "/boot/dtb-$(uname -r)" ]; then
-  echo "E: no dtb-* symlink for the currently running kernel" >&2
-  echo "E: run 'sudo flash-kernel' to create it" >&2
-elif [ ! -e "/boot/dtbs/$(uname -r)/$DTBPATH" ]; then
-  echo "E: device tree file $DTBPATH is missing from /boot/dtbs" >&2
-elif [ ! -s "/boot/dtbs/$(uname -r)/$DTBPATH" ]; then
-  echo "E: device tree file /boot/dtbs/$DTBPATH is empty (zero bytes)" >&2
-elif [ "$(readlink "/boot/dtb-$(uname -r)")" != "dtbs/$(uname -r)/$DTBPATH" ]; then
-  echo "E: /boot/dtb-$(uname -r) symlink does not reference dtbs/$(uname -r)/$DTBPATH but: $(readlink "/boot/dtb-$(uname -r)")" >&2
+if [ -n "$PKG_KERNEL_MAIN" ] && backend_pkg_installed "$PKG_KERNEL_MAIN" \
+  && ! backend_running_kernel_matches_main_pkg; then
+  echo "E: the currently running kernel is not the one provided by $PKG_KERNEL_MAIN" >&2
 fi
 
 if [ -e "/etc/modprobe.d/reform.conf" ]; then
@@ -800,31 +473,24 @@ if [ -e /proc/modules ] && ! grep --quiet '^reform2_lpc ' /proc/modules; then
   echo "E: reform2_lpc is not loaded (battery status information will be missing)" >&2
 fi
 
-# The reform-debian-packages pipeline makes sure that these modules exist but
-# reform-tools can be used on other distros as well.
-for mod in updates/dkms/reform2_lpc.ko \
-  kernel/drivers/gpu/drm/imx/cdns/cdns_mhdp_imx.ko \
-  kernel/drivers/gpu/drm/bridge/cadence/cdns-mhdp8546.ko \
-  kernel/drivers/net/mdio/mdio-mux-meson-g12a.ko; do
-  if [ ! -e "/usr/lib/modules/$(uname -r)/$mod" ] \
-    && [ ! -e "/usr/lib/modules/$(uname -r)/${mod}.xz" ]; then
-    echo "E: /usr/lib/modules/$(uname -r)/$mod{.xz} does not exist" >&2
-  fi
-done
+if ! backend_modules_check; then
+  echo "E: running distro backend module checks failed" >&2
+fi
 
 if [ ! -e "/sys/class/power_supply/BAT0" ]; then
   echo "E: /sys/class/power_supply/BAT0 is missing -- reform2_lpc module not loaded?" >&2
 elif [ ! -L "/sys/class/power_supply/BAT0" ]; then
   echo "E: /sys/class/power_supply/BAT0 exists but is not a symlink" >&2
 else
-  case "$(cat /proc/device-tree/model)" in
+  BAT0_LINK="$(readlink /sys/class/power_supply/BAT0)"
+  case "$MODEL" in
     "MNT Reform Next with "*) : ;; # not implemented for Reform Next yet
     "MNT Reform 2 with LS1028A Module" | \
       "MNT Reform 2 with BPI-CM4 Module" | \
       "MNT Pocket Reform with BPI-CM4 Module")
-      case "$(readlink /sys/class/power_supply/BAT0)" in
+      case "$BAT0_LINK" in
         ../../devices/platform/*/spi_master/spi0/spi0.0/power_supply/BAT0) : ;;
-        *) echo "E: unexpected link target of /sys/class/power_supply/BAT0: $(readlink /sys/class/power_supply/BAT0)" >&2 ;;
+        *) echo "E: unexpected link target of /sys/class/power_supply/BAT0: $BAT0_LINK" >&2 ;;
       esac
       ;;
     "MNT Reform 2" | "MNT Reform 2 HDMI" | \
@@ -834,23 +500,15 @@ else
       "MNT Reform 2 with RCORE RK3588 Module" | \
       "MNT Pocket Reform with i.MX8MP Module" | \
       "MNT Pocket Reform with RCORE RK3588 Module")
-      case "$(readlink /sys/class/power_supply/BAT0)" in
+      case "$BAT0_LINK" in
         ../../devices/platform/*/spi_master/spi1/spi1.0/power_supply/BAT0) : ;;
-        *) echo "E: unexpected link target of /sys/class/power_supply/BAT0: $(readlink /sys/class/power_supply/BAT0)" >&2 ;;
+        *) echo "E: unexpected link target of /sys/class/power_supply/BAT0: $BAT0_LINK" >&2 ;;
       esac
       ;;
-    *) echo "E: unexpected content in /proc/device-tree/model: $(cat /proc/device-tree/model)" >&2 ;;
+    *) echo "E: unexpected content in /proc/device-tree/model: $MODEL" >&2 ;;
   esac
 fi
 
-worddiff() {
-  for word in $1; do
-    case $2 in
-      "$word" | "$word "* | *" $word" | *" $word "*) : ;;
-      *) echo "$word" ;;
-    esac
-  done
-}
 if [ "$(tr ' ' '\n' </proc/cmdline | sort -u)" != "$(echo "$BOOTARGS" | tr ' ' '\n' | sort -u)" ]; then
   if [ -n "$(worddiff "$(cat /proc/cmdline)" "$BOOTARGS")" ]; then
     echo "I: kernel boot parameters your system does use but which are not the default:" >&2
@@ -872,7 +530,7 @@ case "$(cat /proc/cmdline)" in *" single "* | "single "* | *" single" | "single"
   ;;
 esac
 
-case "$(cat /proc/device-tree/model)" in
+case "$MODEL" in
   "MNT Pocket Reform with RCORE RK3588 Module" | \
     "MNT Reform 2 with RCORE-DSI RK3588 Module" | \
     "MNT Reform 2 with RCORE RK3588 Module" | \
@@ -890,76 +548,23 @@ case "$(cat /proc/device-tree/model)" in
     ;;
 esac
 
-if ! dpkg-query --showformat '${db:Status-Status}\n' --show "linux-headers-$(uname -r)" 2>/dev/null | grep -q '^installed$'; then
-  echo "E: the linux header package linux-headers-$(uname -r) for the currently running kernel is not installed (cannot compile reform2_lpc.ko DKMS module for battery status)" >&2
+if ! backend_running_kernel_headers_pkg_installed; then
+  hdr_pkg="$(backend_running_kernel_headers_pkg_name 2>/dev/null || true)"
+  echo "E: the header package${hdr_pkg:+ $hdr_pkg} for the currently running kernel is not installed (cannot compile reform2_lpc.ko DKMS module for battery status)" >&2
 else
   # even if the package is installed, the directory might be missing for some reason
   if [ ! -d "/usr/lib/modules/$(uname -r)/build/include" ]; then
-    echo "E: the kernel header files cannot be found at /usr/lib/modules/$(uname -r)/build/include even though the package linux-headers-$(uname -r) is installed" >&2
+    echo "E: the kernel header files cannot be found at /usr/lib/modules/$(uname -r)/build/include even though the header package for the running kernel is installed" >&2
   fi
 fi
 
-for f in mntre reform_bookworm reform_bookworm-backports; do
-  file="/etc/apt/sources.list.d/${f}.sources"
-  if [ ! -e "$file" ]; then
-    continue
-  fi
-  if [ "$(stat -c %a "$file")" != 666 ]; then
-    # nothing to do
-    continue
-  fi
-  echo "E: $file has insecure permissions 0666, consider a chmod 644" >&2
-done
-for f in . firefox firefox/syspref.js motd-full motd-rescue profile.d profile.d/reform.sh profile.d/reform-setup.sh; do
-  file="/etc/$f"
-  if [ ! -e "$file" ]; then
-    continue
-  fi
-  # only process world-writable files
-  if [ -z "$(find "$file" -maxdepth 0 \( \! -type l \) -perm /o+w)" ]; then
-    continue
-  fi
-  echo "E: $file has insecure permissions (it is world-writable)" >&2
-done
-if [ -e /etc/profile.d/reform-setup.sh ]; then
-  # https://source.mnt.re/reform/mnt-reform-setup-wizard/-/issues/23
-  echo "W: reform-setup-wizard failed to clean up /etc/profile.d/reform-setup.sh. It can be safely removed." >&2
-fi
-if [ -e /etc/skel ] && [ "$(stat -c %a /etc/skel)" = "777" ]; then
-  echo "E: /etc/skel has insecure permissions 0777, consider a chmod -R g-w,o-rw" >&2
-fi
-if [ -n "$(find /etc \( \! -type l \) -perm /o+w)" ]; then
-  echo "E: the following files in /etc are world-writable, consider removing world-writable permissions:" >&2
-  find /etc \( \! -type l \) -perm /o+w >&2
-fi
-if [ -n "$(find /root \( \! -type l \) -perm /o+w)" ]; then
-  echo "E: the following files in /root are world-writable, consider removing world-writable permissions:" >&2
-  find /root \( \! -type l \) -perm /o+w >&2
+if ! backend_distro_specific_checks; then
+  echo "E: running distro backend distro-specific checks failed" >&2
 fi
 
-case "$(cat /proc/device-tree/model)" in "MNT Reform 2" | "MNT Reform 2 HDMI")
-  if [ ! -e /etc/u-boot-menu/conf.d ]; then
-    echo "W: /etc/u-boot-menu/conf.d does not exist -- create it by running reform-display-config" >&2
-  fi
-  if [ ! -e /etc/u-boot-menu/conf.d/reform.conf ]; then
-    echo "W: /etc/u-boot-menu/conf.d/reform.conf does not exist -- create it by running reform-display-config" >&2
-  else
-    case "$(cat /proc/device-tree/model)" in
-      "MNT Reform 2")
-        reformconfcontent="# the content of this file is auto-generated by reform-display-config\nU_BOOT_FDT=/freescale/imx8mq-mnt-reform2.dtb\n"
-        ;;
-      "MNT Reform 2 HDMI")
-        reformconfcontent="# the content of this file is auto-generated by reform-display-config\nU_BOOT_FDT=/freescale/imx8mq-mnt-reform2-hdmi.dtb\n"
-        ;;
-    esac
-    if ! printf "$reformconfcontent" | cmp --quiet - /etc/u-boot-menu/conf.d/reform.conf; then
-      echo "W: unexpected content in /etc/u-boot-menu/conf.d/reform.conf:" >&2
-      printf "$reformconfcontent" | diff -u - /etc/u-boot-menu/conf.d/reform.conf || true
-      echo "W: re-run reform-display-config for the corrent content" >&2
-    fi
-  fi
-  ;;
-esac
+if ! backend_initramfs_checks "$BOOT_METHOD"; then
+  echo "E: running distro backend initramfs checks failed" >&2
+fi
 
 if [ ! -e "/dev/dri/renderD128" ]; then
   echo "E: /dev/dri/renderD128 does not exist -- no hardware accelerated rendering" >&2
@@ -1002,48 +607,15 @@ fi
 if [ "$OFFLINE" = "yes" ]; then
   echo "I: skipping the remaining checks because --offline was used" >&2
 else
-  # shellcheck disable=SC2016
-  case "$MIRROR" in mntre.com)
-    if [ "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://mntre.com/reform-debian-repo/' --format '$(RELEASE)' | sort -u)" != "reform" ]; then
-      echo "E: the reform repository is not known to apt" >&2
-      echo "E: add the following line to your /etc/apt/sources.list to fix this" >&2
-      echo "deb [arch=arm64 trusted=yes] https://mntre.com/reform-debian-repo reform main" >&2
-    fi
-    if [ -n "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://reform.debian.net/debian/' --format '$(RELEASE)')" ]; then
-      echo "E: you have the reform.debian.net repository enabled while also using the mntre.com mirror. Consider choosing one or the other but not both." >&2
-    fi
-    ;;
-  reform.debian.net)
-    release="$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://reform.debian.net/debian/' --format '$(RELEASE)')"
-    case "$release" in
-      "") echo "E: unable to obtain release name for reform.debian.net repository" >&2 ;;
-      bookworm*) : ;;
-      trixie*) : ;;
-      *) echo "E: unknown reform.debian.net repository release name: $release" >&2 ;;
-    esac
-    if [ "$(apt-get indextargets 'Created-By: Packages' 'Repo-URI: https://mntre.com/reform-debian-repo/' --format '$(RELEASE)')" = reform ]; then
-      echo "E: you have the mntre.com repository enabled while also using the reform.debian.net mirror. Consider choosing one or the other but not both." >&2
-    fi
-    ;;
-  *)
-    echo "invalid mirror: $MIRROR" >&2
+  if ! backend_repo_online_checks; then
+    echo "E: running distro backend online repository checks failed" >&2
     exit 1
-    ;;
-  esac
-
-  # on a311d we need non-free-firmware
-  # shellcheck disable=SC2016
-  if [ "$NEED_NONFREE" = true ] && ! apt-get indextargets 'Created-By: Packages' 'Origin: Debian' 'Repo-URI: http://deb.debian.org/debian/' --format '$(COMPONENT)' | sort -u | grep --silent non-free-firmware; then
-    echo "W: you do not have non-free-firmware enabled" >&2
-    echo "W: this is required to install non-free firmware blobs that are required for platforms like Banana Pi A311D" >&2
-    echo "W: you can add a line like this to your /etc/apt/sources.list:" >&2
-    echo "deb http://deb.debian.org/debian unstable non-free-firmware" >&2
   fi
 
   bootloaderurl="https://source.mnt.re/reform/${BOOTLOADER_PROJECT}/-/jobs/artifacts/${BOOTLOADER_TAG}/raw/$(basename "$DTBPATH" .dtb)-flash.bin?job=build"
   bootloaderbin=$(mktemp)
   ret=0
-  /usr/lib/apt/apt-helper download-file "$bootloaderurl" "$bootloaderbin" "SHA1:$BOOTLOADER_SHA1" >/dev/null || ret=$?
+  download_url_with_sha1 "$bootloaderurl" "$bootloaderbin" "$BOOTLOADER_SHA1" || ret=$?
   if [ "$ret" != 0 ]; then
     echo "E: download of $bootloaderurl failed" >&2
   else
@@ -1096,57 +668,25 @@ else
   fi
   rm "$bootloaderbin"
 
-  case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with LS1028A Module")
+  case "$MODEL" in "MNT Reform 2 with LS1028A Module")
     mhdpfwbin=$(mktemp)
-    /usr/lib/apt/apt-helper download-file \
+    if download_url_with_sha1 \
       "https://source.mnt.re/reform/reform-ls1028a-uboot/-/raw/main/ls1028a-mhdpfw.bin" \
-      "$mhdpfwbin" "SHA1:fa96b9aa59d7c1e9e6ee1c0375d0bcc8f8e5b78c" >/dev/null
-    if [ ! -e /boot/ls1028a-mhdpfw.bin ]; then
-      echo "W: /boot/ls1028a-mhdpfw.bin doesn't exist" >&2
-      echo "W: You can download the latest version by running as root:" >&2
-      echo "reform-flash-bootloader" >&2
-    elif ! cmp --quiet /boot/ls1028a-mhdpfw.bin "$mhdpfwbin"; then
-      echo "W: /boot/ls1028a-mhdpfw.bin is not the latest uboot" >&2
-      echo "W: You can update it to the latest version by running as root:" >&2
-      echo "reform-flash-bootloader" >&2
+      "$mhdpfwbin" "fa96b9aa59d7c1e9e6ee1c0375d0bcc8f8e5b78c"; then
+      if [ ! -e /boot/ls1028a-mhdpfw.bin ]; then
+        echo "W: /boot/ls1028a-mhdpfw.bin doesn't exist" >&2
+        echo "W: You can download the latest version by running as root:" >&2
+        echo "reform-flash-bootloader" >&2
+      elif ! cmp --quiet /boot/ls1028a-mhdpfw.bin "$mhdpfwbin"; then
+        echo "W: /boot/ls1028a-mhdpfw.bin is not the latest uboot" >&2
+        echo "W: You can update it to the latest version by running as root:" >&2
+        echo "reform-flash-bootloader" >&2
+      fi
+    else
+      echo "E: download of ls1028a-mhdpfw.bin failed" >&2
     fi
     rm "$mhdpfwbin"
     ;;
   esac
 
-  if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-arm64" 2>/dev/null | grep -q '^installed$'; then
-    case "$MIRROR" in mntre.com)
-      if ! apt-cache policy linux-image-arm64 | grep --quiet mntre.com; then
-        echo "E: the linux-image-arm64 package cannot come from the MNT repos" >&2
-      fi
-      ;;
-    reform.debian.net)
-      if ! apt-cache policy linux-image-arm64 | grep --quiet /reform.debian.net/; then
-        echo "E: the linux-image-arm64 package cannot come from the reform.debian.net repos" >&2
-      fi
-      ;;
-    *)
-      echo "invalid mirror: $MIRROR" >&2
-      exit 1
-      ;;
-    esac
-  fi
-
-  if dpkg-query --showformat '${db:Status-Status}\n' --show "linux-image-mnt-reform-arm64" 2>/dev/null | grep -q '^installed$'; then
-    case "$MIRROR" in mntre.com)
-      if ! apt-cache policy linux-image-mnt-reform-arm64 | grep --quiet mntre.com; then
-        echo "E: the linux-image-mnt-reform-arm64 package cannot come from the MNT repos" >&2
-      fi
-      ;;
-    reform.debian.net)
-      if ! apt-cache policy linux-image-mnt-reform-arm64 | grep --quiet /reform.debian.net/; then
-        echo "E: the linux-image-mnt-reform-arm64 package cannot come from the reform.debian.net repos" >&2
-      fi
-      ;;
-    *)
-      echo "invalid mirror: $MIRROR" >&2
-      exit 1
-      ;;
-    esac
-  fi
 fi
