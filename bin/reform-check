@@ -530,6 +530,12 @@ case "$(cat /proc/cmdline)" in *" single "* | "single "* | *" single" | "single"
   ;;
 esac
 
+if [ -e "/boot/extlinux/extlinux.conf" ]; then
+  if ! grep --quiet '^[	 ]\+\(fdt\|fdtdir\) ' /boot/extlinux/extlinux.conf; then
+    echo "E: neither fdt nor fdtdir lines found in /boot/extlinux/extlinux.conf" >&2
+  fi
+fi
+
 case "$MODEL" in
   "MNT Pocket Reform with RCORE RK3588 Module" | \
     "MNT Reform 2 with RCORE-DSI RK3588 Module" | \
