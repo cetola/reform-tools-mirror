@@ -44,6 +44,17 @@ init_a311d() {
   if ! modinfo -n mdio_mux_meson_g12a >/dev/null; then
     echo "E: modinfo failed for mdio_mux_meson_g12a (not built as a module?) -- unable to reload"
   else
+    # The async MDIO bus scan that runs after driver probe holds a transient
+    # reference; wait for it to complete before attempting rmmod.
+    i=0
+    while [ "$(cat /sys/module/dwmac_meson8b/refcnt 2>/dev/null)" != "0" ]; do
+      i=$((i + 1))
+      if [ "$i" -ge 60 ]; then
+        echo "W: gave up waiting for dwmac_meson8b to become unloadable after 30s" >&2
+        break
+      fi
+      sleep 0.5
+    done
     for m in dwmac_meson8b dwmac_generic stmmac_platform stmmac mdio_mux_meson_g12a mdio_mux pcs_xpcs mdio_devres of_mdio; do
       grep --quiet "^$m " /proc/modules || continue
       rmmod "$m"
