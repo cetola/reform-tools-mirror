@@ -279,13 +279,15 @@ case "$MODEL" in
     if have_cmd fwupdmgr; then
       FWUPD_VERSION="$(fwupdmgr --version 2>/dev/null | awk '/^runtime[[:space:]]+org\.freedesktop\.fwupd/ {print $3; exit}')"
     fi
-    if have_cmd jq && [ -n "$FWUPD_VERSION" ] && version_ge "$FWUPD_VERSION" "2.0.16"; then
-      LATEST_SYS_VER="$(fwupdmgr search --json com.mntre.pocket_reform.sysctl10.firmware 2>/dev/null \
-        | jq --raw-output '.Releases[0].Version // empty' 2>/dev/null || true)"
+    if [ "$OFFLINE" != "yes" ]; then
+      if have_cmd jq && [ -n "$FWUPD_VERSION" ] && version_ge "$FWUPD_VERSION" "2.0.16"; then
+        LATEST_SYS_VER="$(fwupdmgr search --json com.mntre.pocket_reform.sysctl10.firmware 2>/dev/null \
+          | jq --raw-output '.Releases[0].Version // empty' 2>/dev/null || true)"
+      elif command -v unxz >/dev/null && command -v curl >/dev/null && command -v xmllint >/dev/null; then
+        LATEST_SYS_VER="$(curl --silent https://fwupd.org//downloads/firmware.xml.xz | unxz | xmllint --xpath "string(/components/component[id[text()='com.mntre.pocket_reform.sysctl10.firmware']]/releases/release[1]/@version)" - || true)"
+      fi
     elif have_cmd xb-tool && [ -e /var/cache/fwupd/metadata.xmlb ]; then
       LATEST_SYS_VER="$(xb-tool query /var/cache/fwupd/metadata.xmlb "components/component/id[text()='com.mntre.pocket_reform.sysctl10.firmware']/../releases/release[1]" 2>/dev/null || true)"
-    elif [ "$OFFLINE" != "yes" ] && command -v unxz >/dev/null && command -v curl >/dev/null && command -v xmllint >/dev/null; then
-      LATEST_SYS_VER="$(curl --silent https://fwupd.org//downloads/firmware.xml.xz | unxz | xmllint --xpath "string(/components/component[id[text()='com.mntre.pocket_reform.sysctl10.firmware']]/releases/release[1]/@version)" - || true)"
     fi
     if [ -z "$LATEST_SYS_VER" ]; then
       echo "I: To retrieve the latest sysctl and keyboard firmware versions install ${PKG_FWUPD:-fwupd} (>= 2.0.16) and ${PKG_JQ:-jq}, install xb-tool, or install curl, xz-utils and libxml2-utils" >&2
