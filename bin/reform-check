@@ -265,7 +265,12 @@ case "$MODEL" in
   "MNT Pocket Reform with "*" Module")
     if [ "$OFFLINE" != "yes" ] && [ ! -e /var/cache/fwupd/metadata.xmlb ] && command -v fwupdtool >/dev/null; then
       echo "I: running fwupdtool refresh" >&2
-      fwupdtool refresh
+      ret=0
+      fwupdtool refresh || ret=$?
+      if [ "$ret" != 0 ]; then
+        echo "E: fwupdtool refresh failed -- you can skip checking for the latest firmware version with --offline" >&2
+        exit 1
+      fi
     fi
     LATEST_SYS_VER=""
     # fwupdmgr search was added in fwupd 2.0.16 (commit b2d8491); older
