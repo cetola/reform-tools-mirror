@@ -291,6 +291,9 @@ case "$MODEL" in
     fi
     if [ -z "$LATEST_SYS_VER" ]; then
       echo "I: To retrieve the latest sysctl and keyboard firmware versions install ${PKG_FWUPD:-fwupd} (>= 2.0.16) and ${PKG_JQ:-jq}, install xb-tool, or install curl, xz-utils and libxml2-utils" >&2
+      if [ "$OFFLINE" = "yes" ]; then
+        echo "I: Checking for the latest firmware version requires reform-check to be run without --offline" >&2
+      fi
     fi
 
     if have_cmd reform-mcu-tool && have_cmd jq; then
