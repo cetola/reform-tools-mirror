@@ -344,7 +344,6 @@ case "$MODEL" in
       echo "W: /sys/bus/spi/drivers/reform2_lpc/spi1.0/firmware does not exist -- is the reform2_lpc module loaded?" >&2
     fi
     ;;
-  *) echo "E: unexpected content in /proc/device-tree/model: $MODEL" >&2 ;;
 esac
 
 if [ -e "/proc/device-tree/chosen/u-boot,version" ]; then
@@ -515,7 +514,6 @@ else
         *) echo "E: unexpected link target of /sys/class/power_supply/BAT0: $BAT0_LINK" >&2 ;;
       esac
       ;;
-    *) echo "E: unexpected content in /proc/device-tree/model: $MODEL" >&2 ;;
   esac
 fi
 
