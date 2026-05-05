@@ -28,6 +28,11 @@ fi
 # below, make sure to also adjust the respective initramfs hook in the
 # reform-system-image repository.
 case $MACHINE in
+  "MNT Desktop Reform with RCORE RK3588 Module") : ;;
+  "MNT Pocket Reform with BPI-CM4 Module") : ;;
+  "MNT Pocket Reform with i.MX8MP Module") : ;;
+  "MNT Pocket Reform with QUASAR QCS6490 Module") : ;;
+  "MNT Pocket Reform with RCORE RK3588 Module") : ;;
   "MNT Reform 2") : ;;
   "MNT Reform 2 HDMI") : ;;
   "MNT Reform 2 with BPI-CM4 Module") : ;;
@@ -40,12 +45,11 @@ case $MACHINE in
     [ "${verbose}" = "y" ] && echo "Adding /usr/bin/dmesg"
     copy_exec /usr/bin/dmesg
     ;;
+  "MNT Reform 2 with QUASAR QCS6490 Module") : ;;
   "MNT Reform 2 with QUASAR QCS8550 Module") : ;;
-  "MNT Reform 2 with RCORE RK3588 Module") : ;;
   "MNT Reform 2 with RCORE-DSI RK3588 Module") : ;;
-  "MNT Pocket Reform with i.MX8MP Module") : ;;
-  "MNT Pocket Reform with BPI-CM4 Module") : ;;
-  "MNT Pocket Reform with RCORE RK3588 Module") : ;;
+  "MNT Reform 2 with RCORE RK3588 Module") : ;;
+  "MNT Reform Next with QUASAR QCS6490 Module") : ;;
   "MNT Reform Next with RCORE RK3588 Module") : ;;
   "")
     echo "W: unable to deduce target machine for reform initramfs-hook" >&2
