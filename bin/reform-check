@@ -319,32 +319,28 @@ case "$MODEL" in
     ;;
 esac
 
+SPINUM=0
 case "$MODEL" in
-  "MNT Reform Next with "*) : ;; # not implemented for Reform Next yet
   "MNT Reform 2 with LS1028A Module" | \
     "MNT Reform 2 with BPI-CM4 Module" | \
-    "MNT Pocket Reform with BPI-CM4 Module")
-    if [ -e "/sys/bus/spi/drivers/reform2_lpc/spi0.0/firmware" ]; then
-      # A311D
-      echo "I: Version of LPC firmware: $(cat /sys/bus/spi/drivers/reform2_lpc/spi0.0/firmware)"
-    else
-      echo "W: /sys/bus/spi/drivers/reform2_lpc/spi0.0/firmware does not exist -- is the reform2_lpc module loaded?" >&2
-    fi
-    ;;
+    "MNT Pocket Reform with BPI-CM4 Module") : ;; # nothing to do, SPINUM stays zero
   "MNT Reform 2" | "MNT Reform 2 HDMI" | \
     "MNT Reform 2 with i.MX8MP Module" | \
     "MNT Reform 2 with QUASAR QCS8550 Module" | \
     "MNT Reform 2 with RCORE-DSI RK3588 Module" | \
     "MNT Reform 2 with RCORE RK3588 Module" | \
+    "MNT Reform Next with RCORE RK3588 Module" | \
     "MNT Pocket Reform with i.MX8MP Module" | \
-    "MNT Pocket Reform with RCORE RK3588 Module")
-    if [ -e "/sys/bus/spi/drivers/reform2_lpc/spi1.0/firmware" ]; then
-      echo "I: Version of LPC firmware: $(cat /sys/bus/spi/drivers/reform2_lpc/spi1.0/firmware)"
-    else
-      echo "W: /sys/bus/spi/drivers/reform2_lpc/spi1.0/firmware does not exist -- is the reform2_lpc module loaded?" >&2
-    fi
-    ;;
+    "MNT Pocket Reform with RCORE RK3588 Module") SPINUM=1 ;;
+  "MNT Pocket Reform with QUASAR QCS6490 Module" | \
+    "MNT Reform 2 with QUASAR QCS6490 Module" | \
+    "MNT Reform Next with QUASAR QCS6490 Module") SPINUM=4 ;;
 esac
+if [ -e "/sys/bus/spi/drivers/reform2_lpc/spi${SPINUM}.0/firmware" ]; then
+  echo "I: Version of LPC firmware: $(cat /sys/bus/spi/drivers/reform2_lpc/spi${SPINUM}.0/firmware)"
+else
+  echo "W: /sys/bus/spi/drivers/reform2_lpc/spi1.0/firmware does not exist -- is the reform2_lpc module loaded?" >&2
+fi
 
 if [ -e "/proc/device-tree/chosen/u-boot,version" ]; then
   UBOOT_VERSION_RAW="$(read_nul_terminated_file /proc/device-tree/chosen/u-boot,version)"
@@ -492,28 +488,9 @@ elif [ ! -L "/sys/class/power_supply/BAT0" ]; then
   echo "E: /sys/class/power_supply/BAT0 exists but is not a symlink" >&2
 else
   BAT0_LINK="$(readlink /sys/class/power_supply/BAT0)"
-  case "$MODEL" in
-    "MNT Reform Next with "*) : ;; # not implemented for Reform Next yet
-    "MNT Reform 2 with LS1028A Module" | \
-      "MNT Reform 2 with BPI-CM4 Module" | \
-      "MNT Pocket Reform with BPI-CM4 Module")
-      case "$BAT0_LINK" in
-        ../../devices/platform/*/spi_master/spi0/spi0.0/power_supply/BAT0) : ;;
-        *) echo "E: unexpected link target of /sys/class/power_supply/BAT0: $BAT0_LINK" >&2 ;;
-      esac
-      ;;
-    "MNT Reform 2" | "MNT Reform 2 HDMI" | \
-      "MNT Reform 2 with i.MX8MP Module" | \
-      "MNT Reform 2 with QUASAR 8550 Module" | \
-      "MNT Reform 2 with RCORE-DSI RK3588 Module" | \
-      "MNT Reform 2 with RCORE RK3588 Module" | \
-      "MNT Pocket Reform with i.MX8MP Module" | \
-      "MNT Pocket Reform with RCORE RK3588 Module")
-      case "$BAT0_LINK" in
-        ../../devices/platform/*/spi_master/spi1/spi1.0/power_supply/BAT0) : ;;
-        *) echo "E: unexpected link target of /sys/class/power_supply/BAT0: $BAT0_LINK" >&2 ;;
-      esac
-      ;;
+  case "$BAT0_LINK" in
+    ../../devices/platform/*/spi_master/spi0/spi${SPINUM}.0/power_supply/BAT0) : ;;
+    *) echo "E: unexpected link target of /sys/class/power_supply/BAT0: $BAT0_LINK" >&2 ;;
   esac
 fi
 
