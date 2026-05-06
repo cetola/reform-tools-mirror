@@ -58,3 +58,8 @@ case $MACHINE in
     echo "W: unsupported machine: $MACHINE" >&2
     ;;
 esac
+
+# firmware required by Quasar QCS6490 variants
+copy_file firmware /lib/firmware/qcom/qcs6490/qupv3fw.elf
+copy_file firmware /lib/firmware/qcom/a660_sqe.fw
+copy_file firmware /lib/firmware/qcom/a660_gmu.bin
