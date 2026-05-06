@@ -489,7 +489,7 @@ elif [ ! -L "/sys/class/power_supply/BAT0" ]; then
 else
   BAT0_LINK="$(readlink /sys/class/power_supply/BAT0)"
   case "$BAT0_LINK" in
-    ../../devices/platform/*/spi_master/spi0/spi${SPINUM}.0/power_supply/BAT0) : ;;
+    ../../devices/platform/*"/spi_master/spi${SPINUM}/spi${SPINUM}.0/power_supply/BAT0") : ;;
     *) echo "E: unexpected link target of /sys/class/power_supply/BAT0: $BAT0_LINK" >&2 ;;
   esac
 fi
