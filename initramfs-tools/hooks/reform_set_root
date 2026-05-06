@@ -1,0 +1,97 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# Copyright 2008 — 2011 Martin Michlmayr <tbm@debian.org>
+# Copyright 2011 — 2013 Loïc Minier <lool@debian.org>
+# Copyright 2014 — 2015 Ian Campbell <ijc@hellion.org.uk>
+# Copyright 2016 — 2018 Vagrant Cascadian <vagrant@debian.org>
+
+PREREQ=""
+
+prereqs() {
+  echo "$PREREQ"
+}
+
+case $1 in
+  prereqs)
+    prereqs
+    exit 0
+    ;;
+esac
+
+# don't act if flash-kernel is taking care of setting the default root parameter
+if [ -e "/usr/share/initramfs-tools/hooks/flash_kernel_set_root" ]; then
+  echo "I: skipping reform_set_root in favour of flash_kernel_set_root" >&2
+  exit
+fi
+
+# shellcheck disable=SC1091
+. /usr/share/initramfs-tools/hook-functions
+
+if [ -e "$DESTDIR/conf/conf.d/default_root" ]; then
+  echo "I: skipping reform_set_root because /conf/conf.d/default_root was already created by another hook" >&2
+  exit
+fi
+
+# Record the root filesystem device for use during boot
+rootdev=$(grep -E '^[^# 	]+[ 	]+/[ 	]' /etc/fstab | awk '{print $1}') || true
+
+# Map LVM devices in the form of /dev/vg/lv to /dev/mapper/..., otherwise
+# initramfs won't initialize them.
+if [ -n "$rootdev" ]; then
+  path=$(readlink -f "$rootdev")
+  if echo "$path" | grep -q "^/dev/mapper/"; then
+    rootdev=$path
+  fi
+fi
+
+# Translate LABEL, UUID, and PARTUUID entries into a proper device name.
+if echo "$rootdev" | grep -q "="; then
+  a=$(echo "$rootdev" | cut -d "=" -f 1)
+  b=$(echo "$rootdev" | cut -d "=" -f 2- | sed -e 's/^"\(.*\)"$/\1/')
+  case "$a" in
+    LABEL)
+      c=$(echo "$b" | sed 's#/#\\x2f#g')
+      if [ -e "/dev/disk/by-label/$c" ]; then
+        rootdev="/dev/disk/by-label/$c"
+      else
+        echo "Label $b not found in /dev/disk/by-label" >&2
+      fi
+      ;;
+    UUID)
+      rootdev=/dev/disk/by-uuid/$b
+      if [ ! -e "$rootdev" ]; then
+        echo "UUID $b doesn't exist in /dev/disk/by-uuid" >&2
+      fi
+      ;;
+    PARTUUID)
+      rootdev=/dev/disk/by-partuuid/$b
+      if [ ! -e "$rootdev" ]; then
+        echo "PARTUUID $b doesn't exist in /dev/disk/by-partuuid" >&2
+      fi
+      ;;
+    PARTLABEL)
+      rootdev=/dev/disk/by-partlabel/$b
+      if [ ! -e "$rootdev" ]; then
+        echo "PARTLABEL $b doesn't exist in /dev/disk/by-partlabel" >&2
+      fi
+      ;;
+    *)
+      echo "/etc/fstab parse error; cannot recognize root $rootdev" >&2
+      rootdev=/dev/sda2
+      echo "guessing that the root device is $rootdev" >&2
+      ;;
+  esac
+fi
+
+if [ ! -e "$rootdev" ]; then
+  echo "Warning: root device $rootdev does not exist" >&2
+fi
+
+# The boot loader may or may not pass root= on the command line, so
+# provide a default.
+install -d "$DESTDIR/conf/conf.d"
+echo "ROOT=\"$rootdev\"" >"$DESTDIR/conf/conf.d/default_root"
+if [ -n "${rootflags}" ]; then
+  echo "ROOTFLAGS=\"-o ${rootflags}\"" >>"$DESTDIR/conf/conf.d/default_root"
+fi
