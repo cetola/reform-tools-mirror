@@ -1,0 +1,59 @@
+#!/bin/sh
+# SPDX-License-Identifier: LGPL-2.1-or-later
+#
+# Installs the symlink /boot/EFI/BOOT/BOOTAA64.EFI pointing to
+# /boot/EFI/Linux/$ENTRY_TOKEN-$KERNEL_VERSION.efi because the latter is not
+# picked up by u-boot.
+
+set -e
+
+COMMAND="${1:?}"
+KERNEL_VERSION="${2:?}"
+# shellcheck disable=SC2034
+ENTRY_DIR_ABS="$3"
+# shellcheck disable=SC2034
+KERNEL_IMAGE="$4"
+
+# these two are set by kernel-install
+ENTRY_TOKEN="$KERNEL_INSTALL_ENTRY_TOKEN"
+BOOT_ROOT="$KERNEL_INSTALL_BOOT_ROOT"
+
+# this is $BOOT_ROOT/EFI/Linux in 90-uki-copy.install
+UKI_DIR="$BOOT_ROOT/EFI/BOOT"
+
+case "$COMMAND" in
+  remove)
+    [ "$KERNEL_INSTALL_VERBOSE" -gt 0 ] && echo "Removing $UKI_DIR/BOOTAA64.EFI" >&2
+    exec rm -f "$UKI_DIR/BOOTAA64.EFI"
+    ;;
+  add) ;;
+  *) exit 0 ;;
+esac
+
+[ "$KERNEL_INSTALL_LAYOUT" = "uki" ] || exit 0
+
+if ! [ -d "$UKI_DIR" ]; then
+  [ "$KERNEL_INSTALL_VERBOSE" -gt 0 ] && echo "creating $UKI_DIR" >&2
+  mkdir -p "$UKI_DIR"
+fi
+
+# FIXME: in the future, support /etc/kernel/tries as well
+UKI_FILE="../Linux/$ENTRY_TOKEN-$KERNEL_VERSION.efi"
+
+if [ ! -f "$UKI_DIR/$UKI_FILE" ]; then
+  [ "$KERNEL_INSTALL_VERBOSE" -gt 0 ] && echo "$UKI_DIR/$UKI_FILE does not exist. Nothing to do." >&2
+  exit 0
+fi
+
+if [ -L "$UKI_DIR/BOOTAA64.EFI" ]; then
+  [ "$KERNEL_INSTALL_VERBOSE" -gt 0 ] && echo "Removing old symlink $UKI_DIR/BOOTAA64.EFI" >&2
+  rm "$UKI_DIR/BOOTAA64.EFI"
+elif [ -e "$UKI_DIR/BOOTAA64.EFI" ]; then
+  echo "E: $UKI_DIR/BOOTAA64.EFI exists and is a normal file -- bailing out" >&2
+  exit 1
+fi
+
+[ "$KERNEL_INSTALL_VERBOSE" -gt 0 ] && echo "Creating symlink $UKI_DIR/BOOTAA64.EFI to $UKI_FILE" >&2
+ln -s "$UKI_FILE" "$UKI_DIR/BOOTAA64.EFI"
+
+exit 0

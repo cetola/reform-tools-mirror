@@ -160,6 +160,8 @@ install-indep: $(MAN1)
 	$(INSTALLDATA) -t $(DESTDIR)$(sysconfdir)/profile.d etc/profile.d/reform-mali.sh
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/doc/reform-tools/examples
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/doc/reform-tools/examples examples/keyboard_rainbow.py
+	$(INSTALL)     -d $(DESTDIR)$(libdir)/kernel/install.d/
+	$(INSTALL)     -t $(DESTDIR)$(libdir)/kernel/install.d/ kernel-install/91-reform-bootaa64.install
 	if [ -e "reform-check/distro/unknown.sh" ]; then \
 		echo "E: reform-check/distro/unknown.sh must never exist" >&2; \
 		exit 1; \
@@ -204,12 +206,12 @@ clean:
 lint:
 	clang-format lpc/reform2_lpc.c | diff -u lpc/reform2_lpc.c -
 	shfmt --posix --simplify --binary-next-line --case-indent --indent 2 --diff \
-		bin kernel/* initramfs-tools/*/* flash-kernel/*/* reform-check/*.sh reform-check/distro/*.sh
+		bin kernel/* initramfs-tools/*/* flash-kernel/*/* reform-check/*.sh reform-check/distro/*.sh kernel-install/*
 	shfmt --language-dialect=bash --simplify --binary-next-line --case-indent --indent 2 --diff \
 		libexec/reform-tools/reform-power-daemon
 	black --check --diff bin/reform-compstat libexec/reform-tools/reform-tray.py libexec/reform-tools/reform-wallpaper.py examples/keyboard_rainbow.py
 	black --line-length 120 --check --diff bin/reform-mcu-tool
-	shellcheck bin/* kernel/* initramfs-tools/*/* flash-kernel/*/* reform-check/*.sh reform-check/distro/*.sh libexec/reform-tools/reform-power-daemon
+	shellcheck bin/* kernel/* initramfs-tools/*/* flash-kernel/*/* reform-check/*.sh reform-check/distro/*.sh libexec/reform-tools/reform-power-daemon kernel-install/*
 
 test:
 	# check the validity of gschema overrides
