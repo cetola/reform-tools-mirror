@@ -161,6 +161,7 @@ install-indep: $(MAN1)
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/doc/reform-tools/examples
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/doc/reform-tools/examples examples/keyboard_rainbow.py
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/kernel/install.d/
+	$(INSTALL)     -t $(DESTDIR)$(libdir)/kernel/install.d/ kernel-install/59-reform-ukiconf.install
 	$(INSTALL)     -t $(DESTDIR)$(libdir)/kernel/install.d/ kernel-install/91-reform-bootaa64.install
 	if [ -e "reform-check/distro/unknown.sh" ]; then \
 		echo "E: reform-check/distro/unknown.sh must never exist" >&2; \
