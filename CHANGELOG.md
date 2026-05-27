@@ -1,3 +1,29 @@
+1.87 (2026-05-05)
+=================
+
+ * machines/* with BPI-CM4 Module.conf: bump u-boot to 2026-04-09
+ * machines:
+    - add MNT {Pocket Reform,Reform Next} with QUASAR QCS6490 Module
+    - add MNT {Pocket Reform,Reform Next} with QUASAR QCS8550 Module
+    - rename MNT Desktop Reform to MNT Station
+ * bin/reform-display-config: set $U_BOOT_FDT_DIR for u-boot-menu
+ * bin/reform-check:
+    - support for Arch Linux
+    - introduce distro backends for distro-specific checks
+    - check for /dev/dri/renderD128 and /sys/kernel/debug/devices_deferred
+    - check if extlinux.conf contains fdt entries
+    - suggest to run with --offline if "fwupdtool refresh" failed
+    - only run 'fwupdmgr search' and curl with --offline was not passed
+    - do not check for invalid content of /proc/device-tree/model
+    - set spi number for lpc firmware and BAT0 link target check on QUASAR
+ * initramfs-tools/hooks/reform: add firmware required for QUASAR
+ * initramfs-tools/hooks/reform_set_root: allow removal of flash-kernel
+ * initramfs-tools/reform.conf: add modules required for QUASAR
+ * kernel-install/91-reform-bootaa64.install: create
+   /boot/EFI/BOOT/BOOTAA64.EFI symlink
+ * kernel-install/59-reform-ukiconf.install: create temporary
+   /run/kernel/uki.conf with DeviceTreeAuto with all our dtbs
+
 1.86 (2026-03-25)
 =================
 
