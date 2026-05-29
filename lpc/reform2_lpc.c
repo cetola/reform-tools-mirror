@@ -37,8 +37,10 @@ typedef struct lpc_driver_data {
 } lpc_driver_data;
 
 static int force_backlight_control = 0;
-module_param(force_backlight_control, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
-MODULE_PARM_DESC(force_backlight_control, "Force PWM based backlight control by System Controller");
+module_param(force_backlight_control, int,
+	     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+MODULE_PARM_DESC(force_backlight_control,
+		 "Force PWM based backlight control by System Controller");
 
 static int lpc_probe(struct spi_device *spi);
 static void lpc_remove(struct spi_device *spi);
