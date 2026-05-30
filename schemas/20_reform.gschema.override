@@ -13,6 +13,7 @@ gtk-theme = 'Adwaita'
 cursor-theme = 'Adwaita'
 color-scheme = 'prefer-dark'
 show-battery-percentage = true
+gtk-enable-primary-paste = true
 
 [org.gnome.desktop.background]
 picture-options = 'zoom'
