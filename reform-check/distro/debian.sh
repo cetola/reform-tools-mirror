@@ -572,8 +572,40 @@ backend_empty_root_password_check() {
   fi
 }
 
+backend_render_access_checks() {
+  # Debian builds systemd with GROUP_RENDER_UACCESS=true (mode 0660), so
+  # non-root access to renderD128 requires the uaccess tag and per-session ACLs.
+  if [ -e "/dev/dri/renderD128" ]; then
+    if [ "$(stat -c %G /dev/dri/renderD128)" != "render" ]; then
+      echo "W: /dev/dri/renderD128 is not owned by the render group" >&2
+    fi
+    if ! udevadm info --query=property --property=TAGS --value /dev/dri/renderD128 | grep --fixed-strings --quiet ":uaccess:"; then
+      echo "E: udev does not have /dev/dri/renderD128 tagged with 'uaccess' -- non-root user will not have access to hardware rendering" >&2
+    fi
+  fi
+  if ! grep --quiet 'SUBSYSTEM=="drm",.*KERNEL=="renderD.*TAG+="uaccess"' /usr/lib/udev/rules.d/*; then
+    echo "E: missing udev rule to add the 'uaccess' tag to /dev/dri/renderD128" >&2
+  fi
+  if [ -n "${SUDO_USER:-}" ]; then
+    if id --name --groups --zero "$SUDO_USER" \
+      | grep --quiet --null-data --line-regexp --fixed-strings render; then
+      # SUBSYSTEM=="drm", KERNEL=="renderD*", TAG+="uaccess"
+      echo "I: user $SUDO_USER is in the render group which should not be necessary" >&2
+      echo "I: to gain access to /dev/dri/renderD128, use ACLs as they are set by udev's uaccess tag" >&2
+    fi
+    if [ -e "/dev/dri/renderD128" ]; then
+      if ! getfacl --omit-header --absolute-names /dev/dri/renderD128 | grep --line-regexp --fixed-strings --quiet -- "user:$SUDO_USER:rw-"; then
+        echo "E: ACL of /dev/dri/renderD128 does not contain an entry for $SUDO_USER -- missing access means no hardware rendering for non-root users" >&2
+      fi
+    fi
+  else
+    echo "I: not executed with sudo -- cannot do tests for the user who ran sudo" >&2
+  fi
+}
+
 backend_distro_specific_checks() {
   backend_deprecated_kernel_pkg_checks
   backend_empty_root_password_check
   backend_image_hygiene_checks
+  backend_render_access_checks
 }

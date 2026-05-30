@@ -294,5 +294,8 @@ backend_initramfs_checks() {
 }
 
 backend_distro_specific_checks() {
-  :
+  if [ -e "/dev/dri/renderD128" ] \
+    && [ $(($(stat -c '%a' /dev/dri/renderD128) & 6)) -ne 6 ]; then
+    echo "E: /dev/dri/renderD128 is not world-readable/writable -- non-root user will not have access to hardware rendering" >&2
+  fi
 }
