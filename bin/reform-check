@@ -366,8 +366,8 @@ fi
 
 ROOT_SOURCE="$(findmnt --noheadings --evaluate --mountpoint / --output SOURCE)"
 BOOT_SOURCE="$(findmnt --noheadings --evaluate --mountpoint /boot --output SOURCE)"
-ROOT_FSTAB_SOURCE="$(findmnt --fstab --noheadings --evaluate --mountpoint / --output SOURCE)"
-BOOT_FSTAB_SOURCE="$(findmnt --fstab --noheadings --evaluate --mountpoint /boot --output SOURCE)"
+ROOT_FSTAB_SOURCE="$(findmnt --fstab --noheadings --mountpoint / --output SOURCE)"
+BOOT_FSTAB_SOURCE="$(findmnt --fstab --noheadings --mountpoint /boot --output SOURCE)"
 
 HUMAN_ROOT=
 case "$ROOT_SOURCE" in
