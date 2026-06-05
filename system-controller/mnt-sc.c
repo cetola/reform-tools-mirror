@@ -110,7 +110,7 @@ static int bl_update_status(struct backlight_device *bl)
 {
 	struct mntsc_driver_data *lpc = (struct mntsc_driver_data *)bl_get_data(bl);
 	char cmd[32];
-	snprintf(cmd, 32, "(set-lite %d)", bl->props.brightness);
+	snprintf(cmd, 32, "(set-blgt %d)", bl->props.brightness);
 	sc_cmd(lpc, cmd);
 	return 0;
 }
@@ -174,7 +174,7 @@ static int mntsc_suspend_cb(struct notifier_block *nb, unsigned long action,
 	switch (action) {
 	case PM_SUSPEND_PREPARE:
 		dev_info(&data->spi->dev, "%s: set brightness %u\n", __func__, 0);
-		sc_cmd(data, "(set-lite 0");
+		sc_cmd(data, "(set-blgt 0");
 		break;
 	case PM_POST_SUSPEND:
 		dev_info(&data->spi->dev, "%s: set brightness %u\n", __func__,
@@ -318,7 +318,6 @@ static ssize_t sc_cmdresp(struct mntsc_driver_data *lpc, char *cmd, uint8_t resp
 	memset(response, 0, MNTSC_RES_SZ);
 
 	mutex_lock(&lpc->lock);
-	//dev_err(&lpc->spi->dev, "mntsc_command: %s\n", cmd);
 	int len = strlen(cmd);
 	for (int i = 0; i < len; i+=8) {
 		uint8_t xfer[9];
@@ -331,8 +330,6 @@ static ssize_t sc_cmdresp(struct mntsc_driver_data *lpc, char *cmd, uint8_t resp
 		ret = spi_write(lpc->spi, xfer, 8);
 		udelay(200);
 	}
-	//ret = spi_write(lpc->spi, cmd, len);
-	//dev_err(&lpc->spi->dev, "lpc: sent [%s]\n", cmd);
 
 #define RX_SZ 32
 	int done = 0;
@@ -360,13 +357,11 @@ static ssize_t sc_cmdresp(struct mntsc_driver_data *lpc, char *cmd, uint8_t resp
 					if (strncmp(rxbuf, "u64 ", 4)) {
 						uint64_t r_u64;
 						if (!kstrtoull(&rxbuf[5], 10, &r_u64)) {
-							dev_err(&lpc->spi->dev, "lpc: parsed u64: %llu.\n", r_u64);
 							*(uint64_t*)response = r_u64;
 						}
 					} else if (strncmp(rxbuf, "i64 ", 4)) {
 						int64_t r_i64;
 						if (!kstrtoull(&rxbuf[5], 10, &r_i64)) {
-							dev_err(&lpc->spi->dev, "lpc: parsed i64: %lld.\n", r_i64);
 							*(int64_t*)response = r_i64;
 						}
 					} else if (strncmp(rxbuf, "f64 ", 4)) {
@@ -393,8 +388,7 @@ static ssize_t sc_cmdresp(struct mntsc_driver_data *lpc, char *cmd, uint8_t resp
 			break;
 		}
 	}
-	dev_err(&lpc->spi->dev, "lpc: rxbuf [%s]\n", rxbuf);
-	//msleep(500);
+	dev_dbg(&lpc->spi->dev, "lpc: rxbuf [%s]\n", rxbuf);
 
 	mutex_unlock(&lpc->lock);
 	return ret;
