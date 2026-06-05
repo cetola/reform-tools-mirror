@@ -51,8 +51,8 @@ static ssize_t show_uart(struct device *dev, struct device_attribute *attr,
 			 char *buf);
 static ssize_t store_uart(struct device *dev, struct device_attribute *attr,
 			  const char *buf, size_t count);
-static ssize_t lpc_command(struct lpc_driver_data *lpc, char* cmd,
-			   uint8_t *response);
+static ssize_t lpc_command(struct lpc_driver_data *lpc, char command,
+			   uint8_t arg1, uint8_t *response);
 static int get_bat_property(struct power_supply *psy,
 			    enum power_supply_property psp,
 			    union power_supply_propval *val);
@@ -104,9 +104,7 @@ static int bl_update_status(struct backlight_device *bl)
 {
 	struct lpc_driver_data *lpc = (struct lpc_driver_data *)bl_get_data(bl);
 	uint8_t buffer[LPC_RES_SZ];
-	char cmd[32];
-	snprintf(cmd, 32, "(set-blgt %d)", bl->props.brightness);
-	lpc_command(lpc, cmd, buffer);
+	lpc_command(lpc, 'b', bl->props.brightness, buffer);
 	return 0;
 }
 
@@ -154,7 +152,24 @@ static uint32_t lpc_get_api_version(struct device *dev)
 	struct lpc_driver_data *lpc =
 		(struct lpc_driver_data *)dev_get_drvdata(dev);
 
-	ret = MNTRE_LPC_API_V3;
+	ret = lpc_command(lpc, 'f', 2, str);
+	if (ret)
+		return MNTRE_LPC_API_UNKNOWN;
+
+	ret = kstrtou32(str, 10, &version);
+	if (ret)
+		return MNTRE_LPC_API_UNKNOWN;
+
+	ret = MNTRE_LPC_API_UNKNOWN;
+	if (version > 20200000 && version < 20250526) {
+		ret = MNTRE_LPC_API_V1;
+	} else if (version >= 20250526 && version < 20260315) {
+		ret = MNTRE_LPC_API_V2;
+	} else if (version >= 20260315 && version <= 30000101) {
+		ret = MNTRE_LPC_API_V3;
+	}
+	dev_info(dev, "raw version: %u (%s), LPC API version: %d.\n", version,
+		 str, ret);
 	return ret;
 }
 
@@ -269,101 +284,60 @@ static void lpc_remove(struct spi_device *spi)
 }
 
 /* response[] has to have a size of at least 8 bytes! */
-static ssize_t lpc_command(struct lpc_driver_data *lpc, char* cmd, uint8_t *response)
+static ssize_t lpc_command(struct lpc_driver_data *lpc, char command,
+			   uint8_t arg1, uint8_t *response)
 {
 	int ret = 0;
 	memset(response, 0, LPC_RES_SZ);
 
+	int delays[3] = { 50, 50, 50 };
+	if (lpc->api_version >= MNTRE_LPC_API_V2) {
+		/* newer LPC firmware doesn't need huge delays */
+		/* because the response time is minimized */
+		delays[0] = 2;
+		delays[1] = 3;
+		delays[2] = 0;
+	}
+
+	uint8_t cmd[4] = { 0xb5, command, arg1, 0x0 };
+	cmd[3] = lpc_calc_checksum(cmd, 4);
+
 	mutex_lock(&lpc->lock);
-	//dev_err(&lpc->spi->dev, "lpc_command: %s\n", cmd);
-	int len = strlen(cmd);
-	for (int i = 0; i < len; i+=8) {
-		uint8_t xfer[9];
-		memset(xfer, 0, 9);
-		int remain = 8;
-		if (i + 8 >= len) {
-			remain = len - i;
-		}
-		memcpy(xfer, &cmd[i], remain);
-		ret = spi_write(lpc->spi, xfer, 8);
-		udelay(200);
+
+	msleep(delays[0]);
+	ret = spi_write(lpc->spi, cmd, 4);
+	if (ret) {
+		dev_err(&lpc->spi->dev,
+			"lpc_command: %c/%d spi_write failed.\n", command,
+			arg1);
+		mutex_unlock(&lpc->lock);
+		return ret;
 	}
-	//ret = spi_write(lpc->spi, cmd, len);
-	//dev_err(&lpc->spi->dev, "lpc: sent [%s]\n", cmd);
 
-#define RX_SZ 32
-	int done = 0;
-	int delayed = 0;
-	int vcount = 0;
-	char rxbuf[RX_SZ];
-	memset(rxbuf, 0, RX_SZ);
-	int paren = 0;
-	while (!done) {
-		uint8_t c = 0;
-		ret = spi_read(lpc->spi, &c, 1);
-		if (ret) {
-			dev_err(&lpc->spi->dev, "lpc: spi_read failed (%d).\n", ret);
-			break;
-		}
-		if (c == '(') {
-			paren++;
-		}
-		if (c == ')') {
-			paren--;
-
-			if (paren == 0) {
-				// response received
-				if (vcount >= 5) {
-					if (strncmp(rxbuf, "u64 ", 4)) {
-						uint64_t r_u64;
-						if (!kstrtoull(&rxbuf[5], 10, &r_u64)) {
-							dev_err(&lpc->spi->dev, "lpc: parsed u64: %llu.\n", r_u64);
-							*(uint64_t*)response = r_u64;
-						}
-					} else if (strncmp(rxbuf, "i64 ", 4)) {
-						int64_t r_i64;
-						if (!kstrtoull(&rxbuf[5], 10, &r_i64)) {
-							dev_err(&lpc->spi->dev, "lpc: parsed i64: %lld.\n", r_i64);
-							*(int64_t*)response = r_i64;
-						}
-					} else if (strncmp(rxbuf, "f64 ", 4)) {
-						dev_err(&lpc->spi->dev, "lpc: can't parse f64 response yet.\n");
-					}
-				}
-				break;
-			}
-		}
-		if (c == 0 || c == 0xff) {
-			//dev_err(&lpc->spi->dev, "lpc: 00 @ %d/%d.\n", count, vcount);
-			udelay(10);
-			delayed++;
-		} else if (paren == 1) {
-			rxbuf[vcount] = c;
-			vcount++;
-		}
-		if (vcount >= RX_SZ) {
-			dev_err(&lpc->spi->dev, "lpc: max read %d.\n", vcount);
-			break;
-		}
-		if (delayed >= 1000) {
-			dev_err(&lpc->spi->dev, "lpc: timeout %d.\n", delayed);
-			break;
-		}
+	msleep(delays[1]);
+	ret = spi_read(lpc->spi, response, 8);
+	if (ret) {
+		dev_err(&lpc->spi->dev, "lpc_command: %c/%d spi_read failed.\n",
+			command, arg1);
 	}
-	dev_err(&lpc->spi->dev, "lpc: rxbuf [%s]\n", rxbuf);
-	//msleep(500);
-
+	msleep(delays[2]);
 	mutex_unlock(&lpc->lock);
+	if (lpc->api_version >= MNTRE_LPC_API_V3 &&
+	    !lpc_confirm_checksum(response, LPC_RES_SZ)) {
+		dev_err(&lpc->spi->dev,
+			"lpc_command: %c/%d checksum mismatch: %x expected, %x received.\n",
+			command, arg1, lpc_calc_checksum(response, LPC_RES_SZ),
+			response[LPC_RES_SZ - 1]);
+		return -EINVAL;
+	}
 	return ret;
 }
-
-static char uart_resp[9];
 
 static ssize_t show_uart(struct device *dev, struct device_attribute *attr,
 			 char *buf)
 {
-	uart_resp[8] = 0;
-	return snprintf(buf, PAGE_SIZE, "%s", uart_resp);
+	/* not yet implemented */
+	return 0;
 }
 
 /* let LPC output bytes over UART to MNT Desktop Reform control panel */
@@ -373,10 +347,9 @@ static ssize_t store_uart(struct device *dev, struct device_attribute *attr,
 	struct lpc_driver_data *lpc =
 		(struct lpc_driver_data *)dev_get_drvdata(dev);
 	uint8_t discard[8];
-	char cmd[64];
-	snprintf(cmd, (count > 64 ? count : 64), "%s", buf);
-	cmd[63] = 0;
-	lpc_command(lpc, cmd, uart_resp);
+	for (size_t i = 0; i < count; i++) {
+		lpc_command(lpc, 'z', buf[i], discard);
+	}
 	return count;
 }
 
@@ -392,7 +365,7 @@ static ssize_t show_status(struct device *dev, struct device_attribute *attr,
 	struct lpc_driver_data *lpc =
 		(struct lpc_driver_data *)dev_get_drvdata(dev);
 
-	ret = lpc_command(lpc, "(0q)", buffer);
+	ret = lpc_command(lpc, 'q', 0, buffer);
 	if (ret)
 		return 0;
 
@@ -405,6 +378,8 @@ static ssize_t show_status(struct device *dev, struct device_attribute *attr,
 			"%d.%dV %d.%dA %2d%% [status=%d] [API=%d]\n",
 			voltage / 1000, voltage % 1000, amps / 1000,
 			abs(amps % 1000), percentage, status, lpc->api_version);
+
+	return snprintf(buf, PAGE_SIZE, "ok\n");
 }
 
 static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
@@ -416,10 +391,10 @@ static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
 	struct lpc_driver_data *lpc =
 		(struct lpc_driver_data *)dev_get_drvdata(dev);
 
-	ret = lpc_command(lpc, "(cell-mv 0)", buffer);
+	ret = lpc_command(lpc, 'v', 0, buffer);
 	if (ret)
 		return 0;
-	ret = lpc_command(lpc, "(cell-mv 1)", &buffer[8]);
+	ret = lpc_command(lpc, 'v', 1, &buffer[8]);
 	if (ret)
 		return 0;
 
@@ -447,11 +422,17 @@ static ssize_t show_firmware(struct device *dev, struct device_attribute *attr,
 	struct lpc_driver_data *lpc =
 		(struct lpc_driver_data *)dev_get_drvdata(dev);
 
-	ret = lpc_command(lpc, "(0f)", str1);
+	ret = lpc_command(lpc, 'f', 0, str1);
+	if (ret)
+		return 0;
+	ret = lpc_command(lpc, 'f', 1, str2);
+	if (ret)
+		return 0;
+	ret = lpc_command(lpc, 'f', 2, str3);
 	if (ret)
 		return 0;
 
-	return snprintf(buf, PAGE_SIZE, "%s\n", str1);
+	return snprintf(buf, PAGE_SIZE, "%s %s %s\n", str1, str2, str3);
 }
 
 static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
@@ -462,7 +443,7 @@ static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 	struct lpc_driver_data *lpc =
 		(struct lpc_driver_data *)dev_get_drvdata(dev);
 
-	lpc_command(lpc, "(0c)", buffer);
+	lpc_command(lpc, 'c', 0, buffer);
 
 	cap_acc_mah = buffer[0] | (buffer[1] << 8);
 	cap_min_mah = buffer[2] | (buffer[3] << 8);
@@ -479,7 +460,7 @@ static int lpc_power_off(struct sys_off_data *data)
 
 	/* try to shut down power, forever */
 	while (true) {
-		lpc_command(lpc, "(0p)", buffer);
+		lpc_command(lpc, 'p', 1, buffer);
 		msleep(100);
 	}
 	return 0;
@@ -498,7 +479,7 @@ static int get_bat_property(struct power_supply *psy,
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
 		val->intval = POWER_SUPPLY_STATUS_UNKNOWN;
-		ret = lpc_command(lpc, "(0q)", buffer);
+		ret = lpc_command(lpc, 'q', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -523,7 +504,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-		ret = lpc_command(lpc, "(0q)", buffer);
+		ret = lpc_command(lpc, 'q', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -535,7 +516,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
-		ret = lpc_command(lpc, "(0q)", buffer);
+		ret = lpc_command(lpc, 'q', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -556,7 +537,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CAPACITY:
-		ret = lpc_command(lpc, "(0q)", buffer);
+		ret = lpc_command(lpc, 'q', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -574,7 +555,7 @@ static int get_bat_property(struct power_supply *psy,
 
 	case POWER_SUPPLY_PROP_CHARGE_FULL:
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
-		ret = lpc_command(lpc, "(0c)", buffer);
+		ret = lpc_command(lpc, 'c', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -583,7 +564,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
-		ret = lpc_command(lpc, "(0c)", buffer);
+		ret = lpc_command(lpc, 'c', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -591,7 +572,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_EMPTY:
-		ret = lpc_command(lpc, "(0c)", buffer);
+		ret = lpc_command(lpc, 'c', 0, buffer);
 		if (ret)
 			return -EBUSY;
 
