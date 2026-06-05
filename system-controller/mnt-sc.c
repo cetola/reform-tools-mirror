@@ -57,7 +57,12 @@ static int get_bat_property(struct power_supply *psy,
 			    enum power_supply_property psp,
 			    union power_supply_propval *val);
 
-static ssize_t sc_cmdresp(struct mntsc_driver_data *mntsc, char *cmd, uint8_t response[static 8]);
+static ssize_t sc_cmdresp(struct mntsc_driver_data *mntsc, char *cmd,
+			  uint8_t response[static 8]);
+
+static ssize_t sc_cmdresp_retry(struct mntsc_driver_data *mntsc, char *command,
+				char response[static 8]);
+
 /* Send a command and discard the response */
 static char discard_resp[8];
 #define sc_cmd(mntsc, cmd) sc_cmdresp(mntsc, cmd, discard_resp)
@@ -110,7 +115,7 @@ static int bl_update_status(struct backlight_device *bl)
 	struct mntsc_driver_data *mntsc = (struct mntsc_driver_data *)bl_get_data(bl);
 	char cmd[32];
 	snprintf(cmd, 32, "(set-lite %d)", bl->props.brightness);
-	sc_cmd(mntsc, cmd);
+	sc_cmdresp_retry(mntsc, cmd, discard_resp);
 	return 0;
 }
 
@@ -173,16 +178,16 @@ static int mntsc_suspend_cb(struct notifier_block *nb, unsigned long action,
 	switch (action) {
 	case PM_SUSPEND_PREPARE:
 		dev_info(&mntsc->spi->dev, "%s: set brightness %u\n", __func__, 0);
-		sc_cmd(mntsc, "(set-lite 0)");
+		sc_cmdresp_retry(mntsc, "(set-lite 0)", discard_resp);
 		/* power down auxiliary rails */
-		sc_cmd(mntsc, "(soc-susp)");
+		sc_cmdresp_retry(mntsc, "(soc-susp)", discard_resp);
 		break;
 	case PM_POST_SUSPEND:
 		dev_info(&mntsc->spi->dev, "%s: set brightness %u\n", __func__,
 			 mntsc->backlight->props.brightness);
 		bl_update_status(mntsc->backlight);
 		/* power up auxiliary rails */
-		sc_cmd(mntsc, "(soc-psus)");
+		sc_cmdresp_retry(mntsc, "(soc-psus)", discard_resp);
 		break;
 	}
 
@@ -365,14 +370,26 @@ static ssize_t sc_cmdresp(struct mntsc_driver_data *mntsc, char *cmd, uint8_t re
 						uint64_t r_u64;
 						if (!kstrtoull(&rxbuf[5], 10, &r_u64)) {
 							*(uint64_t*)response = r_u64;
+						} else {
+							dev_err(&mntsc->spi->dev, "mntsc: u64 parse error.\n");
+							ret = -EAGAIN;
+							break;
 						}
 					} else if (strncmp(rxbuf, "i64 ", 4)) {
 						int64_t r_i64;
 						if (!kstrtoull(&rxbuf[5], 10, &r_i64)) {
 							*(int64_t*)response = r_i64;
+						} else {
+							dev_err(&mntsc->spi->dev, "mntsc: i64 parse error.\n");
+							ret = -EAGAIN;
+							break;
 						}
 					} else if (strncmp(rxbuf, "f64 ", 4)) {
 						dev_err(&mntsc->spi->dev, "mntsc: can't parse f64 response yet.\n");
+					} else if (strncmp(rxbuf, "err ", 4)) {
+						dev_err(&mntsc->spi->dev, "mntsc: protocol error.\n");
+						ret = -EAGAIN;
+						break;
 					}
 				}
 				break;
