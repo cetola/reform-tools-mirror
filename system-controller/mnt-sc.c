@@ -27,10 +27,10 @@
 #define MNTSC_API_V3 3
 #define MNTSC_API_V4 4
 
-/* array size for lpc response buffers */
+/* array size for SC response buffers */
 #define MNTSC_RES_SZ 9
 
-typedef struct mntsc_driver_data {
+struct mntsc_driver_data {
 	struct spi_device *spi;
 	struct power_supply *bat;
 	struct mutex lock;
@@ -38,7 +38,7 @@ typedef struct mntsc_driver_data {
 	struct gpio_chip gc;
 	struct notifier_block suspend_notifier;
 	uint32_t api_version;
-} lpc_driver_data;
+};
 
 static int mntsc_power_off(struct sys_off_data *data);
 static ssize_t show_status(struct device *dev, struct device_attribute *attr,
@@ -57,7 +57,7 @@ static int get_bat_property(struct power_supply *psy,
 			    enum power_supply_property psp,
 			    union power_supply_propval *val);
 
-static ssize_t sc_cmdresp(struct mntsc_driver_data *lpc, char *cmd, uint8_t response[static 8]);
+static ssize_t sc_cmdresp(struct mntsc_driver_data *mntsc, char *cmd, uint8_t response[static 8]);
 /* Send a command and discard the response */
 static char discard_resp[8];
 #define sc_cmd(mntsc, cmd) sc_cmdresp(mntsc, cmd, discard_resp)
@@ -107,10 +107,10 @@ static int bl_get_brightness(struct backlight_device *bl)
 
 static int bl_update_status(struct backlight_device *bl)
 {
-	struct mntsc_driver_data *lpc = (struct mntsc_driver_data *)bl_get_data(bl);
+	struct mntsc_driver_data *mntsc = (struct mntsc_driver_data *)bl_get_data(bl);
 	char cmd[32];
 	snprintf(cmd, 32, "(set-lite %d)", bl->props.brightness);
-	sc_cmd(lpc, cmd);
+	sc_cmd(mntsc, cmd);
 	return 0;
 }
 
@@ -167,22 +167,22 @@ static int mntsc_gpio_get_direction(struct gpio_chip *gc, unsigned int offset)
 static int mntsc_suspend_cb(struct notifier_block *nb, unsigned long action,
 			void *_data)
 {
-	struct mntsc_driver_data *data =
+	struct mntsc_driver_data *mntsc =
 		container_of(nb, struct mntsc_driver_data, suspend_notifier);
 
 	switch (action) {
 	case PM_SUSPEND_PREPARE:
-		dev_info(&data->spi->dev, "%s: set brightness %u\n", __func__, 0);
-		sc_cmd(data, "(set-lite 0)");
+		dev_info(&mntsc->spi->dev, "%s: set brightness %u\n", __func__, 0);
+		sc_cmd(mntsc, "(set-lite 0)");
 		/* power down auxiliary rails */
-		sc_cmd(data, "(soc-susp)");
+		sc_cmd(mntsc, "(soc-susp)");
 		break;
 	case PM_POST_SUSPEND:
-		dev_info(&data->spi->dev, "%s: set brightness %u\n", __func__,
-			 data->backlight->props.brightness);
-		bl_update_status(data->backlight);
+		dev_info(&mntsc->spi->dev, "%s: set brightness %u\n", __func__,
+			 mntsc->backlight->props.brightness);
+		bl_update_status(mntsc->backlight);
 		/* power up auxiliary rails */
-		sc_cmd(data, "(soc-psus)");
+		sc_cmd(mntsc, "(soc-psus)");
 		break;
 	}
 
@@ -319,12 +319,12 @@ static void mntsc_remove(struct spi_device *spi)
 }
 
 /* response[] has to have a size of at least 8 bytes! */
-static ssize_t sc_cmdresp(struct mntsc_driver_data *lpc, char *cmd, uint8_t response[static 8])
+static ssize_t sc_cmdresp(struct mntsc_driver_data *mntsc, char *cmd, uint8_t response[static 8])
 {
 	int ret = 0;
 	memset(response, 0, MNTSC_RES_SZ);
 
-	mutex_lock(&lpc->lock);
+	mutex_lock(&mntsc->lock);
 	int len = strlen(cmd);
 	for (int i = 0; i < len; i+=8) {
 		uint8_t xfer[9];
@@ -334,7 +334,7 @@ static ssize_t sc_cmdresp(struct mntsc_driver_data *lpc, char *cmd, uint8_t resp
 			remain = len - i;
 		}
 		memcpy(xfer, &cmd[i], remain);
-		ret = spi_write(lpc->spi, xfer, 8);
+		ret = spi_write(mntsc->spi, xfer, 8);
 		udelay(200);
 	}
 
@@ -347,9 +347,9 @@ static ssize_t sc_cmdresp(struct mntsc_driver_data *lpc, char *cmd, uint8_t resp
 	int paren = 0;
 	while (!done) {
 		uint8_t c = 0;
-		ret = spi_read(lpc->spi, &c, 1);
+		ret = spi_read(mntsc->spi, &c, 1);
 		if (ret) {
-			dev_err(&lpc->spi->dev, "lpc: spi_read failed (%d).\n", ret);
+			dev_err(&mntsc->spi->dev, "mntsc: spi_read failed (%d).\n", ret);
 			break;
 		}
 		if (c == '(') {
@@ -372,14 +372,14 @@ static ssize_t sc_cmdresp(struct mntsc_driver_data *lpc, char *cmd, uint8_t resp
 							*(int64_t*)response = r_i64;
 						}
 					} else if (strncmp(rxbuf, "f64 ", 4)) {
-						dev_err(&lpc->spi->dev, "lpc: can't parse f64 response yet.\n");
+						dev_err(&mntsc->spi->dev, "mntsc: can't parse f64 response yet.\n");
 					}
 				}
 				break;
 			}
 		}
 		if (c == 0 || c == 0xff) {
-			//dev_err(&lpc->spi->dev, "lpc: 00 @ %d/%d.\n", count, vcount);
+			//dev_err(&mntsc->spi->dev, "mntsc: 00 @ %d/%d.\n", count, vcount);
 			udelay(10);
 			delayed++;
 		} else if (paren == 1) {
@@ -387,17 +387,17 @@ static ssize_t sc_cmdresp(struct mntsc_driver_data *lpc, char *cmd, uint8_t resp
 			vcount++;
 		}
 		if (vcount >= RX_SZ) {
-			dev_err(&lpc->spi->dev, "lpc: max read %d.\n", vcount);
+			dev_err(&mntsc->spi->dev, "mntsc: max read %d.\n", vcount);
 			break;
 		}
 		if (delayed >= 1000) {
-			dev_err(&lpc->spi->dev, "lpc: timeout %d.\n", delayed);
+			dev_err(&mntsc->spi->dev, "mntsc: timeout %d.\n", delayed);
 			break;
 		}
 	}
-	dev_dbg(&lpc->spi->dev, "lpc: rxbuf [%s]\n", rxbuf);
+	dev_dbg(&mntsc->spi->dev, "mntsc: rxbuf [%s]\n", rxbuf);
 
-	mutex_unlock(&lpc->lock);
+	mutex_unlock(&mntsc->lock);
 	return ret;
 }
 
@@ -427,12 +427,12 @@ static ssize_t show_uart(struct device *dev, struct device_attribute *attr,
 static ssize_t store_uart(struct device *dev, struct device_attribute *attr,
 			  const char *buf, size_t count)
 {
-	struct mntsc_driver_data *lpc =
+	struct mntsc_driver_data *mntsc =
 		(struct mntsc_driver_data *)dev_get_drvdata(dev);
 	char cmd[64];
 	snprintf(cmd, (count > 64 ? count : 64), "%s", buf);
 	cmd[63] = 0;
-	sc_cmdresp_retry(lpc, cmd, uart_resp);
+	sc_cmdresp_retry(mntsc, cmd, uart_resp);
 	return count;
 }
 
@@ -445,10 +445,10 @@ static ssize_t show_status(struct device *dev, struct device_attribute *attr,
 	int16_t amps;
 	uint8_t percentage;
 	uint8_t status;
-	struct mntsc_driver_data *lpc =
+	struct mntsc_driver_data *mntsc =
 		(struct mntsc_driver_data *)dev_get_drvdata(dev);
 
-	ret = sc_cmdresp_retry(lpc, "(0q)", buffer);
+	ret = sc_cmdresp_retry(mntsc, "(0q)", buffer);
 	if (ret)
 		return 0;
 
@@ -460,7 +460,7 @@ static ssize_t show_status(struct device *dev, struct device_attribute *attr,
 	return snprintf(buf, PAGE_SIZE,
 			"%d.%dV %d.%dA %2d%% [status=%d] [API=%d]\n",
 			voltage / 1000, voltage % 1000, amps / 1000,
-			abs(amps % 1000), percentage, status, lpc->api_version);
+			abs(amps % 1000), percentage, status, mntsc->api_version);
 }
 
 static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
@@ -469,13 +469,13 @@ static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
 	int ret = 0;
 	uint8_t buffer[MNTSC_RES_SZ * 2];
 	uint16_t cells[16];
-	struct mntsc_driver_data *lpc =
+	struct mntsc_driver_data *mntsc =
 		(struct mntsc_driver_data *)dev_get_drvdata(dev);
 
-	ret = sc_cmdresp_retry(lpc, "(cell-mv 0)", buffer);
+	ret = sc_cmdresp_retry(mntsc, "(cell-mv 0)", buffer);
 	if (ret)
 		return 0;
-	ret = sc_cmdresp_retry(lpc, "(cell-mv 1)", &buffer[8]);
+	ret = sc_cmdresp_retry(mntsc, "(cell-mv 1)", &buffer[8]);
 	if (ret)
 		return 0;
 
@@ -500,16 +500,16 @@ static ssize_t show_firmware(struct device *dev, struct device_attribute *attr,
 {
 	int ret = 0;
 	uint8_t str1[MNTSC_RES_SZ], str2[MNTSC_RES_SZ], str3[MNTSC_RES_SZ];
-	struct mntsc_driver_data *lpc =
+	struct mntsc_driver_data *mntsc =
 		(struct mntsc_driver_data *)dev_get_drvdata(dev);
 
-	ret = sc_cmdresp_retry(lpc, "(0f)", str1);
+	ret = sc_cmdresp_retry(mntsc, "(0f)", str1);
 	if (ret)
 		return 0;
-	ret = sc_cmdresp_retry(lpc, "(1f)", str1);
+	ret = sc_cmdresp_retry(mntsc, "(1f)", str1);
 	if (ret)
 		return 0;
-	ret = sc_cmdresp_retry(lpc, "(2f)", str1);
+	ret = sc_cmdresp_retry(mntsc, "(2f)", str1);
 	if (ret)
 		return 0;
 
@@ -521,10 +521,10 @@ static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 {
 	uint8_t buffer[MNTSC_RES_SZ];
 	uint16_t cap_acc_mah, cap_min_mah, cap_max_mah;
-	struct mntsc_driver_data *lpc =
+	struct mntsc_driver_data *mntsc =
 		(struct mntsc_driver_data *)dev_get_drvdata(dev);
 
-	sc_cmdresp_retry(lpc, "(0c)", buffer);
+	sc_cmdresp_retry(mntsc, "(0c)", buffer);
 
 	cap_acc_mah = buffer[0] | (buffer[1] << 8);
 	cap_min_mah = buffer[2] | (buffer[3] << 8);
@@ -537,11 +537,11 @@ static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 static int mntsc_power_off(struct sys_off_data *data)
 {
 	uint8_t buffer[MNTSC_RES_SZ];
-	struct mntsc_driver_data *lpc = (struct mntsc_driver_data *)data->cb_data;
+	struct mntsc_driver_data *mntsc = (struct mntsc_driver_data *)data->cb_data;
 
 	/* try to shut down power, forever */
 	while (true) {
-		sc_cmdresp_retry(lpc, "(0p)", buffer);
+		sc_cmdresp_retry(mntsc, "(0p)", buffer);
 		msleep(100);
 	}
 	return 0;
@@ -554,13 +554,13 @@ static int get_bat_property(struct power_supply *psy,
 	int ret = 0;
 	uint8_t buffer[MNTSC_RES_SZ];
 	int milliamp, millivolt;
-	struct mntsc_driver_data *lpc =
+	struct mntsc_driver_data *mntsc =
 		(struct mntsc_driver_data *)power_supply_get_drvdata(psy);
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
 		val->intval = POWER_SUPPLY_STATUS_UNKNOWN;
-		ret = sc_cmdresp_retry(lpc, "(0q)", buffer);
+		ret = sc_cmdresp_retry(mntsc, "(0q)", buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -585,7 +585,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-		ret = sc_cmdresp_retry(lpc, "(0q)", buffer);
+		ret = sc_cmdresp_retry(mntsc, "(0q)", buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -597,7 +597,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
-		ret = sc_cmdresp_retry(lpc, "(0q)", buffer);
+		ret = sc_cmdresp_retry(mntsc, "(0q)", buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -617,7 +617,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CAPACITY:
-		ret = sc_cmdresp_retry(lpc, "(0q)", buffer);
+		ret = sc_cmdresp_retry(mntsc, "(0q)", buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -626,7 +626,7 @@ static int get_bat_property(struct power_supply *psy,
 
 	case POWER_SUPPLY_PROP_CHARGE_FULL:
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
-		ret = sc_cmdresp_retry(lpc, "(0c)", buffer);
+		ret = sc_cmdresp_retry(mntsc, "(0c)", buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -635,7 +635,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
-		ret = sc_cmdresp_retry(lpc, "(0c)", buffer);
+		ret = sc_cmdresp_retry(mntsc, "(0c)", buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -643,7 +643,7 @@ static int get_bat_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGE_EMPTY:
-		ret = sc_cmdresp_retry(lpc, "(0c)", buffer);
+		ret = sc_cmdresp_retry(mntsc, "(0c)", buffer);
 		if (ret)
 			return -EBUSY;
 
@@ -669,7 +669,7 @@ static const struct of_device_id of_mntre_sc_match[] = {
 MODULE_DEVICE_TABLE(of, of_mntre_sc_match);
 
 static struct spi_device_id mntsc_spi_dev_id[] = {
-	{ "mntre-system-controller", 0 },
+	{ "mntre,system-controller", 0 },
 	{},
 };
 MODULE_DEVICE_TABLE(spi, mntsc_spi_dev_id);
@@ -680,7 +680,7 @@ static struct spi_driver mntre_sc = {
 	.driver = {
 		.of_match_table = of_match_ptr(of_mntre_sc_match),
 		.owner = THIS_MODULE,
-		.name = "mnt_syscon",
+		.name = "mnt_sc",
 	},
 	.id_table = mntsc_spi_dev_id,
 };
