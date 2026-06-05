@@ -21,7 +21,6 @@
 #include <linux/suspend.h>
 #include <linux/version.h>
 
-
 #define MNTSC_API_UNKNOWN 0
 #define MNTSC_API_V1 1
 #define MNTSC_API_V2 2
@@ -174,12 +173,19 @@ static int mntsc_suspend_cb(struct notifier_block *nb, unsigned long action,
 	switch (action) {
 	case PM_SUSPEND_PREPARE:
 		dev_info(&data->spi->dev, "%s: set brightness %u\n", __func__, 0);
+		/* TODO abstract as one SC command for SoC suspend that works for all devices */
 		sc_cmd(data, "(set-blgt 0");
+		/* power down usb hub */
+		sc_cmd(data, "(set-gpio 1 0");
+		sc_cmd(data, "(set-gpio 3 0");
 		break;
 	case PM_POST_SUSPEND:
 		dev_info(&data->spi->dev, "%s: set brightness %u\n", __func__,
 			 data->backlight->props.brightness);
+		/* TODO abstract as one SC command for SoC post-suspend */
 		bl_update_status(data->backlight);
+		sc_cmd(data, "(set-gpio 3 1");
+		sc_cmd(data, "(set-gpio 1 1");
 		break;
 	}
 
@@ -304,6 +310,10 @@ static int mntsc_probe(struct spi_device *spi)
 
 static void mntsc_remove(struct spi_device *spi)
 {
+	struct mntsc_driver_data *data =
+		(struct mntsc_driver_data *)dev_get_drvdata(&spi->dev);
+	unregister_pm_notifier(&data->suspend_notifier);
+
 	device_remove_file(&spi->dev, &dev_attr_status);
 	device_remove_file(&spi->dev, &dev_attr_firmware);
 	device_remove_file(&spi->dev, &dev_attr_cells);
