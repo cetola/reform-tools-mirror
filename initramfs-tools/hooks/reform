@@ -25,9 +25,13 @@ fi
 # The switch below creates device-specific initramfs depending on the platform
 # that update-initramfs is run on. For the system images, we would like to
 # create identical images that work on all boards. Thus, if you change anything
-# below, make sure to also adjust the respective initramfs hook in the
+# below, make sure to also adjust the 'reform-mkimage-hook' initramfs hook in the
 # reform-system-image repository.
 case $MACHINE in
+  "MNT Desktop Reform with RCORE RK3588 Module") : ;;
+  "MNT Pocket Reform with BPI-CM4 Module") : ;;
+  "MNT Pocket Reform with i.MX8MP Module") : ;;
+  "MNT Pocket Reform with RCORE RK3588 Module") : ;;
   "MNT Reform 2") : ;;
   "MNT Reform 2 HDMI") : ;;
   "MNT Reform 2 with BPI-CM4 Module") : ;;
@@ -40,12 +44,21 @@ case $MACHINE in
     [ "${verbose}" = "y" ] && echo "Adding /usr/bin/dmesg"
     copy_exec /usr/bin/dmesg
     ;;
-  "MNT Reform 2 with QUASAR QCS8550 Module") : ;;
-  "MNT Reform 2 with RCORE RK3588 Module") : ;;
+  "MNT Pocket Reform with QUASAR QCS6490 Module" | \
+    "MNT Reform 2 with QUASAR QCS6490 Module" | \
+    "MNT Reform 2 with QUASAR QCS8550 Module" | \
+    "MNT Reform Next with QUASAR QCS6490 Module")
+    # firmware required by Quasar QCS6490 variants
+    # FIXME: find out how to make this happen automatically via the connection
+    #        of kernel modules to these firmware files
+    for f in qcs6490/qupv3fw.elf a660_sqe.fw a660_gmu.bin; do
+      # shellcheck disable=SC2154
+      [ "${verbose}" = "y" ] && echo "Adding firmware qcom/$f"
+      copy_file firmware "/lib/firmware/qcom/$f"
+    done
+    ;;
   "MNT Reform 2 with RCORE-DSI RK3588 Module") : ;;
-  "MNT Pocket Reform with i.MX8MP Module") : ;;
-  "MNT Pocket Reform with BPI-CM4 Module") : ;;
-  "MNT Pocket Reform with RCORE RK3588 Module") : ;;
+  "MNT Reform 2 with RCORE RK3588 Module") : ;;
   "MNT Reform Next with RCORE RK3588 Module") : ;;
   "")
     echo "W: unable to deduce target machine for reform initramfs-hook" >&2

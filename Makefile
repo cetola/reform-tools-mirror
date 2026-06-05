@@ -17,11 +17,15 @@ sysconfdir = /etc
 
 BINPROGS=$(wildcard bin/*)
 MAN1=$(patsubst bin/%,man/%.1,$(BINPROGS))
+REFORM_CHECK_INSTALLED_DISTRO ?= $(shell sh -c .\ reform-check/common.sh\;\ detect_backend_from_os_release)
+REFORM_CHECK_INSTALLED_BACKEND=reform-check/distro/$(REFORM_CHECK_INSTALLED_DISTRO).sh
 
-
+# Plymouth integration is optional. If the build host doesn't have
+# it, skip building and installing the boot splash bits.
+HAVE_PLYMOUTH := $(shell command -v pkgconf >/dev/null 2>&1 && pkgconf --exists ply-splash-core 2>/dev/null && echo yes)
 
 .PHONY: all
-all: man plymouth
+all: man $(if $(HAVE_PLYMOUTH),plymouth)
 
 .PHONY: man
 man: $(MAN1)
@@ -75,10 +79,14 @@ plymouth/background.png: ./share/backgrounds/mnt-reform-next-y2k.jpg
 	convert $< -resize 1920x1080 $@
 
 .PHONY: install
-install: install-arch install-indep
+install: install-indep $(if $(HAVE_PLYMOUTH),install-plymouth) $(if $(filter debian,$(REFORM_CHECK_INSTALLED_DISTRO)),install-debian-tooling)
+ifneq ($(HAVE_PLYMOUTH),yes)
+	@echo "W: ply-splash-core not found, plymouth integration was skipped (no boot splash)." >&2
+	@echo "W: install plymouth dev files (Arch: 'plymouth'; Debian: 'libplymouth-dev') and re-run 'make install' to include it." >&2
+endif
 
-.PHONY: install-arch
-install-arch: plymouth/background.png plymouth/monobar.so
+.PHONY: install-plymouth
+install-plymouth: plymouth/background.png plymouth/monobar.so
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/initramfs-tools/hooks
 	$(INSTALL)     -t $(DESTDIR)$(datadir)/initramfs-tools/hooks initramfs-tools/hooks/reform-plymouth
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/plymouth/themes/reform-y2k
@@ -115,25 +123,14 @@ install-indep: $(MAN1)
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/pulseaudio/alsa-mixer/profile-sets audio/reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(bindir)
 	$(INSTALL)     -t $(DESTDIR)$(bindir) $(BINPROGS)
-	$(INSTALL)     -d $(DESTDIR)$(datadir)/flash-kernel/preboot.d
-	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/flash-kernel/preboot.d flash-kernel/preboot.d/00reform2_preboot
-	$(INSTALL)     -d $(DESTDIR)$(datadir)/flash-kernel/ubootenv.d
-	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/flash-kernel/ubootenv.d flash-kernel/ubootenv.d/00reform2_ubootenv
-	$(INSTALL)     -d $(DESTDIR)$(datadir)/initramfs-tools/hooks
-	$(INSTALL)     -t $(DESTDIR)$(datadir)/initramfs-tools/hooks initramfs-tools/hooks/reform
-	$(INSTALL)     -d $(DESTDIR)$(datadir)/initramfs-tools/modules.d
-	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/initramfs-tools/modules.d initramfs-tools/reform.conf
-	$(INSTALL)     -d $(DESTDIR)$(datadir)/initramfs-tools/scripts/init-top
-	$(INSTALL)     -t $(DESTDIR)$(datadir)/initramfs-tools/scripts/init-top initramfs-tools/scripts/reform
-	$(INSTALL)     -d $(DESTDIR)$(datadir)/kernel/postinst.d
-	$(INSTALL)     -t $(DESTDIR)$(datadir)/kernel/postinst.d kernel/zz-reform-tools
-	$(INSTALL)     -t $(DESTDIR)$(datadir)/kernel/postinst.d kernel/zz-reform-bootspec
 	$(INSTALL)     -d $(DESTDIR)$(libexecdir)/reform-tools
 	$(INSTALL)     -t $(DESTDIR)$(libexecdir)/reform-tools libexec/reform-tools/reform-tray.py
 	$(INSTALL)     -t $(DESTDIR)$(libexecdir)/reform-tools libexec/reform-tools/reform-wallpaper.py
 	$(INSTALL)     -t $(DESTDIR)$(libexecdir)/reform-tools libexec/reform-tools/reform-power-daemon
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/reform-tools/machines
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/reform-tools/machines machines/*
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/reform-tools reform-check/common.sh
+	$(INSTALLDATA) $(REFORM_CHECK_INSTALLED_BACKEND) $(DESTDIR)$(datadir)/reform-tools/distro.sh
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/modprobe.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/modprobe.d modprobe.d/reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/glib-2.0/schemas
@@ -147,8 +144,6 @@ install-indep: $(MAN1)
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/systemd/sleep.conf.d systemd/reform-sleep.conf
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/systemd/system
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/systemd/system systemd/reform-hw-setup.service systemd/reform-sleep.service systemd/reform-power-daemon.service
-	$(INSTALL)     -d $(DESTDIR)$(datadir)/u-boot-menu/conf.d
-	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/u-boot-menu/conf.d u-boot-menu/reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/dracut/dracut.conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/dracut/dracut.conf.d dracut/20-pocket-reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(libdir)/sddm/sddm.conf.d
@@ -165,6 +160,44 @@ install-indep: $(MAN1)
 	$(INSTALLDATA) -t $(DESTDIR)$(sysconfdir)/profile.d etc/profile.d/reform-mali.sh
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/doc/reform-tools/examples
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/doc/reform-tools/examples examples/keyboard_rainbow.py
+	$(INSTALL)     -d $(DESTDIR)$(libdir)/kernel/install.d/
+	$(INSTALL)     -t $(DESTDIR)$(libdir)/kernel/install.d/ kernel-install/59-reform-ukiconf.install
+	$(INSTALL)     -t $(DESTDIR)$(libdir)/kernel/install.d/ kernel-install/91-reform-bootaa64.install
+	if [ -e "reform-check/distro/unknown.sh" ]; then \
+		echo "E: reform-check/distro/unknown.sh must never exist" >&2; \
+		exit 1; \
+	fi
+	if [ "$(REFORM_CHECK_INSTALLED_DISTRO)" = "unknown" ]; then \
+		echo "E: unable to detect your distro" >&2; \
+		exit 1; \
+	fi
+	if [ ! -r "$(REFORM_CHECK_INSTALLED_BACKEND)" ]; then \
+		echo "E: $(REFORM_CHECK_INSTALLED_BACKEND) is unreadable" >&2; \
+		exit 1; \
+	fi
+
+# Tooling configs that only make sense on Debian-based systems:
+# flash-kernel, initramfs-tools, u-boot-menu, and Debian's kernel
+# postinst.d hook convention. Wired into 'install' only when the
+# detected distro is debian.
+.PHONY: install-debian-tooling
+install-debian-tooling:
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/flash-kernel/preboot.d
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/flash-kernel/preboot.d flash-kernel/preboot.d/00reform2_preboot
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/flash-kernel/ubootenv.d
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/flash-kernel/ubootenv.d flash-kernel/ubootenv.d/00reform2_ubootenv
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/initramfs-tools/hooks
+	$(INSTALL)     -t $(DESTDIR)$(datadir)/initramfs-tools/hooks initramfs-tools/hooks/reform
+	$(INSTALL)     -t $(DESTDIR)$(datadir)/initramfs-tools/hooks initramfs-tools/hooks/reform_set_root
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/initramfs-tools/modules.d
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/initramfs-tools/modules.d initramfs-tools/reform.conf
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/initramfs-tools/scripts/init-top
+	$(INSTALL)     -t $(DESTDIR)$(datadir)/initramfs-tools/scripts/init-top initramfs-tools/scripts/reform
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/kernel/postinst.d
+	$(INSTALL)     -t $(DESTDIR)$(datadir)/kernel/postinst.d kernel/zz-reform-tools
+	$(INSTALL)     -t $(DESTDIR)$(datadir)/kernel/postinst.d kernel/zz-reform-bootspec
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/u-boot-menu/conf.d
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/u-boot-menu/conf.d u-boot-menu/reform.conf
 
 .PHONY: clean
 clean:
@@ -174,12 +207,12 @@ clean:
 lint:
 	clang-format lpc/reform2_lpc.c | diff -u lpc/reform2_lpc.c -
 	shfmt --posix --simplify --binary-next-line --case-indent --indent 2 --diff \
-		bin kernel/* initramfs-tools/*/* flash-kernel/*/*
+		bin kernel/* initramfs-tools/*/* flash-kernel/*/* reform-check/*.sh reform-check/distro/*.sh kernel-install/*
 	shfmt --language-dialect=bash --simplify --binary-next-line --case-indent --indent 2 --diff \
 		libexec/reform-tools/reform-power-daemon
 	black --check --diff bin/reform-compstat libexec/reform-tools/reform-tray.py libexec/reform-tools/reform-wallpaper.py examples/keyboard_rainbow.py
 	black --line-length 120 --check --diff bin/reform-mcu-tool
-	shellcheck bin/* kernel/* initramfs-tools/*/* flash-kernel/*/* libexec/reform-tools/reform-power-daemon
+	shellcheck bin/* kernel/* initramfs-tools/*/* flash-kernel/*/* reform-check/*.sh reform-check/distro/*.sh libexec/reform-tools/reform-power-daemon kernel-install/*
 
 test:
 	# check the validity of gschema overrides
@@ -188,3 +221,45 @@ test:
 	echo '<schemalist></schemalist>' > schemas/dummy.gschema.xml
 	glib-compile-schemas --dry-run --strict schemas
 	rm schemas/dummy.gschema.xml
+	set -e; for backend in reform-check/distro/*.sh; do \
+		backend_name=$$(basename "$$backend"); \
+		backend_dir=$$(dirname "$$backend"); \
+		BACKEND="$$backend" BACKEND_DIR="$$backend_dir" sh -ec '\
+			. reform-check/common.sh; \
+			. "$$BACKEND"; \
+			# BACKEND_MAIN_FLOW_READY marks that this backend is wired into \
+			# the shared reform-check flow and expected to implement the full \
+			# backend interface below. Experimental backends can leave this \
+			# unset or set it to no until they are ready. \
+			test "$${BACKEND_MAIN_FLOW_READY:-no}" = yes; \
+			for backend_fn in \
+				backend_name \
+				backend_validate_options \
+				backend_preflight_checks \
+				backend_pkg_installed \
+				backend_pkg_version \
+				backend_pkg_verify \
+				backend_kernel_pkg_name \
+				backend_kernel_headers_pkg_name \
+				backend_tools_pkg_name \
+				backend_fwupd_pkg_name \
+				backend_jq_pkg_name \
+				backend_mcu_tool_pkg_name \
+				backend_running_kernel_pkg_installed \
+				backend_running_kernel_headers_pkg_installed \
+				backend_running_kernel_headers_pkg_name \
+				backend_running_kernel_matches_main_pkg \
+				backend_kernel_artifact_checks \
+				backend_skel_profile_checks \
+				backend_repo_checks \
+				backend_repo_online_checks \
+				backend_boot_tool_checks \
+				backend_modules_check \
+				backend_initramfs_checks \
+				backend_distro_specific_checks; do \
+				command -v "$$backend_fn" >/dev/null 2>&1 || { \
+					echo "$$BACKEND: missing $$backend_fn" >&2; \
+					exit 1; \
+				}; \
+			done'; \
+	done

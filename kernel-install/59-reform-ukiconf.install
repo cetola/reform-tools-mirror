@@ -1,0 +1,46 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3-or-later
+#
+# /usr/lib/kernel/install.d/60-ukify.install searches for uki.conf in the
+# following directories (in that order) and uses the first it finds:
+#
+#  * /etc/kernel
+#  * /run/kernel
+#  * /usr/local/lib/kernel
+#  * /usr/lib/kernel
+#
+# We must not change content in /usr (systemd-ukify ships a commented out
+# /usr/lib/kernel/uki.conf) and we should not write into /etc/kernel/uki.conf
+# in case the system admin wants to override this.
+#
+# So instead, we populate /run/kernel/uki.conf with the DeviceTreeAuto setting
+# assembled from the DTBPATH properties found in the
+# /usr/share/reform-tools/machines/*.conf files.
+#
+# Since the path of the DeviceTreeAuto includes the kernel version, we have to
+# re-generate /run/kernel/uki.conf every time.
+
+set -e
+
+KERNEL_VERSION="${2:?}"
+
+mkdir -p /run/kernel
+printf "[UKI]\nDeviceTreeAuto=" >"/run/kernel/uki.conf"
+for CONF in /usr/share/reform-tools/machines/*.conf; do
+  # shellcheck disable=SC1090
+  . "$CONF"
+  path="/usr/lib/linux-image-$KERNEL_VERSION/$DTBPATH"
+  if [ ! -e "$path" ]; then
+    echo "W: $path does not exist, not adding it to /run/kernel/uki.conf" >&2
+    continue
+  fi
+  printf " %s" "$path" >>"/run/kernel/uki.conf"
+done
+echo >>"/run/kernel/uki.conf"
+
+if [ "$KERNEL_INSTALL_VERBOSE" -gt 0 ]; then
+  echo "I: contents of /run/kernel/uki.conf:" >&2
+  cat /run/kernel/uki.conf >&2
+fi
+
+exit 0
