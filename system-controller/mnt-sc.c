@@ -109,7 +109,7 @@ static int bl_update_status(struct backlight_device *bl)
 {
 	struct mntsc_driver_data *lpc = (struct mntsc_driver_data *)bl_get_data(bl);
 	char cmd[32];
-	snprintf(cmd, 32, "(set-blgt %d)", bl->props.brightness);
+	snprintf(cmd, 32, "(set-lite %d)", bl->props.brightness);
 	sc_cmd(lpc, cmd);
 	return 0;
 }
@@ -173,19 +173,16 @@ static int mntsc_suspend_cb(struct notifier_block *nb, unsigned long action,
 	switch (action) {
 	case PM_SUSPEND_PREPARE:
 		dev_info(&data->spi->dev, "%s: set brightness %u\n", __func__, 0);
-		/* TODO abstract as one SC command for SoC suspend that works for all devices */
-		sc_cmd(data, "(set-blgt 0");
-		/* power down usb hub */
-		sc_cmd(data, "(set-gpio 1 0");
-		sc_cmd(data, "(set-gpio 3 0");
+		sc_cmd(data, "(set-lite 0)");
+		/* power down auxiliary rails */
+		sc_cmd(data, "(soc-susp)");
 		break;
 	case PM_POST_SUSPEND:
 		dev_info(&data->spi->dev, "%s: set brightness %u\n", __func__,
 			 data->backlight->props.brightness);
-		/* TODO abstract as one SC command for SoC post-suspend */
 		bl_update_status(data->backlight);
-		sc_cmd(data, "(set-gpio 3 1");
-		sc_cmd(data, "(set-gpio 1 1");
+		/* power up auxiliary rails */
+		sc_cmd(data, "(soc-psus)");
 		break;
 	}
 
