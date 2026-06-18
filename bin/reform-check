@@ -316,6 +316,12 @@ case "$MODEL" in
     else
       echo "I: Install ${PKG_REFORM_MCU_TOOL:-reform-tools} and ${PKG_JQ:-jq} to query Pocket controller and keyboard firmware versions" >&2
     fi
+
+    panel_version="$(cat "/sys/devices/platform/fde30000.dsi/fde30000.dsi.0/mnt_pocket_reform_panel_version")"
+    case $panel_version in
+      1 | 2) echo "I: Version of Pocket Reform panel: $panel_version" >&2 ;;
+      *) echo "W: Unknown panel version: $panel_version" >&2 ;;
+    esac
     ;;
 esac
 
