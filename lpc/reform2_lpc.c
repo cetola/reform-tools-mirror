@@ -36,6 +36,12 @@ typedef struct lpc_driver_data {
 	uint32_t api_version;
 } lpc_driver_data;
 
+static int force_backlight_control = 0;
+module_param(force_backlight_control, int,
+	     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+MODULE_PARM_DESC(force_backlight_control,
+		 "Force PWM based backlight control by System Controller");
+
 static int lpc_probe(struct spi_device *spi);
 static void lpc_remove(struct spi_device *spi);
 static int lpc_power_off(struct sys_off_data *data);
@@ -247,14 +253,15 @@ static int lpc_probe(struct spi_device *spi)
 	}
 
 	/* for MNT Pocket Reform with Display Version 2, the
-     system controller has to control the backlight
-     directly via PWM, but it must not do that on
-     other versions of the display. */
+	   system controller has to control the backlight
+	   directly via PWM, but it must not do that on
+	   other versions of the display. */
 	__mnt_pocket_reform_get_panel_version =
 		(void *)__symbol_get("mnt_pocket_reform_get_panel_version");
 
-	if (__mnt_pocket_reform_get_panel_version &&
-	    __mnt_pocket_reform_get_panel_version() == 2) {
+	if (force_backlight_control ||
+	    (__mnt_pocket_reform_get_panel_version &&
+	     __mnt_pocket_reform_get_panel_version() == 2)) {
 		dev_info(
 			&spi->dev,
 			"enabling backlight control for MNT Pocket Reform with "
@@ -279,8 +286,6 @@ static void lpc_remove(struct spi_device *spi)
 	device_remove_file(&spi->dev, &dev_attr_cells);
 	device_remove_file(&spi->dev, &dev_attr_capacity);
 	device_remove_file(&spi->dev, &dev_attr_uart);
-
-	// spi_controller_put(spi->controller);
 }
 
 /* response[] has to have a size of at least 8 bytes! */
@@ -340,15 +345,15 @@ static ssize_t show_uart(struct device *dev, struct device_attribute *attr,
 	return 0;
 }
 
-/* let LPC output bytes over UART to MNT Desktop Reform control panel */
+/* manually send raw command to LPC */
 static ssize_t store_uart(struct device *dev, struct device_attribute *attr,
 			  const char *buf, size_t count)
 {
 	struct lpc_driver_data *lpc =
 		(struct lpc_driver_data *)dev_get_drvdata(dev);
 	uint8_t discard[8];
-	for (size_t i = 0; i < count; i++) {
-		lpc_command(lpc, 'z', buf[i], discard);
+	if (count >= 2) {
+		lpc_command(lpc, buf[1], buf[0], discard);
 	}
 	return count;
 }
@@ -531,7 +536,7 @@ static int get_bat_property(struct power_supply *psy,
 		}
 
 		/* system controller and linux disagree on which sign
-     * means charging and which means discharging */
+		 * means charging and which means discharging */
 		val->intval = -milliamp * 1000;
 
 		break;
@@ -542,8 +547,8 @@ static int get_bat_property(struct power_supply *psy,
 			return -EBUSY;
 
 		/* don't trigger upower emergency shutdown in case
-     * of faulty data
-     * (normally happens at 5% or less) */
+		 * of faulty data
+		 * (normally happens at 5% or less) */
 		int gauge = buffer[4];
 		if (gauge < 6)
 			gauge = 6;
@@ -604,17 +609,16 @@ static struct spi_device_id g_spi_dev_id_list[] = {
 MODULE_DEVICE_TABLE(spi, g_spi_dev_id_list);
 
 static struct spi_driver g_spi_driver = {
-    .probe = lpc_probe,
-    .remove = lpc_remove,
-    .driver =
-        {
-            .of_match_table = of_match_ptr(of_tis_spi_match),
-            .owner = THIS_MODULE,
-            .name = "reform2_lpc",
-        },
-    .id_table = g_spi_dev_id_list,
+	.probe = lpc_probe,
+	.remove = lpc_remove,
+	.driver = {
+		.of_match_table = of_match_ptr(of_tis_spi_match),
+		.owner = THIS_MODULE,
+		.name = "reform2_lpc",
+	},
+	.id_table = g_spi_dev_id_list,
 };
 module_spi_driver(g_spi_driver);
 
-MODULE_DESCRIPTION("Reform 2 LPC Driver");
+MODULE_DESCRIPTION("MNT Reform 2 LPC Driver");
 MODULE_LICENSE("GPL");
