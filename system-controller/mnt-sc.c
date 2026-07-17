@@ -3,7 +3,7 @@
  * Copyright 2022 nanocodebug <nanocodebug@gmail.com>
  * Copyright 2023 Michael Fincham <michael@hotplate.co.nz>
  * Copyright 2024 Michal Suchánek <hramrach@gmail.com>
- * Copyright 2024-2026 Lucie Lukas Hartmann <lukas@mntre.com>
+ * Copyright 2024-2026 Lucie Hartmann <lucie@mntre.com>
  * Copyright 2023-2025 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
  */
 
@@ -282,7 +282,7 @@ static int mntsc_probe(struct spi_device *spi)
 	if (backlight && of_device_is_available(backlight)) {
 		dev_dbg(
 			&spi->dev,
-			"enabling PWM display backlight control by MNT System Controler.\n");
+			"enabling PWM display backlight control by MNT System Controller.\n");
 		data->backlight = mntsc_create_backlight(&spi->dev, data);
 		if (IS_ERR(data->backlight)) {
 			dev_err(&spi->dev, "mntsc_create_backlight failed.\n");
@@ -303,7 +303,7 @@ static int mntsc_probe(struct spi_device *spi)
 	data->gc.owner = THIS_MODULE;
 	data->gc.can_sleep = true;
 	data->gc.names =
-		(const char *const[]){ "disp_reset", "hub_pwr_en", "pcie_pwr_en", "3v3_en", "uswitch_en", "disp_bl_pwr_en" };
+		(const char *const[]){ "disp_reset", "hub_pwr_en", "pcie_pwr_en", "3v3_en", "uswitch_off", "disp_bl_pwr_en" };
 
 	spi_controller_get(spi->controller);
 
@@ -347,6 +347,9 @@ static ssize_t sc_cmdresp(struct mntsc_driver_data *mntsc, char *cmd, uint8_t re
 	int done = 0;
 	int delayed = 0;
 	int vcount = 0;
+	// rxbuf is filled up with anything between open and closed parentheses
+	// (the response value)
+	// maximum RX_SZ characters
 	char rxbuf[RX_SZ];
 	memset(rxbuf, 0, RX_SZ);
 	int paren = 0;
@@ -364,33 +367,36 @@ static ssize_t sc_cmdresp(struct mntsc_driver_data *mntsc, char *cmd, uint8_t re
 			paren--;
 
 			if (paren == 0) {
-				// response received
-				if (vcount >= 5) {
-					if (strncmp(rxbuf, "u64 ", 4)) {
+				// list response received
+				if (vcount >= 1) {
+					if (rxbuf[0] >= '0' && rxbuf[0] <= '9') {
 						uint64_t r_u64;
-						if (!kstrtoull(&rxbuf[5], 10, &r_u64)) {
+						if (!kstrtoull(rxbuf, 10, &r_u64)) {
 							*(uint64_t*)response = r_u64;
 						} else {
 							dev_err(&mntsc->spi->dev, "mntsc: u64 parse error.\n");
 							ret = -EAGAIN;
 							break;
 						}
-					} else if (strncmp(rxbuf, "i64 ", 4)) {
+					} else if (vcount >= 2 && rxbuf[0] == '-' && rxbuf[1] >= '0' && rxbuf[1] <= '9') {
 						int64_t r_i64;
-						if (!kstrtoull(&rxbuf[5], 10, &r_i64)) {
+						if (!kstrtoull(rxbuf, 10, &r_i64)) {
 							*(int64_t*)response = r_i64;
 						} else {
 							dev_err(&mntsc->spi->dev, "mntsc: i64 parse error.\n");
 							ret = -EAGAIN;
 							break;
 						}
-					} else if (strncmp(rxbuf, "f64 ", 4)) {
-						dev_err(&mntsc->spi->dev, "mntsc: can't parse f64 response yet.\n");
-					} else if (strncmp(rxbuf, "err ", 4)) {
-						dev_err(&mntsc->spi->dev, "mntsc: protocol error.\n");
+					} else if (vcount >= 4 && strncmp(rxbuf, "err ", 4)) {
+						dev_err(&mntsc->spi->dev, "mntsc: error response: %s\n", rxbuf);
+						ret = -EAGAIN;
+						break;
+					} else {
+						dev_err(&mntsc->spi->dev, "mntsc: couldn't parse response: %s\n", rxbuf);
 						ret = -EAGAIN;
 						break;
 					}
+					// TODO: accept words and strings
 				}
 				break;
 			}
@@ -405,10 +411,12 @@ static ssize_t sc_cmdresp(struct mntsc_driver_data *mntsc, char *cmd, uint8_t re
 		}
 		if (vcount >= RX_SZ) {
 			dev_err(&mntsc->spi->dev, "mntsc: max read %d.\n", vcount);
+			ret = -EAGAIN;
 			break;
 		}
 		if (delayed >= 1000) {
 			dev_err(&mntsc->spi->dev, "mntsc: timeout %d.\n", delayed);
+			ret = -EAGAIN;
 			break;
 		}
 	}
