@@ -278,6 +278,7 @@ static int mntsc_probe(struct spi_device *spi)
 	}
 
 	/* Register backlight device if we have a backlight node */
+	/* TODO: check (mb-ver) >= 2 first */
 	backlight = of_get_child_by_name(spi->dev.of_node, "backlight");
 	if (backlight && of_device_is_available(backlight)) {
 		dev_dbg(
@@ -360,10 +361,10 @@ static ssize_t sc_cmdresp(struct mntsc_driver_data *mntsc, char *cmd, uint8_t re
 			dev_err(&mntsc->spi->dev, "mntsc: spi_read failed (%d).\n", ret);
 			break;
 		}
-		if (c == '(') {
+		else if (c == '(') {
 			paren++;
 		}
-		if (c == ')') {
+		else if (c == ')') {
 			paren--;
 
 			if (paren == 0) {
@@ -401,26 +402,30 @@ static ssize_t sc_cmdresp(struct mntsc_driver_data *mntsc, char *cmd, uint8_t re
 				break;
 			}
 		}
-		if (c == 0 || c == 0xff) {
+		else if (c == 0 || c == 0xff) {
 			//dev_err(&mntsc->spi->dev, "mntsc: 00 @ %d/%d.\n", count, vcount);
 			udelay(10);
 			delayed++;
-		} else if (paren == 1) {
+		}
+		else if (paren == 1) {
 			rxbuf[vcount] = c;
 			vcount++;
 		}
+
 		if (vcount >= RX_SZ) {
 			dev_err(&mntsc->spi->dev, "mntsc: max read %d.\n", vcount);
 			ret = -EAGAIN;
 			break;
 		}
+
 		if (delayed >= 1000) {
 			dev_err(&mntsc->spi->dev, "mntsc: timeout %d.\n", delayed);
 			ret = -EAGAIN;
 			break;
 		}
 	}
-	dev_dbg(&mntsc->spi->dev, "mntsc: rxbuf [%s]\n", rxbuf);
+	//dev_dbg(&mntsc->spi->dev, "mntsc: rxbuf [%s]\n", rxbuf);
+	udelay(200);
 
 	mutex_unlock(&mntsc->lock);
 	return ret;
@@ -688,7 +693,7 @@ static int get_bat_property(struct power_supply *psy,
 }
 
 static const struct of_device_id of_mntre_sc_match[] = {
-	{ .compatible = "mntre,system-controller", .data = 0 },
+	{ .compatible = "mntre,system-controller", .data = NULL },
 	{}
 };
 MODULE_DEVICE_TABLE(of, of_mntre_sc_match);
