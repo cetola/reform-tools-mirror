@@ -1,8 +1,12 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# -*- tab-width: 2; indent-tabs-mode: nil; sh-basic-offset: 2 -*-
+# ex: set tabstop=2 expandtab:
 #
 # MNT Reform Power Daemon
+# Copyright 2026 MNT Research GmbH
 #
-# A prototype daemon for managing power consumption on MNT Pocket Reform, with the goals of:
+# A daemon for managing power consumption on MNT Pocket Reform, with the goals of:
 #
 # - avoiding SoC resets due to current spikes causing voltage dips on 5V rail, on low battery voltage
 # - prolonging runtime on battery
@@ -36,74 +40,86 @@ if ((kbd_ver < min_kbd_ver)); then
   echo "Warning: Please upgrade your Keyboard firmware using gnome-firmware (at least version $min_kbd_ver required)." >&2
 fi
 
+! command -v nvme > /dev/null
+nvme_tool_available=$?
+
 bat_path="/sys/class/power_supply/BAT0"
 gpu_path="/sys/devices/platform/fb000000.gpu/devfreq/fb000000.gpu"
 cpu_path="/sys/devices/system/cpu/cpufreq"
 min_gpu_freq="300000000"
-prev_status=""
+power_state=""
+prev_power_state=""
 
 # Policy when powered by batteries
-#bat_display_backlight_level="40%"
 bat_max_gpu_freq="300000000"
-#bat_cpu_governor="powersave"
+bat_cpu_governor="schedutil"
 bat_keyboard_backlight='xLBRT\x05'
+bat_nvme_pstate="2" # SSD low power state
+bat_full_capacity="80" # minimum battery percentage to allow high power state with AC connectedf but "Not charging"
 
-# Policy when powered by AC adapter
-#ac_display_backlight_level="70%"
+# Policy when powered by AC adapter and batteries have enough charge
+# (intermittent charger dropouts can cause system brownouts on low battery)
 ac_max_gpu_freq="1000000000"
 ac_cpu_governor="schedutil" # TODO could also be: "performance", especially on Classic Reform
 ac_keyboard_backlight='xLBRT\x30'
+ac_nvme_pstate="0" # SSD max power state
+ac_min_capacity="50" # minimum battery percentage to allow high power state with AC connected
 
-while sleep 1; do
+while sleep 0.5; do
   bat_status=$(cat $bat_path/status)
+  bat_capacity=$(cat $bat_path/capacity)
 
-  if [ "$bat_status" = "$prev_status" ]; then
+  if [[ "$bat_status" == "Charging" && "$bat_capacity" -ge "$ac_min_capacity" ]]; then
+    power_state="high"
+  fi
+
+  if [[ "$bat_status" == "Not charging" && "$bat_capacity" -ge "$bat_full_capacity" ]]; then
+    power_state="high"
+  fi
+
+  if [[ "$bat_status" == "Discharging" || "$bat_capacity" -lt "$ac_min_capacity" ]]; then
+    power_state="low"
+  fi
+
+  if [[ "$power_state" == "$prev_power_state" ]]; then
     continue
   fi
 
-  echo "Battery status changed to $bat_status."
+  set +e
+  echo "Power state changed to $power_state ($bat_status / $bat_capacity%)."
 
   # on AC power?
-  if [ "$bat_status" == "Charging" ]; then
-    echo "Charging"
+  if [[ "$power_state" == "high" ]]; then
     echo "simple_ondemand" >"$gpu_path/governor"
     echo "$min_gpu_freq" >"$gpu_path/min_freq"
     echo "$ac_max_gpu_freq" >"$gpu_path/max_freq"
-    # FIXME this triggers a bug in the panel driver when panel v1 is turned off (i.e. on HDMI)
-    # that makes everything crash/freeze, so commented out for now
-    #brightnessctl set "$ac_display_backlight_level"
-
-    # apply keyboard brightness. requires firmware 20251118+
-    for hidraw in /dev/input/by-id/usb-MNT_Pocket_Reform_Input_*hidraw; do
-      [ -e "$hidraw" ] || continue
-      printf "%b" "$ac_keyboard_backlight" >"$hidraw"
-    done
 
     for i in 0 4 6; do
       echo "$ac_cpu_governor" >"$cpu_path/policy$i/scaling_governor"
     done
+
+    if [[ $nvme_tool_available ]]; then
+      for nvme in /dev/nvme?; do
+        nvme set-feature $nvme --feature-id=2 --value=$ac_nvme_pstate
+      done
+    fi
   fi
 
   # on battery power?
-  if [ "$bat_status" == "Discharging" ]; then
-    echo "Discharging"
+  if [[ "$power_state" == "low" ]]; then
     echo "userspace" >"$gpu_path/governor"
     echo "$min_gpu_freq" >"$gpu_path/min_freq"
     echo "$bat_max_gpu_freq" >"$gpu_path/max_freq"
-    # FIXME this triggers a bug in the panel driver when panel v1 is turned off (i.e. on HDMI)
-    # that makes everything crash/freeze, so commented out for now
-    #brightnessctl set "$bat_display_backlight_level"
-
-    # apply keyboard brightness. requires firmware 20251118+
-    for hidraw in /dev/input/by-id/usb-MNT_Pocket_Reform_Input_*hidraw; do
-      [ -e "$hidraw" ] || continue
-      printf "%b" "$bat_keyboard_backlight" >"$hidraw"
-    done
 
     for i in 0 4 6; do
       echo "powersave" >"$cpu_path/policy$i/scaling_governor"
     done
+
+    for nvme in /dev/nvme?; do
+      nvme set-feature /dev/nvme0 --feature-id=2 --value=$bat_nvme_pstate
+    done
   fi
 
-  prev_status="$bat_status"
+  prev_power_state="$power_state"
+  set -e
 done
