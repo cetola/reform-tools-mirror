@@ -148,10 +148,9 @@ static int mntsc_gpio_set(struct gpio_chip *gc, unsigned int offset, int value)
 {
 	int ret;
 	struct mntsc_driver_data *mntsc =
-		(struct mntsc_driver_data *)dev_get_drvdata(gc->parent);
+		(struct mntsc_driver_data *)gpiochip_get_data(gc);
 
-	dev_info(gc->parent, "%s: %s <- %d\n", __func__, gc->names[offset],
-		 value);
+	dev_info(&mntsc->spi->dev, "[mntsc_gpio_set] %d <- %d\n", (int)offset, value);
 	char cmd[32];
 	snprintf(cmd, 32, "(set-gpio %d %d)", offset, value);
 	ret = sc_cmd(mntsc, cmd);
