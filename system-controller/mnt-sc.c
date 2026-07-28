@@ -694,14 +694,12 @@ static int get_bat_property(struct power_supply *psy,
 
 static const struct of_device_id of_mntre_sc_match[] = {
 	{ .compatible = "mntre,system-controller", .data = NULL },
-	{ .compatible = "mntre,system-controller-debug", .data = NULL },
 	{}
 };
 MODULE_DEVICE_TABLE(of, of_mntre_sc_match);
 
 static struct spi_device_id mntsc_spi_dev_id[] = {
 	{ "mntre,system-controller", 0 },
-	{ "mntre,system-controller-debug", 0 },
 	{},
 };
 MODULE_DEVICE_TABLE(spi, mntsc_spi_dev_id);
