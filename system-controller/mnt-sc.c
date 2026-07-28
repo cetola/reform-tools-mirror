@@ -305,6 +305,7 @@ static int mntsc_probe(struct spi_device *spi)
 	data->gc.can_sleep = true;
 	data->gc.names =
 		(const char *const[]){ "disp_reset", "hub_pwr_en", "pcie_pwr_en", "3v3_en", "uswitch_off", "disp_bl_pwr_en" };
+	devm_gpiochip_add_data(&spi->dev, &data->gc, data);
 
 	spi_controller_get(spi->controller);
 
