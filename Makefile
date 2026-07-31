@@ -206,13 +206,14 @@ clean:
 .PHONY: lint
 lint:
 	clang-format lpc/reform2_lpc.c | diff -u lpc/reform2_lpc.c -
+	clang-format system-controller/mnt-sc.c | diff -u system-controller/mnt-sc.c -
 	shfmt --posix --simplify --binary-next-line --case-indent --indent 2 --diff \
 		bin kernel/* initramfs-tools/*/* flash-kernel/*/* reform-check/*.sh reform-check/distro/*.sh kernel-install/*
 	shfmt --language-dialect=bash --simplify --binary-next-line --case-indent --indent 2 --diff \
 		libexec/reform-tools/reform-power-daemon
 	black --check --diff bin/reform-compstat libexec/reform-tools/reform-tray.py libexec/reform-tools/reform-wallpaper.py examples/keyboard_rainbow.py
 	black --line-length 120 --check --diff bin/reform-mcu-tool
-	shellcheck -S warning bin/* kernel/* initramfs-tools/*/* flash-kernel/*/* reform-check/*.sh reform-check/distro/*.sh libexec/reform-tools/reform-power-daemon kernel-install/*
+	shellcheck bin/* kernel/* initramfs-tools/*/* flash-kernel/*/* reform-check/*.sh reform-check/distro/*.sh libexec/reform-tools/reform-power-daemon kernel-install/*
 
 test:
 	# check the validity of gschema overrides

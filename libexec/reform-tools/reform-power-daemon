@@ -40,8 +40,10 @@ if ((kbd_ver < min_kbd_ver)); then
   echo "Warning: Please upgrade your Keyboard firmware using gnome-firmware (at least version $min_kbd_ver required)." >&2
 fi
 
-! command -v nvme >/dev/null
-nvme_tool_available=$?
+nvme_tool_available=false
+if command -v nvme >/dev/null; then
+  nvme_tool_available=true
+fi
 
 bat_path="/sys/class/power_supply/BAT0"
 gpu_path="/sys/devices/platform/fb000000.gpu/devfreq/fb000000.gpu"
@@ -97,7 +99,7 @@ while sleep 0.5; do
       echo "$ac_cpu_governor" >"$cpu_path/policy$i/scaling_governor"
     done
 
-    if [[ $nvme_tool_available ]]; then
+    if [[ $nvme_tool_available == "true" ]]; then
       for nvme in /dev/nvme?; do
         nvme set-feature "$nvme" --feature-id=2 "--value=$ac_nvme_pstate"
       done
