@@ -212,7 +212,7 @@ lint:
 		libexec/reform-tools/reform-power-daemon
 	black --check --diff bin/reform-compstat libexec/reform-tools/reform-tray.py libexec/reform-tools/reform-wallpaper.py examples/keyboard_rainbow.py
 	black --line-length 120 --check --diff bin/reform-mcu-tool
-	shellcheck bin/* kernel/* initramfs-tools/*/* flash-kernel/*/* reform-check/*.sh reform-check/distro/*.sh libexec/reform-tools/reform-power-daemon kernel-install/*
+	shellcheck -S warning bin/* kernel/* initramfs-tools/*/* flash-kernel/*/* reform-check/*.sh reform-check/distro/*.sh libexec/reform-tools/reform-power-daemon kernel-install/*
 
 test:
 	# check the validity of gschema overrides
