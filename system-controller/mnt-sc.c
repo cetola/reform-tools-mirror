@@ -29,6 +29,11 @@
 
 /* array size for SC response buffers */
 #define MNTSC_RES_SZ 9
+#define MNTSC_RX_SZ 32
+#define MNTSC_RX_MAX_DELAY 2000
+#define MNTSC_TX_DELAY 1000
+#define MNTSC_CMD_RETRY_DELAY 1000
+#define MNTSC_MAX_RETRIES 10
 
 struct mntsc_driver_data {
 	struct spi_device *spi;
@@ -114,7 +119,11 @@ static int bl_update_status(struct backlight_device *bl)
 {
 	struct mntsc_driver_data *mntsc = (struct mntsc_driver_data *)bl_get_data(bl);
 	char cmd[32];
-	snprintf(cmd, 32, "(set-lite %d)", bl->props.brightness);
+	if (backlight_is_blank(bl)) {
+		snprintf(cmd, 32, "(set-lite 0)");
+	} else {
+		snprintf(cmd, 32, "(set-lite %d)", bl->props.brightness);
+	}
 	sc_cmdresp_retry(mntsc, cmd, discard_resp);
 	return 0;
 }
@@ -146,20 +155,13 @@ static uint32_t mntsc_get_api_version(struct device *dev)
 
 static int mntsc_gpio_set(struct gpio_chip *gc, unsigned int offset, int value)
 {
-	int ret;
 	struct mntsc_driver_data *mntsc =
 		(struct mntsc_driver_data *)gpiochip_get_data(gc);
 
 	dev_info(&mntsc->spi->dev, "[mntsc_gpio_set] %d <- %d\n", (int)offset, value);
 	char cmd[32];
 	snprintf(cmd, 32, "(set-gpio %d %d)", offset, value);
-	ret = sc_cmd(mntsc, cmd);
-	if (ret) {
-		dev_err(gc->parent, "%s: %d <- %d error %d\n", __func__, offset,
-			value, ret);
-		return ret;
-	}
-
+	sc_cmdresp_retry(mntsc, cmd, discard_resp);
 	return 0;
 }
 
@@ -341,18 +343,17 @@ static ssize_t sc_cmdresp(struct mntsc_driver_data *mntsc, char *cmd, uint8_t re
 		}
 		memcpy(xfer, &cmd[i], remain);
 		ret = spi_write(mntsc->spi, xfer, 8);
-		udelay(200);
+		udelay(MNTSC_TX_DELAY);
 	}
 
-#define RX_SZ 32
 	int done = 0;
 	int delayed = 0;
 	int vcount = 0;
 	// rxbuf is filled up with anything between open and closed parentheses
 	// (the response value)
 	// maximum RX_SZ characters
-	char rxbuf[RX_SZ];
-	memset(rxbuf, 0, RX_SZ);
+	char rxbuf[MNTSC_RX_SZ];
+	memset(rxbuf, 0, MNTSC_RX_SZ);
 	int paren = 0;
 	while (!done) {
 		uint8_t c = 0;
@@ -412,20 +413,19 @@ static ssize_t sc_cmdresp(struct mntsc_driver_data *mntsc, char *cmd, uint8_t re
 			vcount++;
 		}
 
-		if (vcount >= RX_SZ) {
+		if (vcount >= MNTSC_RX_SZ) {
 			dev_err(&mntsc->spi->dev, "mntsc: max read %d.\n", vcount);
 			ret = -EAGAIN;
 			break;
 		}
 
-		if (delayed >= 1000) {
-			dev_err(&mntsc->spi->dev, "mntsc: timeout %d.\n", delayed);
+		if (delayed >= MNTSC_RX_MAX_DELAY) {
+			//dev_err(&mntsc->spi->dev, "mntsc: timeout %d.\n", delayed);
 			ret = -EAGAIN;
 			break;
 		}
 	}
 	//dev_dbg(&mntsc->spi->dev, "mntsc: rxbuf [%s]\n", rxbuf);
-	udelay(200);
 
 	mutex_unlock(&mntsc->lock);
 	return ret;
@@ -435,16 +435,19 @@ static ssize_t sc_cmdresp_retry(struct mntsc_driver_data *mntsc, char* command,
 			   char response[static 8])
 {
 	int ret = -EAGAIN, i;
-	for (i = 0; i < 3 && ret == -EAGAIN; i++)
+	for (i = 0; i < MNTSC_MAX_RETRIES && ret == -EAGAIN; i++) {
 		ret = sc_cmdresp(mntsc, command, response);
+		udelay(MNTSC_CMD_RETRY_DELAY);
+		if (ret != -EAGAIN) break;
+	}
 
-	if (i == 3 && ret == -EAGAIN)
+	if (i == MNTSC_MAX_RETRIES && ret == -EAGAIN)
 		dev_err(&mntsc->spi->dev, "cmd failed after %d retries!", i);
 
 	return ret;
 }
 
-static char uart_resp[9];
+static char uart_resp[MNTSC_RES_SZ];
 
 static ssize_t show_uart(struct device *dev, struct device_attribute *attr,
 			 char *buf)
@@ -554,7 +557,9 @@ static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 	struct mntsc_driver_data *mntsc =
 		(struct mntsc_driver_data *)dev_get_drvdata(dev);
 
-	sc_cmdresp_retry(mntsc, "(0c)", buffer);
+	ret = sc_cmdresp_retry(mntsc, "(0c)", buffer);
+	if (ret)
+		return 0;
 
 	cap_acc_mah = buffer[0] | (buffer[1] << 8);
 	cap_min_mah = buffer[2] | (buffer[3] << 8);

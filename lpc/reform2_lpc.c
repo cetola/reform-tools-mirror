@@ -247,9 +247,9 @@ static int lpc_probe(struct spi_device *spi)
 	}
 
 	/* for MNT Pocket Reform with Display Version 2, the
-     system controller has to control the backlight
-     directly via PWM, but it must not do that on
-     other versions of the display. */
+	   system controller has to control the backlight
+	   directly via PWM, but it must not do that on
+	   other versions of the display. */
 	__mnt_pocket_reform_get_panel_version =
 		(void *)__symbol_get("mnt_pocket_reform_get_panel_version");
 
