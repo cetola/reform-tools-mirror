@@ -370,7 +370,13 @@ case "$MODEL" in
     "MNT Reform Next with QUASAR QCS6490 Module") SPINUM=4 ;;
 esac
 if [ -e "/sys/bus/spi/drivers/reform2_lpc/spi${SPINUM}.0/firmware" ]; then
-  echo "I: Version of LPC firmware: $(cat /sys/bus/spi/drivers/reform2_lpc/spi${SPINUM}.0/firmware)"
+  case "$MODEL" in "MNT Pocket Reform with "*" Module")
+    echo "I: Version of Pocket Reform Sysctl firmware: $(cat /sys/bus/spi/drivers/reform2_lpc/spi${SPINUM}.0/firmware)"
+    ;;
+  *)
+    echo "I: Version of Classic Reform LPC firmware: $(cat /sys/bus/spi/drivers/reform2_lpc/spi${SPINUM}.0/firmware)"
+    ;;
+  esac
 else
   echo "W: /sys/bus/spi/drivers/reform2_lpc/spi1.0/firmware does not exist -- is the reform2_lpc module loaded?" >&2
 fi
