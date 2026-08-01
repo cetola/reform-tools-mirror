@@ -520,8 +520,16 @@ if [ -e "/etc/modprobe.d/reform.conf" ]; then
   fi
 fi
 
-if [ -e /proc/modules ] && ! grep --quiet '^reform2_lpc ' /proc/modules; then
-  echo "E: reform2_lpc is not loaded (battery status information will be missing)" >&2
+if [ -e /proc/modules ]; then
+  if ! grep --quiet '^reform2_lpc ' /proc/modules; then
+    echo "E: reform2_lpc is not loaded (battery status information might be missing)" >&2
+  fi
+  case "$MODEL" in "MNT Pocket Reform with "*" Module")
+    if ! grep --quiet '^mnt_sc ' /proc/modules; then
+      echo "E: mnt_sc is not loaded (likely broken: battery status, brightness control and poweroff)" >&2
+    fi
+    ;;
+  esac
 fi
 
 if ! backend_modules_check; then
