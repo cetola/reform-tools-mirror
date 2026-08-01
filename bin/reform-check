@@ -370,8 +370,15 @@ if [ -e "/proc/device-tree/chosen/u-boot,version" ]; then
     fi
     echo "I: Version of MNT U-Boot: $version" >&2
   fi
+elif [ -e "/proc/device-tree/chosen/barebox-version" ]; then
+  echo "I: Version of Barebox: $(cat /proc/device-tree/chosen/barebox-version)" >&2
+  if [ -e "/proc/device-tree/chosen/mntre,barebox-model" ]; then
+    echo "I: Model of Barebox: $(cat /proc/device-tree/chosen/mntre,barebox-model)" >&2
+  else
+    echo "W: Unable to determine barebox machine model" >&2
+  fi
 else
-  echo "W: /proc/device-tree/chosen/u-boot,version does not exist -- U-Boot version too old?" >&2
+  echo "W: Unable to retrieve bootloader version" >&2
 fi
 
 if ! BOOT_METHOD="$(backend_boot_tool_checks)"; then
