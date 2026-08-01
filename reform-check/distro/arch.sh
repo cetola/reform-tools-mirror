@@ -145,6 +145,7 @@ backend_boot_tool_checks() {
 backend_modules_check() {
   check_expected_modules \
     updates/dkms/reform2_lpc.ko \
+    kernel/drivers/firmware/mnt-sc.ko \
     updates/dkms/wlan.ko
 }
 

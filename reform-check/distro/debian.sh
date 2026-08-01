@@ -314,6 +314,7 @@ backend_modules_check() {
   # The reform-debian-packages pipeline makes sure that these modules exist.
   check_expected_modules \
     updates/dkms/reform2_lpc.ko \
+    kernel/drivers/firmware/mnt-sc.ko \
     kernel/drivers/gpu/drm/imx/cdns/cdns_mhdp_imx.ko \
     kernel/drivers/gpu/drm/bridge/cadence/cdns-mhdp8546.ko \
     kernel/drivers/net/mdio/mdio-mux-meson-g12a.ko
