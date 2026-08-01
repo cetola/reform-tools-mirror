@@ -331,6 +331,24 @@ case "$MODEL" in
     else
       echo "I: Version of Pocket Reform panel: $(cat "$panel_version_path")" >&2
     fi
+
+    # https://pid.codes/1209/6D07/
+    path_sysctl=$(find_usb_device 1209 6d07 "Pocket_Reform_System_Controller_1.0")
+    if [ -z "$path_sysctl" ]; then
+      path_sysctl=$(find_usb_device 1209 6d07 "Pocket_Reform_System_Controller_2.0")
+    fi
+    if [ -z "$path_sysctl" ]; then
+      echo "W: unable to find USB device 1209:6d07 for MNT Pocket Reform System Controller" >&2
+    fi
+
+    # https://pid.codes/1209/6D06/
+    path_keyb=$(find_usb_device 1209 6d06 "Pocket_Reform_Input_1.0")
+    if [ -z "$path_keyb" ]; then
+      path_keyb=$(find_usb_device 1209 6d06 "Pocket_Reform_Input_2.0")
+    fi
+    if [ -z "$path_keyb" ]; then
+      echo "W: unable to find USB device 1209:6d06 for MNT Pocket Reform Input" >&2
+    fi
     ;;
 esac
 

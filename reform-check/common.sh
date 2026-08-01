@@ -198,3 +198,20 @@ parse_uboot_version() {
   # Finally, if successful, print the MNT U-Boot version for the caller
   echo "$year-$month-$day"
 }
+
+find_usb_device() {
+  result=
+  for p in /sys/bus/usb/devices/*; do
+    [ -e "$p/idVendor" ] || continue
+    [ "$(cat "$p/idVendor")" = "$1" ] || continue
+    [ -e "$p/idProduct" ] || continue
+    [ "$(cat "$p/idProduct")" = "$2" ] || continue
+    [ "$(udevadm info --query=property --property="ID_MODEL" --value "$p")" = "$3" ] || continue
+    if [ -n "$result" ]; then
+      echo "found more than one device matching $1 $2 $3" >&2
+      exit 1
+    fi
+    result="$(realpath -e "$p")"
+  done
+  echo "$result"
+}
