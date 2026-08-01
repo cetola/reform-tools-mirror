@@ -1,3 +1,23 @@
+1.88 (2026-08-01)
+=================
+
+ * schemas/20_reform.gschema.override: Re-enable middle-mouse-button paste
+ * bin/reform-check:
+    - print Pocket Reform panel version
+    - move render access checks to distro backends
+    - print barebox version
+    - check for the presence of keyboard and sysctl usb devices
+    - only check for mnt_sc on pocket reform
+    - check for presence of kernel/drivers/firmware/mnt-sc.ko
+ * power-daemon:
+    - high and low states
+    - charge threshold
+    - nvme power state sketch
+ * initramfs-tools/reform.conf: include mnt-sc and panel-mnt-pocket-reform as
+   mandatory modules/drivers
+ * reform-hw-setup: wait for dwmac_meson8b to be unloadable before rmmod
+
+
 1.87 (2026-05-05)
 =================
 
