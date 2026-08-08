@@ -19,8 +19,8 @@ if ! grep -q "MNT Pocket Reform with RCORE RK3588 Module" /proc/device-tree/mode
   exit 2
 fi
 
-if ! lsmod | grep reform2_lpc; then
-  echo "Fatal: reform2_lpc module not loaded. Please reinstall reform2-lpc-dkms and reboot." >&2
+if ! lsmod | grep -E "(reform2_lpc|mnt_sc)"; then
+	echo "Fatal: neither reform2_lpc nor mnt_sc module loaded. Please upgrade all firmware (using gnome-firmware or fwupdmgr update) and (before rebooting) update these Debian packages: apt update; apt install linux-image-mnt-reform-arm64 reform-tools. Then reboot." >&2
   exit 2
 fi
 
