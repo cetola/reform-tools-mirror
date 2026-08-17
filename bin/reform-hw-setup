@@ -31,15 +31,6 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 init_a311d() {
-  # A311D sound controls
-  # without setting these, there is no UCM profile and messages like this are produced:
-  # no backend DAIs enabled for fe.dai-link-0, possibly missing ALSA mixer-based routing or UCM profile
-  amixer -c 0 sset 'FRDDR_A SINK 1 SEL' 'OUT 1'
-  amixer -c 0 sset 'FRDDR_A SRC 1 EN' 'on'
-  amixer -c 0 sset 'TDMOUT_B SRC SEL' 'IN 0'
-  amixer -c 0 sset 'TDMIN_B SRC SEL' 'IN 1'
-  amixer -c 0 sset 'TODDR_A SRC SEL' 'IN 1'
-
   # Workaround for ethernet PHY reset problem
   if ! modinfo -n mdio_mux_meson_g12a >/dev/null; then
     echo "E: modinfo failed for mdio_mux_meson_g12a (not built as a module?) -- unable to reload"
@@ -67,6 +58,15 @@ init_a311d() {
   # Workaround for SDIO wifi not loading
   echo ffe03000.mmc >/sys/class/mmc_host/mmc2/device/driver/unbind
   echo ffe03000.mmc >/sys/bus/platform/drivers/meson-gx-mmc/bind
+
+  # A311D sound controls
+  # without setting these, there is no UCM profile and messages like this are produced:
+  # no backend DAIs enabled for fe.dai-link-0, possibly missing ALSA mixer-based routing or UCM profile
+  amixer -c 0 sset 'FRDDR_A SINK 1 SEL' 'OUT 1'
+  amixer -c 0 sset 'FRDDR_A SRC 1 EN' 'on'
+  amixer -c 0 sset 'TDMOUT_B SRC SEL' 'IN 0'
+  amixer -c 0 sset 'TDMIN_B SRC SEL' 'IN 1'
+  amixer -c 0 sset 'TODDR_A SRC SEL' 'IN 1'
 }
 
 init_wm8960() {
