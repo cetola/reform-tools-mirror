@@ -319,7 +319,7 @@ case "$MODEL" in
 
     case "$MODEL" in
       "MNT Pocket Reform with BPI-CM4 Module") panel_version_path="/sys/devices/platform/soc/ffd00000.bus/ffd07000.dsi/ffd07000.dsi.0/mnt_pocket_reform_panel_version" ;;
-      "MNT Pocket Reform with i.MX8MP Module") panel_version_path= ;;
+      "MNT Pocket Reform with i.MX8MP Module") panel_version_path="/sys/devices/platform/soc@0/32c00000.bus/32e60000.dsi/32e60000.dsi.0/mnt_pocket_reform_panel_version" ;;
       "MNT Pocket Reform with RCORE RK3588 Module") panel_version_path="/sys/devices/platform/fde30000.dsi/fde30000.dsi.0/mnt_pocket_reform_panel_version" ;;
       "MNT Pocket Reform with QUASAR QCS6490 Module") panel_version_path= ;;
     esac
