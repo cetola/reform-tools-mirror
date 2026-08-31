@@ -362,6 +362,9 @@ if [ "$ZERO" != "yes" ]; then
           if [ "$FORCE" = "yes" ]; then
             echo "Proceeding without user interaction because of --force" >&2
             response="y"
+          elif [ "$DRYRUN" = "yes" ]; then
+            echo "Proceeding without user interaction because of --dry-run" >&2
+            response="y"
           else
             printf "Are you sure you want to proceed? [y/N] "
             read -r response
@@ -385,8 +388,13 @@ if [ "$EMMC_BOOT" = warn ] && [ "$FORCE" != "yes" ]; then
         echo "W: If you flash the wrong bootloader or if the flashing process goes wrong, it is" >&2
         echo "W: possible to soft-brick your board. Restoring it might need some extra hardware." >&2
         echo "W: Please only proceed if you are sure that the benefits outweigh the risks for you." >&2
-        printf "Are you sure you want to proceed? [y/N] "
-        read -r response
+        if [ "$DRYRUN" = "yes" ]; then
+          echo "Proceeding without user interaction because of --dry-run" >&2
+          response="y"
+        else
+          printf "Are you sure you want to proceed? [y/N] "
+          read -r response
+        fi
 
         if [ "$response" != "y" ]; then
           echo "Exiting."
@@ -432,7 +440,14 @@ for dev in "$@"; do
   case $dev in
     emmc | "/dev/${DEV_MMC}"*)
       if [ "$DEV_MMC_BOOT0" = true ]; then
-        echo 0 >"/sys/class/block/${DEV_MMC}boot0/force_ro"
+        if [ "$DRYRUN" = "yes" ]; then
+          echo "S: Simulating: echo 0 >/sys/class/block/${DEV_MMC}boot0/force_ro" >&2
+        else
+          if [ "$VERBOSE" = "yes" ]; then
+            echo "D: Running: echo 0 >/sys/class/block/${DEV_MMC}boot0/force_ro" >&2
+          fi
+          echo 0 >"/sys/class/block/${DEV_MMC}boot0/force_ro"
+        fi
       fi
       ;;
   esac
@@ -455,7 +470,14 @@ for dev in "$@"; do
   case $dev in
     emmc | "/dev/${DEV_MMC}"*)
       if [ "$DEV_MMC_BOOT0" = true ]; then
-        echo 1 >"/sys/class/block/${DEV_MMC}boot0/force_ro"
+        if [ "$DRYRUN" = "yes" ]; then
+          echo "S: Simulating: echo 1 >/sys/class/block/${DEV_MMC}boot0/force_ro" >&2
+        else
+          if [ "$VERBOSE" = "yes" ]; then
+            echo "D: Running: echo 1 >/sys/class/block/${DEV_MMC}boot0/force_ro" >&2
+          fi
+          echo 1 >"/sys/class/block/${DEV_MMC}boot0/force_ro"
+        fi
       fi
       ;;
   esac
