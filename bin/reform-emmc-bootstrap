@@ -141,7 +141,7 @@ esac
 "$@" sh -c '
 set -exuo pipefail
 apt-get update --error-on=any
-if ! dpkg-query --search "/boot/vmlinuz*" >/dev/null; then
+if ! dpkg-query --search "/boot/vmlinuz-*-mnt-reform-arm64" >/dev/null && ! dpkg-query --search "/usr/lib/modules/*-mnt-reform-arm64/vmlinuz" >/dev/null; then
   echo "I: No kernel package installed." >&2
   printf "Do you want this script to install linux-image-mnt-reform-arm64 for you? [y/N] "
   read -r response
@@ -158,7 +158,11 @@ fi
 # also regenerate everything for other installed kernel packages
 # This will find the linux-binary-${kver}-mnt-reform-arm64 package or for
 # kernel versions of 6.18 or older linux-image-${kver}-mnt-reform-arm64
-dpkg-query --search "/boot/vmlinuz*" | sed "s/:.*//" | while read -r pkg; do
+# For kernel version 7.2 and later, vmlinuz is shipped in /usr/lib/modules
+{
+  dpkg-query --search "/boot/vmlinuz-*-mnt-reform-arm64"
+  dpkg-query --search "/usr/lib/modules/*-mnt-reform-arm64/vmlinuz"
+} | sed "s/:.*//" | while read -r pkg; do
   # if a package cannot be downloaded, apt will still exit
   # successfully
   apt-get install --yes --reinstall "$pkg"
