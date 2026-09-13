@@ -165,7 +165,7 @@ if [ "$(id -u)" -ne 0 ]; then
   fi
 
   if [ -e /usr/share/glib-2.0/schemas/20_reform.gschema.override ]; then
-    if ! python3 - /usr/share/glib-2.0/schemas/20_reform.gschema.override <<'END'; then
+    if ! python3 - /usr/share/glib-2.0/schemas/20_reform.gschema.override <<'END'
 import gi
 from gi.repository import GLib, Gio
 import sys
@@ -194,6 +194,7 @@ if not suggestions:
 print("I: the following commands return the respective settings to their defaults")
 print("    " + "\n    ".join(suggestions))
 END
+    then
       echo "I: unable to run gsettings defaults check, skipping." >&2
     fi
   else
