@@ -236,7 +236,14 @@ if [ -z "$(find "/boot" -name "vmlinuz-*")" ]; then
   echo "E: no kernel images were installed into /boot" >&2
   exit 1
 fi
-reform-boot-config --emmc "$(findmnt --noheadings --evaluate --mountpoint / --output SOURCE)"
+reform-boot-config --no-copy-old-boot --force --emmc "$(findmnt --noheadings --evaluate --mountpoint / --output SOURCE)"
+case $(findmnt --fstab --noheadings --mountpoint /boot --output SOURCE) in
+  "/dev/${DEV_MMC}p1") : ;;
+  *)
+    echo "E: reform-boot-config did not add the first partition on eMMC as /boot in /etc/fstab" >&2
+    exit 1
+    ;;
+esac
 '
 
 if [ "$EMMC_BOOT" != false ]; then
