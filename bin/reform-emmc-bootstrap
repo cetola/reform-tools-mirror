@@ -181,22 +181,56 @@ if ! dpkg-query --search "/boot/vmlinuz-*-mnt-reform-arm64" >/dev/null && ! dpkg
     exit 1
   fi
   apt-get install --yes linux-image-mnt-reform-arm64
-else
-  # upgrade linux-image-mnt-reform-arm64 in case that the installed kernel is
-  # not downloadable anymore
-  apt-get install --yes --only-upgrade linux-image-mnt-reform-arm64
 fi
-# also regenerate everything for other installed kernel packages
-# This will find the linux-binary-${kver}-mnt-reform-arm64 package or for
-# kernel versions of 6.18 or older linux-image-${kver}-mnt-reform-arm64
-# For kernel version 7.2 and later, vmlinuz is shipped in /usr/lib/modules
+
+# upgrade linux-image-mnt-reform-arm64 in case that the installed kernel is
+# not downloadable anymore
+apt-get install --yes --only-upgrade linux-image-mnt-reform-arm64
+
+#
+#  version          | package with vmlinuz                  | location of vmlinuz
+# ------------------+---------------------------------------+---------------------------------------------
+#  < 6.19           | linux-image-${kver}-mnt-reform-arm64  | /boot/vmlinuz-*-mnt-reform-arm64
+#  >= 6.19 && < 7.2 | linux-binary-${kver}-mnt-reform-arm64 | /boot/vmlinuz-*-mnt-reform-arm64
+#  >= 7.2           | linux-binary-${kver}-mnt-reform-arm64 | /usr/lib/modules/*-mnt-reform-arm64/vmlinuz
+#
+# With the contents of /boot lost we need to re-download the package containing
+# /boot/vmlinuz-*-mnt-reform-arm64 and to run all the kernel installation
+# scripts, see linux-run-hooks(1).
+#
+# First, re-download and install the packages shipping the kernel in /boot
 {
   dpkg-query --search "/boot/vmlinuz-*-mnt-reform-arm64"
-  dpkg-query --search "/usr/lib/modules/*-mnt-reform-arm64/vmlinuz"
 } | sed "s/:.*//" | while read -r pkg; do
   # if a package cannot be downloaded, apt will still exit
   # successfully
   apt-get install --yes --reinstall "$pkg"
+  # make sure that the respective kernel exists now in /boot
+  if [ -n "$(dpkg --verify "$pkg")" ]; then
+    echo "E: Failed re-installation of $pkg" >&2
+    exit 1
+  fi
+done
+# Then, dpkg-reconfigure the linux-image-${kver}-mnt-reform-arm64 package for
+# each linux-binary-${kver}-mnt-reform-arm64 package that was found. Even if
+# the latter was re-installed before, that will not trigger the kernel
+# installation scripts for that version.
+{
+  dpkg-query --search "/boot/vmlinuz-*-mnt-reform-arm64"
+  dpkg-query --search "/usr/lib/modules/*-mnt-reform-arm64/vmlinuz"
+} | sed "s/:.*//" | while read -r pkg; do
+  case "$pkg" in
+    linux-image-*-mnt-reform-arm64)
+      : # Nothing to do because the package already got re-installed above
+      ;;
+    linux-binary-*-mnt-reform-arm64)
+      dpkg-reconfigure "linux-image-${pkg##linux-binary-}"
+      ;;
+    *)
+      echo "E: unexpected kernel package name: $pkg" >&2
+      exit 1
+      ;;
+  esac
 done
 if [ -z "$(find "/boot" -name "vmlinuz-*")" ]; then
   echo "E: no kernel images were installed into /boot" >&2
