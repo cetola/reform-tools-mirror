@@ -34,8 +34,10 @@ usage() {
   echo "switch) to boot that rootfs." >&2
   echo "" >&2
   echo "Options:" >&2
-  echo "      --emmc Record boot preference in /boot partition on eMMC instead of SD-card." >&2
+  echo "      --emmc             Record boot preference in /boot partition on eMMC instead of SD-card." >&2
   echo "      --no-copy-old-boot Do not copy contents from old /boot partition to new /boot." >&2
+  echo "      --force            Avoid user interaction and automatically unmount, skip warnings," >&2
+  echo "                         create partition tables and copy old /boot contents when needed." >&2
   echo "" >&2
   echo "Instead of using the short-hands sd, ssd, usb or emmc," >&2
   echo "you can choose another root partition by passing" >&2
