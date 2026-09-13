@@ -49,6 +49,53 @@ else
   exit 1
 fi
 
+cat <<END
+
+WARNING: This script will destroy the contents of your eMMC drive and replace
+it with a /boot partition which is able to boot your system on SSD.
+
+WARNING: This operation needs internet access to your Debian apt mirror. Make
+sure that your system is online before proceeding.
+
+END
+printf "Are you sure you want to proceed? [y/N] "
+read -r response
+if [ "$response" != "y" ]; then
+  echo "Exiting."
+  exit
+fi
+
+# This script has two modes: either it is executed from a system on SD-card
+# or from a system on SSD. In the former case, it will run reform-rescue-shell
+# and run the setup code from within a chroot on the SSD. In the latter case,
+# it latter case the setup code will run directly.
+case $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) in
+  "/dev/${DEV_SD}"*) : ;;
+  *)
+    echo "I: Running without chroot isolation of reform-rescue-shell" >&2
+
+    case $(findmnt --fstab --noheadings --mountpoint /boot --output SOURCE) in
+      "/dev/${DEV_MMC}p1") : ;;
+      *)
+        echo "E: The current system does not mount the first partition on eMMC as /boot according to /etc/fstab" >&2
+        exit 1
+        ;;
+    esac
+    if ! mountpoint --quiet "/boot"; then
+      echo "E: /boot has nothing mounted on it" >&2
+      exit 1
+    fi
+    case $(findmnt --noheadings --evaluate --mountpoint /boot --output SOURCE) in
+      "/dev/${DEV_MMC}p1") : ;;
+      *)
+        echo "E: The current system does not have the first partition on eMMC mounted as /boot" >&2
+        exit 1
+        ;;
+    esac
+    umount /boot
+    ;;
+esac
+
 # eMMC device is being used (case 1): mount points are known, show them. Includes swap.
 if [ -n "$(lsblk --noheadings --output=MOUNTPOINT "/dev/${DEV_MMC}")" ]; then
   echo "E: eMMC has the following mounted volumes, unmount them before running this tool" >&2
@@ -80,40 +127,6 @@ if ! get_exclusive_write_lock "/dev/${DEV_MMC}"; then
   exit 1
 fi
 
-# This script has two modes: either it is executed from a system on SD-card
-# or from a system on SSD. In the former case, it will run reform-rescue-shell
-# and run the setup code from within a chroot on the SSD. In the latter case,
-# it latter case the setup code will run directly.
-case $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) in
-  "/dev/${DEV_SD}"*) : ;;
-  *)
-    echo "I: Running without chroot isolation of reform-rescue-shell" >&2
-    echo
-    if mountpoint --quiet "/boot"; then
-      echo "E: /boot still has something mounted on it" >&2
-      exit 1
-    fi
-    # we leave this mounted even after the script has finished, no need for an exit trap
-    mount "/dev/${DEV_MMC}p1" /boot
-    ;;
-esac
-
-cat <<END
-
-WARNING: This script will destroy the contents of your eMMC drive and replace
-it with a /boot partition which is able to boot your system on SSD.
-
-WARNING: This operation needs internet access to your Debian apt mirror. Make
-sure that your system is online before proceeding.
-
-END
-printf "Are you sure you want to proceed? [y/N] "
-read -r response
-if [ "$response" != "y" ]; then
-  echo "Exiting."
-  exit
-fi
-
 # reform-boot-config does the same thing (could share code?)
 parted --script --machine "/dev/$DEV_MMC" "mklabel msdos"
 # create two partitions as expected by reform-check (but we only format /boot)
@@ -126,6 +139,24 @@ mkfs.ext4 -F "/dev/${DEV_MMC}p1"
 # create extlinux directory to make reform-rescue-shell recognize this as a
 # /boot partiton
 debugfs -w "/dev/${DEV_MMC}p1" -R "mkdir /extlinux"
+
+case $(findmnt --noheadings --evaluate --mountpoint / --output SOURCE) in
+  "/dev/${DEV_SD}"*) : ;;
+  *)
+    # The script is executed without reform-rescue-shell isolation
+    # Above we checked that the system's /etc/fstab mounts the first partition
+    # from eMMC on /boot
+    mount /boot
+    # Verify this assumption
+    case $(findmnt --noheadings --evaluate --mountpoint /boot --output SOURCE) in
+      "/dev/${DEV_MMC}p1") : ;;
+      *)
+        echo "E: Mounting /boot did not mount the first partition on eMMC -- check your /etc/fstab" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+esac
 
 set --
 
