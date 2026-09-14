@@ -623,6 +623,64 @@ if test -s /sys/kernel/debug/devices_deferred; then
   cat /sys/kernel/debug/devices_deferred >&2
 fi
 
+if [ ! -e /boot/flash.bin ]; then
+  echo "W: /boot/flash.bin doesn't exist. You can download the latest version by running reform-flash-bootloader as root without arguments" >&2
+  echo "W: Cannot check bootloader on eMMC or SD-Card without /boot/flash.bin." >&2
+elif ! echo "$BOOTLOADER_SHA1  /boot/flash.bin" | sha1sum --strict --check >/dev/null 2>&1; then
+  echo "W: /boot/flash.bin has the wrong sha1. You can update it to the latest version by running reform-flash-bootloader as root without arguments" >&2
+  echo "W: Cannot check bootloader on eMMC or SD-Card without /boot/flash.bin." >&2
+else
+  # The presence of /boot/flash.bin is required for this check because even if
+  # we use sha1sum instead of cmp, we need to know the size of the bootloader.
+  bootloadersize=$(stat --format=%s "/boot/flash.bin")
+
+  if [ "$EMMC_BOOT" != false ]; then
+    realdev="/dev/${DEV_MMC}"
+    if [ "$DEV_MMC_BOOT0" = true ]; then
+      realdev="/dev/${DEV_MMC}boot0"
+    fi
+    if cmp --quiet --bytes="$((bootloadersize - FLASHBIN_OFFSET))" "--ignore-initial=$FLASHBIN_OFFSET:$BOOTLOADER_OFFSET" "/boot/flash.bin" "$realdev" 2>/dev/null; then
+      echo "I: eMMC contains the latest bootloader version ${BOOTLOADER_TAG}" >&2
+    else
+      echo "W: eMMC does not contain latest bootloader" >&2
+      echo "W: You can update it to the latest version by running as root:" >&2
+      echo "reform-flash-bootloader emmc" >&2
+      if [ "$EMMC_BOOT" = warn ]; then
+        echo "I: note that updating the bootloader on eMMC on your platform is not without risk!" >&2
+      fi
+      if cmp --quiet --bytes="$((bootloadersize - FLASHBIN_OFFSET))" "--ignore-initial=0:$BOOTLOADER_OFFSET" /dev/zero "$realdev" 2>/dev/null; then
+        echo "I: The space where the bootloader would've been on eMMC is all zeroes." >&2
+      fi
+    fi
+  fi
+
+  if [ "$SD_BOOT" != false ] && [ -e "/dev/$DEV_SD" ]; then
+    if cmp --quiet --bytes="$((bootloadersize - FLASHBIN_OFFSET))" --ignore-initial="$FLASHBIN_OFFSET:$BOOTLOADER_OFFSET" "/boot/flash.bin" "/dev/$DEV_SD" 2>/dev/null; then
+      echo "I: SD-card contains the latest bootloader version ${BOOTLOADER_TAG}" >&2
+    else
+      echo "W: SD-Card does not contain latest bootloader" >&2
+      echo "W: You can update it to the latest version by running as root:" >&2
+      echo "reform-flash-bootloader sd" >&2
+      if [ "$SD_BOOT" = warn ]; then
+        echo "I: note that updating the bootloader on SD-card on your platform is not without risk!" >&2
+      fi
+      if cmp --quiet --bytes="$((bootloadersize - FLASHBIN_OFFSET))" "--ignore-initial=0:$BOOTLOADER_OFFSET" /dev/zero "/dev/$DEV_SD" 2>/dev/null; then
+        echo "I: The space where the bootloader would've been on SD-Card is all zeroes." >&2
+      fi
+    fi
+  fi
+fi
+
+case "$MODEL" in "MNT Reform 2 with LS1028A Module")
+  if [ ! -e /boot/ls1028a-mhdpfw.bin ]; then
+    echo "W: /boot/ls1028a-mhdpfw.bin doesn't exist" >&2
+    echo "W: You can download the latest version by running reform-flash-bootloader as root without arguments" >&2
+  elif ! echo "fa96b9aa59d7c1e9e6ee1c0375d0bcc8f8e5b78c  /boot/ls1028a-mhdpfw.bin" | sha1sum --strict --check >/dev/null 2>&1; then
+    echo "W: /boot/ls1028a-mhdpfw.bin has the wrong sha1. You can update it to the latest version by running reform-flash-bootloader as root without arguments" >&2
+  fi
+  ;;
+esac
+
 if [ "$OFFLINE" = "yes" ]; then
   echo "I: skipping the remaining checks because --offline was used" >&2
 else
@@ -630,82 +688,4 @@ else
     echo "E: running distro backend online repository checks failed" >&2
     exit 1
   fi
-
-  bootloaderurl="https://source.mnt.re/reform/${BOOTLOADER_PROJECT}/-/jobs/artifacts/${BOOTLOADER_TAG}/raw/$(basename "$DTBPATH" .dtb)-flash.bin?job=build"
-  bootloaderbin=$(mktemp)
-  ret=0
-  download_url_with_sha1 "$bootloaderurl" "$bootloaderbin" "$BOOTLOADER_SHA1" || ret=$?
-  if [ "$ret" != 0 ]; then
-    echo "E: download of $bootloaderurl failed" >&2
-  else
-    if [ ! -e /boot/flash.bin ]; then
-      echo "W: /boot/flash.bin doesn't exist" >&2
-      echo "W: You can download the latest version by running as root:" >&2
-      echo "reform-flash-bootloader" >&2
-    elif ! cmp --quiet /boot/flash.bin "$bootloaderbin"; then
-      echo "W: /boot/flash.bin is not the latest bootloader" >&2
-      echo "W: You can update it to the latest version by running as root:" >&2
-      echo "reform-flash-bootloader" >&2
-    fi
-    bootloadersize=$(stat --format=%s "$bootloaderbin")
-
-    if [ "$EMMC_BOOT" != false ]; then
-      realdev="/dev/${DEV_MMC}"
-      if [ "$DEV_MMC_BOOT0" = true ]; then
-        realdev="/dev/${DEV_MMC}boot0"
-      fi
-      if cmp --quiet --bytes="$((bootloadersize - FLASHBIN_OFFSET))" "--ignore-initial=$FLASHBIN_OFFSET:$BOOTLOADER_OFFSET" "$bootloaderbin" "$realdev" 2>/dev/null; then
-        echo "I: eMMC contains the latest bootloader version ${BOOTLOADER_TAG}" >&2
-      else
-        echo "W: eMMC does not contain latest bootloader" >&2
-        echo "W: You can update it to the latest version by running as root:" >&2
-        echo "reform-flash-bootloader emmc" >&2
-        if [ "$EMMC_BOOT" = warn ]; then
-          echo "I: note that updating the bootloader on eMMC on your platform is not without risk!" >&2
-        fi
-        if cmp --quiet --bytes="$((bootloadersize - FLASHBIN_OFFSET))" "--ignore-initial=0:$BOOTLOADER_OFFSET" /dev/zero "$realdev" 2>/dev/null; then
-          echo "I: The space where the bootloader would've been on eMMC is all zeroes." >&2
-        fi
-      fi
-    fi
-
-    if [ "$SD_BOOT" != false ] && [ -e "/dev/$DEV_SD" ]; then
-      if cmp --quiet --bytes="$((bootloadersize - FLASHBIN_OFFSET))" --ignore-initial="$FLASHBIN_OFFSET:$BOOTLOADER_OFFSET" "$bootloaderbin" "/dev/$DEV_SD" 2>/dev/null; then
-        echo "I: SD-card contains the latest bootloader version ${BOOTLOADER_TAG}" >&2
-      else
-        echo "W: SD-Card does not contain latest bootloader" >&2
-        echo "W: You can update it to the latest version by running as root:" >&2
-        echo "reform-flash-bootloader sd" >&2
-        if [ "$SD_BOOT" = warn ]; then
-          echo "I: note that updating the bootloader on SD-card on your platform is not without risk!" >&2
-        fi
-        if cmp --quiet --bytes="$((bootloadersize - FLASHBIN_OFFSET))" "--ignore-initial=0:$BOOTLOADER_OFFSET" /dev/zero "/dev/$DEV_SD" 2>/dev/null; then
-          echo "I: The space where the bootloader would've been on SD-Card is all zeroes." >&2
-        fi
-      fi
-    fi
-  fi
-  rm "$bootloaderbin"
-
-  case "$MODEL" in "MNT Reform 2 with LS1028A Module")
-    mhdpfwbin=$(mktemp)
-    if download_url_with_sha1 \
-      "https://source.mnt.re/reform/reform-ls1028a-uboot/-/raw/main/ls1028a-mhdpfw.bin" \
-      "$mhdpfwbin" "fa96b9aa59d7c1e9e6ee1c0375d0bcc8f8e5b78c"; then
-      if [ ! -e /boot/ls1028a-mhdpfw.bin ]; then
-        echo "W: /boot/ls1028a-mhdpfw.bin doesn't exist" >&2
-        echo "W: You can download the latest version by running as root:" >&2
-        echo "reform-flash-bootloader" >&2
-      elif ! cmp --quiet /boot/ls1028a-mhdpfw.bin "$mhdpfwbin"; then
-        echo "W: /boot/ls1028a-mhdpfw.bin is not the latest uboot" >&2
-        echo "W: You can update it to the latest version by running as root:" >&2
-        echo "reform-flash-bootloader" >&2
-      fi
-    else
-      echo "E: download of ls1028a-mhdpfw.bin failed" >&2
-    fi
-    rm "$mhdpfwbin"
-    ;;
-  esac
-
 fi
