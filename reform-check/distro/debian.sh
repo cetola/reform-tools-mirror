@@ -356,13 +356,15 @@ backend_repo_checks() {
         PKG="${PKG## }"
         if ! backend_pkg_installed "$PKG"; then
           # Avoid contradictory guidance for the mutually exclusive i.MX8MP wifi packages.
-          if [ "$PKG" = "ezurio-qcacld-2.0-dkms" ] || [ "$PKG" = "reform-qcacld2" ]; then
+          case "$PKG" in ezurio-qcacld-2.0-dkms | reform-qcacld2)
             case "${MODEL:-$(cat /proc/device-tree/model)}" in
               "MNT Pocket Reform with i.MX8MP Module" | "MNT Reform 2 with i.MX8MP Module")
-                continue
+                : # on imx8mp, inform about the absence of qcacld2
                 ;;
+              *) continue ;; # elsewhere, don't inform about its absence
             esac
-          fi
+            ;;
+          esac
           echo "I: $REL of $META is not installed: $PKG" >&2
         fi
       done
