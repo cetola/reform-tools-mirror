@@ -1,4 +1,4 @@
-image: debian:trixie-slim
+image: debian:unstable-slim
 
 build:
   script: |
