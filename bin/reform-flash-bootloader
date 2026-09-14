@@ -423,6 +423,30 @@ for dev in "$@"; do
     *) realdev="$dev" ;;
   esac
 
+  # Check if the target device already contains the expected contents
+  set -- --bytes="$((bootloadersize - FLASHBIN_OFFSET))"
+  if [ "$ZERO" != "yes" ]; then
+    set -- "$@" --ignore-initial="0:$FLASHBIN_OFFSET" - "$IMAGE"
+  else
+    set -- "$@" --bytes="$((bootloadersize - FLASHBIN_OFFSET))" - /dev/zero
+  fi
+  # We use "dd iflag=direct" (which uses O_DIRECT) in the hopes that we read
+  # from the device directly instead of re-using existing caches.
+  if dd if="$realdev" bs=512 skip="$((BOOTLOADER_OFFSET / 512))" count="$(((bootloadersize - FLASHBIN_OFFSET) / 512))" iflag=direct status=none \
+    | cmp "$@"; then
+    if [ "$ZERO" != "yes" ]; then
+      echo "I: $realdev already contains the same bytes as $IMAGE" >&2
+    else
+      echo "I: $realdev already contains zeroes where the bootloader is supposed to be" >&2
+    fi
+    if [ "$FORCE" = "yes" ]; then
+      echo "I: Flashing data to $realdev anyways because of --force" >&2
+    else
+      echo "I: Skipping $realdev without writing data to it" >&2
+      continue
+    fi
+  fi
+
   if [ "$DRYRUN" = "yes" ]; then
     if [ "$ZERO" != "yes" ]; then
       echo "I: Simulate writing $IMAGE to $realdev" >&2
