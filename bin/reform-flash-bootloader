@@ -30,6 +30,8 @@ usage() {
   echo "               flashing offsets. Implies --offline. Requires a custom bootloader binary" >&2
   echo "               via --image. Device short-hands are disabled. Flashing to emmc is" >&2
   echo "               disabled." >&2
+  echo "  --check      Test if flash.bin and requested DEVICE(s) contain the latest bootloader" >&2
+  echo "               and exit zero if yes and non-zero if not." >&2
   echo "  --verbose    Print with higher verbosity." >&2
   echo "  --dry-run    Do not perform the actual flashing." >&2
   echo "" >&2
@@ -47,6 +49,7 @@ ZERO=
 MACHINE=
 VERBOSE=
 DRYRUN=
+CHECK=
 while getopts :hfi:-: OPTCHAR; do
   case "$OPTCHAR" in
     h)
@@ -92,6 +95,7 @@ while getopts :hfi:-: OPTCHAR; do
         zero) ZERO=yes ;;
         verbose) VERBOSE=yes ;;
         dry-run) DRYRUN=yes ;;
+        check) CHECK=yes ;;
         *)
           echo "E: unrecognized option: --$OPTARG" >&2
           exit 1
@@ -208,6 +212,20 @@ for dev in "$@"; do
       ;;
   esac
 done
+
+if [ "$CHECK" = "yes" ]; then
+  if ! echo "$BOOTLOADER_SHA1  /boot/flash.bin" | sha1sum --strict --check >/dev/null 2>&1; then
+    echo "E: SHA1 of /boot/flash.bin does not match" >&2
+    exit 1
+  fi
+  case "$(cat /proc/device-tree/model)" in "MNT Reform 2 with LS1028A Module")
+    if ! echo "fa96b9aa59d7c1e9e6ee1c0375d0bcc8f8e5b78c  /boot/ls1028a-mhdpfw.bin"; then
+      echo "E: SHA1 of /boot/ls1028a-mhdpfw.bin does not match" >&2
+      exit 1
+    fi
+    ;;
+  esac
+fi
 
 if [ "$OFFLINE" != "yes" ]; then
   if echo "$BOOTLOADER_SHA1  /boot/flash.bin" | sha1sum --strict --check >/dev/null 2>&1; then
@@ -347,7 +365,7 @@ done
 # rk3588 and a311d u-boot version 2026-01-11 starts preferring NVMe over eMMC, so warn the
 # user about it in case they have a bootflow on NVMe but want to use eMMC
 # for their /boot instead
-if [ "$ZERO" != "yes" ]; then
+if [ "$ZERO" != "yes" ] && [ "$CHECK" != "yes" ]; then
   case $(findmnt --noheadings --evaluate --mountpoint /boot --output SOURCE) in "/dev/${DEV_MMC}"*)
     case "$(cat /proc/device-tree/model)" in
       "MNT Pocket Reform with BPI-CM4 Module" | \
@@ -381,7 +399,7 @@ if [ "$ZERO" != "yes" ]; then
   esac
 fi
 
-if [ "$EMMC_BOOT" = warn ] && [ "$FORCE" != "yes" ]; then
+if [ "$EMMC_BOOT" = warn ] && [ "$FORCE" != "yes" ] && [ "$CHECK" != "yes" ]; then
   for dev in "$@"; do
     case $dev in
       emmc | "/dev/${DEV_MMC}"*)
@@ -435,6 +453,10 @@ for dev in "$@"; do
   # from the device directly instead of re-using existing caches.
   if dd if="$realdev" bs=512 skip="$((BOOTLOADER_OFFSET / 512))" count="$(((bootloadersize - FLASHBIN_OFFSET) / 512))" iflag=direct status=none \
     | cmp "$@"; then
+    if [ "$CHECK" = "yes" ]; then
+      echo "I: $realdev contains the same bytes as $IMAGE" >&2
+      continue
+    fi
     if [ "$ZERO" != "yes" ]; then
       echo "I: $realdev already contains the same bytes as $IMAGE" >&2
     else
@@ -446,6 +468,10 @@ for dev in "$@"; do
       echo "I: Skipping $realdev without writing data to it" >&2
       continue
     fi
+  elif [ "$CHECK" = "yes" ]; then
+    # The data did not match but since we ran with --check we exit non-zero
+    echo "E: $realdev does not contain the expected contents" >&2
+    exit 1
   fi
 
   if [ "$DRYRUN" = "yes" ]; then
