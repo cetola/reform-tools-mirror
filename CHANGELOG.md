@@ -1,3 +1,24 @@
+1.89 (2026-09-15)
+=================
+
+ * bin/reform-hw-setup: run amixer commands after ethernet phy reset so that
+   failing amixer commands do not affect networking
+ * bin/reform-flash-bootloader: improve --verbose and --dry-run output
+ * bin/reform-emmc-bootstrap:
+    - fix operation without a chroot
+    - use usr/lib/modules/*-mnt-reform-arm64/vmlinuz for kernel 7.2 and later
+    - only re-download packages shipping vmlinuz in /boot and dpkg-reconfigure
+      linux-image-*-mnt-reform-arm64
+    - run reform-boot-config with --no-copy-old-boot and --force
+ * bin/reform-check:
+    - bootloader checks are done without network using /boot/flash.bin
+    - extend checks for qcacld2 dkms driver packages
+ * bin/reform-flash-bootloader:
+    - don't write data if the requested bytes are already present on the target
+    - non-zero exit if the bootloader size is not a multiple of 512 bytes
+    - add --check option to check if bootloader is up-to-date
+ * audio/ucm2.conf.d/rk3588-tlv320ai/HiFi.conf: ensure mono output
+
 1.88 (2026-08-01)
 =================
 
