@@ -357,7 +357,7 @@ backend_repo_checks() {
         if ! backend_pkg_installed "$PKG"; then
           # Avoid contradictory guidance for the mutually exclusive i.MX8MP wifi packages.
           case "$PKG" in ezurio-qcacld-2.0-dkms | reform-qcacld2)
-            case "${MODEL:-$(cat /proc/device-tree/model)}" in
+            case "$MODEL" in
               "MNT Pocket Reform with i.MX8MP Module" | "MNT Reform 2 with i.MX8MP Module")
                 : # on imx8mp, inform about the absence of qcacld2
                 ;;
@@ -388,27 +388,31 @@ backend_repo_checks() {
     echo "W: Consider replacing reform-qcacld2 with ezurio-qcacld-2.0-dkms for Debian stable and stable-backports kernels from reform.debian.net" >&2
   fi
 
-  if [ "$MIRROR" = "mntre.com" ]; then
-    if backend_pkg_installed "reform-qcacld2"; then
-      case "$(cat /proc/device-tree/model)" in
-        "MNT Pocket Reform with i.MX8MP Module" | "MNT Reform 2 with i.MX8MP Module")
-          :
-          ;;
-        *)
-          echo "I: the reform-qcacld2 package is only required for wifi on the Pocket Reform with i.MX8MP, you can safely remove it unless you plan to go back to the imx8m+" >&2
-          ;;
-      esac
-    else
-      case "$(cat /proc/device-tree/model)" in
-        "MNT Pocket Reform with i.MX8MP Module.conf")
-          echo "E: For the official MNT Debian on Pocket Reform with i.MX8MP, the reform-qcacld2 package needs to be installed for working wifi" >&2
-          ;;
-        *)
-          :
-          ;;
-      esac
-    fi
+  if [ "$MIRROR" = "mntre.com" ] && backend_pkg_installed ezurio-qcacld-2.0-dkms; then
+    echo "E: Having ezurio-qcacld-2.0-dkms on a system configured to use packages for Debian unstable from mntre.com will attempt installing the kernel package from the Debian repositories in the kernel postinstallation hook" >&2
+    echo "W: Consider replacing ezurio-qcacld-2.0-dkms with reform-qcacld2 for Debian unstable kernels from mntre.com" >&2
   fi
+
+  case "$MODEL" in
+    *" with i.MX8MP Module")
+      # this is imx8m+
+      if [ "$MIRROR" = "mntre.com" ] && ! backend_pkg_installed reform-qcacld2; then
+        echo "E: For the official MNT Debian on Pocket Reform with i.MX8MP, the reform-qcacld2 package needs to be installed for working wifi" >&2
+      fi
+      if [ "$MIRROR" = "reform.debian.net" ] && ! backend_pkg_installed ezurio-qcacld-2.0-dkms; then
+        echo "E: For the unofficial Debian packages on Pocket Reform with i.MX8MP, the ezurio-qcacld-2.0-dkms package needs to be installed for working wifi" >&2
+      fi
+      ;;
+    *)
+      # this is not imx8m+
+      if [ "$MIRROR" = "mntre.com" ] && backend_pkg_installed reform-qcacld2; then
+        echo "I: the reform-qcacld2 package is only required for wifi on the Pocket Reform with i.MX8MP, you can safely remove it unless you plan to go back to the imx8m+" >&2
+      fi
+      if [ "$MIRROR" = "reform.debian.net" ] && backend_pkg_installed ezurio-qcacld-2.0-dkms; then
+        echo "I: the ezurio-qcacld-2.0-dkms package is only required for wifi on the Pocket Reform with i.MX8MP, you can safely remove it unless you plan to go back to the imx8m+" >&2
+      fi
+      ;;
+  esac
 
   for f in mntre reform_bookworm reform_bookworm-backports; do
     file="/etc/apt/sources.list.d/${f}.sources"
