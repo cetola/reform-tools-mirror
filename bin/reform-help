@@ -1,18 +1,18 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0+
-# Copyright 2020-2022 Lukas F. Hartmann <lukas@mntre.com>
-# Copyright 2022-2025 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
+# Copyright 2020-2026 Lucie Hartmann <lucie@mntre.com>
+# Copyright 2022-2026 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
 
 set -eu
 
 usage() {
-  echo "Prints help text for how to use the MNT Reform." >&2
+  echo "Prints help text for how to use your MNT system." >&2
   echo >&2
   echo "Usage: $0 [--desktop,--root]" >&2
   echo >&2
   echo "Options:" >&2
-  echo "  --desktop Print the MNT Reform desktop help text." >&2
-  echo "  --root    Print the MNT Reform root shell help text." >&2
+  echo "  --desktop Print the MNT system's desktop help text." >&2
+  echo "  --root    Print the MNT system's root shell help text." >&2
 }
 
 reform_help() {
@@ -30,20 +30,6 @@ List hardware/peripherals:         [1mlsblk[0m
                                    [1mlspci[0m
                                    [1mip a[0m
 View this message again:           [1mreform-help[0m
-END
-  case "$(cat /proc/device-tree/model)" in
-    "MNT Pocket Reform with "*)
-      cat <<'END'
-Read the Operator Handbook:        [1mpocket-reform-handbook[0m (press % to fix contrast, Q to quit)
-END
-      ;;
-    *)
-      cat <<'END'
-Read the Operator Handbook:        [1mreform-handbook[0m (press % to fix contrast, Q to quit)
-END
-      ;;
-  esac
-  cat <<'END'
 Set keyboard layout and timezone:  [1msudo reform-config[0m
 Chat in Reform community:          [1mreform-chat[0m
 Select boot device:                [1msudo reform-boot-config[0m
@@ -86,30 +72,13 @@ Afterwards, to be able to become root by using sudo, enter:
   [1madduser [1;4myour-name[0m [1msudo[0m
 
 Then, log out using [1mexit[0m and log in as [1;4myour-name[0m.
-
-To read the MNT Reform Operator Handbook, enter:
-
 END
-  case "$(cat /proc/device-tree/model)" in
-    "MNT Pocket Reform with "*)
-      cat <<'END'
-  [1mpocket-reform-handbook[0m   # (in the browser, press %
-                           # to fix contrast, Q to quit)
-END
-      ;;
-    *)
-      cat <<'END'
-  [1mreform-handbook[0m   # (in the browser, press %
-                    # to fix contrast, Q to quit)
-END
-      ;;
-  esac
 }
 
 reform_desktop_help() {
   cat /etc/motd
   cat <<'END'
-Welcome to the MNT Reform desktop.
+Welcome to your MNT system's desktop.
 
 Useful keyboard shortcuts ([1mSUPER[0m is the MNT logo key):
 
@@ -140,18 +109,6 @@ Customize the sway configuration:
 
 To learn more about the command line, enter: [1mreform-help[0m
 END
-  case "$(cat /proc/device-tree/model)" in
-    "MNT Pocket Reform with "*)
-      cat <<'END'
-Read the MNT Pocket Reform handbook in a browser: [1mpocket-reform-handbook[0m
-END
-      ;;
-    *)
-      cat <<'END'
-Read the MNT Reform handbook in a browser: [1mreform-handbook[0m
-END
-      ;;
-  esac
   echo
   reform_help
 }
