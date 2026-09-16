@@ -3,8 +3,8 @@
  * Copyright 2022 nanocodebug <nanocodebug@gmail.com>
  * Copyright 2023 Michael Fincham <michael@hotplate.co.nz>
  * Copyright 2024 Michal Suchánek <hramrach@gmail.com>
- * Copyright 2024-2026 Lucie Hartmann <lucie@mntre.com>
  * Copyright 2023-2025 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
+ * Copyright 2024-2026 Lucie Hartmann <lucie@mntre.com>
  */
 
 #include <asm-generic/errno-base.h>
@@ -133,43 +133,6 @@ static const struct backlight_ops mntsc_bl_ops = {
 	.get_brightness = bl_get_brightness,
 };
 
-static struct backlight_device *mntsc_create_backlight(struct device *dev,
-						     void *data)
-{
-	struct backlight_properties props;
-
-	memset(&props, 0, sizeof(props));
-	props.type = BACKLIGHT_RAW;
-	props.brightness = 100;
-	props.max_brightness = 100;
-
-	return devm_backlight_device_register(dev,
-					      "mntsc_backlight",
-					      dev, data, &mntsc_bl_ops, &props);
-}
-
-static uint32_t mntsc_get_api_version(struct device *dev)
-{
-	return MNTSC_API_V4;
-}
-
-static int mntsc_gpio_set(struct gpio_chip *gc, unsigned int offset, int value)
-{
-	struct mntsc_driver_data *mntsc =
-		(struct mntsc_driver_data *)gpiochip_get_data(gc);
-
-	dev_info(&mntsc->spi->dev, "[mntsc_gpio_set] %d <- %d\n", (int)offset, value);
-	char cmd[32];
-	snprintf(cmd, 32, "(set-gpio %d %d)", offset, value);
-	sc_cmdresp_retry(mntsc, cmd, discard_resp);
-	return 0;
-}
-
-static int mntsc_gpio_get_direction(struct gpio_chip *gc, unsigned int offset)
-{
-	return GPIO_LINE_DIRECTION_OUT;
-}
-
 static int mntsc_suspend_cb(struct notifier_block *nb, unsigned long action,
 			void *_data)
 {
@@ -184,9 +147,11 @@ static int mntsc_suspend_cb(struct notifier_block *nb, unsigned long action,
 		sc_cmdresp_retry(mntsc, "(soc-susp)", discard_resp);
 		break;
 	case PM_POST_SUSPEND:
-		dev_info(&mntsc->spi->dev, "%s: set brightness %u\n", __func__,
-			 mntsc->backlight->props.brightness);
-		bl_update_status(mntsc->backlight);
+		if (mntsc->backlight) {
+			dev_info(&mntsc->spi->dev, "%s: set brightness %u\n", __func__,
+				 mntsc->backlight->props.brightness);
+			bl_update_status(mntsc->backlight);
+		}
 		/* power up auxiliary rails */
 		sc_cmdresp_retry(mntsc, "(soc-psus)", discard_resp);
 		break;
@@ -195,10 +160,74 @@ static int mntsc_suspend_cb(struct notifier_block *nb, unsigned long action,
 	return NOTIFY_DONE;
 }
 
+static struct backlight_device *mntsc_register_backlight(struct device *dev,
+						     void *data)
+{
+	struct backlight_properties props;
+
+	memset(&props, 0, sizeof(props));
+	props.type = BACKLIGHT_RAW;
+	props.brightness = 100;
+	props.max_brightness = 100;
+
+	return devm_backlight_device_register(dev,
+					      "mntsc_backlight",
+					      dev, data, &mntsc_bl_ops, &props);
+}
+
+static void mntsc_create_backlight(struct mntsc_driver_data *mntsc)
+{
+	/* Create + register backlight device if we have a backlight node */
+	/* and panel driver unlocks this feature via our GPIO (8) */
+	struct device_node *backlight;
+	if (mntsc->backlight && !IS_ERR(mntsc->backlight)) return;
+
+	backlight = of_get_child_by_name(mntsc->spi->dev.of_node, "backlight");
+	if (backlight && of_device_is_available(backlight)) {
+		dev_info(&mntsc->spi->dev,
+			"enabling PWM display backlight control by MNT System Controller.\n");
+		mntsc->backlight = mntsc_register_backlight(&mntsc->spi->dev, mntsc);
+		if (IS_ERR(mntsc->backlight)) {
+			dev_err(&mntsc->spi->dev, "mntsc_register_backlight failed.\n");
+			return;
+		}
+		mntsc->suspend_notifier.notifier_call = mntsc_suspend_cb;
+		register_pm_notifier(&mntsc->suspend_notifier);
+	}
+}
+
+static uint32_t mntsc_get_api_version(struct device *dev)
+{
+	return MNTSC_API_V4;
+}
+
+static int mntsc_gpio_set(struct gpio_chip *gc, unsigned int offset, int value)
+{
+	struct mntsc_driver_data *mntsc =
+		(struct mntsc_driver_data *)gpiochip_get_data(gc);
+
+	dev_info(&mntsc->spi->dev, "[mntsc_gpio_set] (set-gpio %d %d)\n", (int)offset, value);
+	char cmd[32];
+	snprintf(cmd, 32, "(set-gpio %d %d)", offset, value);
+	sc_cmdresp_retry(mntsc, cmd, discard_resp);
+
+	// TODO define constants
+	if (offset == 8 && value == 1) {
+		// create a backlight device when it is requested by
+		// the panel driver for panel v2
+		mntsc_create_backlight(mntsc);
+	}
+	return 0;
+}
+
+static int mntsc_gpio_get_direction(struct gpio_chip *gc, unsigned int offset)
+{
+	return GPIO_LINE_DIRECTION_OUT;
+}
+
 static int mntsc_probe(struct spi_device *spi)
 {
 	struct mntsc_driver_data *data;
-	struct device_node *backlight;
 	int ret;
 
 	spi->max_speed_hz = mntsc_board_info.max_speed_hz;
@@ -278,34 +307,29 @@ static int mntsc_probe(struct spi_device *spi)
 		return ret;
 	}
 
-	/* Register backlight device if we have a backlight node */
-	/* TODO: check (mb-ver) >= 2 first */
-	backlight = of_get_child_by_name(spi->dev.of_node, "backlight");
-	if (backlight && of_device_is_available(backlight)) {
-		dev_dbg(
-			&spi->dev,
-			"enabling PWM display backlight control by MNT System Controller.\n");
-		data->backlight = mntsc_create_backlight(&spi->dev, data);
-		if (IS_ERR(data->backlight)) {
-			dev_err(&spi->dev, "mntsc_create_backlight failed.\n");
-		}
-
-		data->suspend_notifier.notifier_call = mntsc_suspend_cb;
-		register_pm_notifier(&data->suspend_notifier);
-	}
-
 	data->gc.request = gpiochip_generic_request;
 	data->gc.free = gpiochip_generic_free;
 	data->gc.base = -1;
 	data->gc.set = mntsc_gpio_set;
 	data->gc.get_direction = mntsc_gpio_get_direction;
-	data->gc.ngpio = 5;
+	data->gc.ngpio = 10;
 	data->gc.label = dev_name(&spi->dev);
 	data->gc.parent = &spi->dev;
 	data->gc.owner = THIS_MODULE;
 	data->gc.can_sleep = true;
-	data->gc.names =
-		(const char *const[]){ "disp_reset", "hub_pwr_en", "pcie_pwr_en", "3v3_en", "uswitch_off", "disp_bl_pwr_en" };
+	data->gc.names = (const char *const[])
+	{
+		"disp_reset",
+		"hub_pwr_en",
+		"pcie_pwr_en",
+		"3v3_en",
+		"uswitch_off",
+		"disp_bl_pwr_en",
+		"reserved_1",
+		"reserved_2",
+		"disp_v2_bl_unlock",
+		"reserved_3",
+	};
 	devm_gpiochip_add_data(&spi->dev, &data->gc, data);
 
 	spi_controller_get(spi->controller);
@@ -499,23 +523,24 @@ static ssize_t show_status(struct device *dev, struct device_attribute *attr,
 static ssize_t show_cells(struct device *dev, struct device_attribute *attr,
 			  char *buf)
 {
-	int ret = 0;
+	int ret = 0, i = 0;
 	uint8_t buffer[MNTSC_RES_SZ * 2];
 	uint16_t cells[16];
 	struct mntsc_driver_data *mntsc =
 		(struct mntsc_driver_data *)dev_get_drvdata(dev);
 
-	ret = sc_cmdresp_retry(mntsc, "(cell-mv 0)", buffer);
-	if (ret)
-		return 0;
-	ret = sc_cmdresp_retry(mntsc, "(cell-mv 1)", &buffer[8]);
-	if (ret)
-		return 0;
+	for (i = 0; i < 8; i++) {
+		char cmd[32];
+		snprintf(cmd, 32, "(cell-mv %d)", s);
+		ret = sc_cmdresp_retry(mntsc, cmd, buffer);
+		if (ret)
+			return 0;
+	}
 
-	for (int s = 0; s < 16; s += 2) {
-		uint16_t val = buffer[s] | buffer[s + 1] << 8;
-		cells[s] = val / 1000;
-		cells[s + 1] = val % 1000;
+	for (i = 0; i < 16; i += 2) {
+		uint16_t val = buffer[i] | buffer[i + 1] << 8;
+		cells[i] = val / 1000;
+		cells[i + 1] = val % 1000;
 	}
 
 	ret = snprintf(
@@ -557,7 +582,7 @@ static ssize_t show_capacity(struct device *dev, struct device_attribute *attr,
 	struct mntsc_driver_data *mntsc =
 		(struct mntsc_driver_data *)dev_get_drvdata(dev);
 
-	ret = sc_cmdresp_retry(mntsc, "(0c)", buffer);
+	int ret = sc_cmdresp_retry(mntsc, "(0c)", buffer);
 	if (ret)
 		return 0;
 
