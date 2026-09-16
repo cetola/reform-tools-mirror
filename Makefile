@@ -48,8 +48,6 @@ man/%.1: bin/%
 		flash-rescue)   echo "flash rescue image to eMMC" ;;          \
 		flash-uboot)    echo "use reform-flash-bootloader" ;;         \
 		gnome-config)   echo "apply default config to GNOME" ;;       \
-		handbook)       echo "show Reform Handbook" ;;                \
-		pocket-reform-handbook) echo "show Pocket Reform Handbook" ;; \
 		help)           echo "help with MNT Reform" ;;                \
 		hw-setup)       echo "perform hardware tweaks" ;;             \
 		migrate)        echo "copy rootfs to device" ;;               \
