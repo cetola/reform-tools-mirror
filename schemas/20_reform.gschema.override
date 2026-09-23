@@ -138,7 +138,7 @@ enabled-extensions = ['dash-to-dock@micxgx.gmail.com']
 
 [org.gnome.shell.extensions.dash-to-dock]
 hot-keys = false
-disable-overview-on-startup = true
+disable-overview-on-startup = false
 
 ## disable standby (the GDM part is set in /etc/gdm3/greeter.dconf-defaults)
 [org.gnome.settings-daemon.plugins.power]
