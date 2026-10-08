@@ -192,9 +192,11 @@ case "$(cat /proc/device-tree/model)" in
     init_wm8960 rk3588wm8960
     ;;
   "MNT Pocket Reform with RCORE RK3588 Module")
+    # TODO this shouldn't be necessary anymore with the UCM profile!
     init_tlv320aic3100 rk3588tlv320aic
     ;;
   "MNT Reform Next with RCORE RK3588 Module")
+    # TODO this shouldn't be necessary anymore with the UCM profile!
     init_tlv320aic3100 rk3588tlv320aic
     ;;
   "MNT Reform 2 with QUASAR QCS8550 Module")
