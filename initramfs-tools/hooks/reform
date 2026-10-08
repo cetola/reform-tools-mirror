@@ -46,12 +46,23 @@ case $MACHINE in
     ;;
   "MNT Pocket Reform with QUASAR QCS6490 Module" | \
     "MNT Reform 2 with QUASAR QCS6490 Module" | \
-    "MNT Reform 2 with QUASAR QCS8550 Module" | \
     "MNT Reform Next with QUASAR QCS6490 Module")
     # firmware required by Quasar QCS6490 variants
     # FIXME: find out how to make this happen automatically via the connection
     #        of kernel modules to these firmware files
     for f in qcs6490/qupv3fw.elf a660_sqe.fw a660_gmu.bin; do
+      # shellcheck disable=SC2154
+      [ "${verbose}" = "y" ] && echo "Adding firmware qcom/$f"
+      copy_file firmware "/lib/firmware/qcom/$f"
+    done
+    ;;
+  "MNT Pocket Reform with QUASAR QCS8550 Module" | \
+    "MNT Reform 2 with QUASAR QCS8550 Module" | \
+    "MNT Reform Next with QUASAR QCS8550 Module")
+    # firmware required by Quasar QCS8550 variants
+    # FIXME: find out how to make this happen automatically via the connection
+    #        of kernel modules to these firmware files
+    for f in qcs8550/qupv3fw.elf qcs8550/adsp.mbn qcs8550/adsp_dtb.mbn sm8550/MNTQuasar8550TL-tplg.bin sm8550/MNTQuasar8550WM-tplg.bin qcs8550/a740_zap.mbn a740_sqe.fw gmu_gen70200.bin; do
       # shellcheck disable=SC2154
       [ "${verbose}" = "y" ] && echo "Adding firmware qcom/$f"
       copy_file firmware "/lib/firmware/qcom/$f"
