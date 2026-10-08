@@ -115,8 +115,6 @@ install-indep: $(MAN1)
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/udev/rules.d udev/reform-ttymxc-wakeup.rules
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/pulseaudio/alsa-mixer/paths
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/pulseaudio/alsa-mixer/paths audio/analog-input-reform.conf
-	$(INSTALL)     -d $(DESTDIR)$(statedir)/lib/alsa
-	$(INSTALLDATA) -t $(DESTDIR)$(statedir)/lib/alsa audio/asound.state
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/pulseaudio/alsa-mixer/profile-sets
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/pulseaudio/alsa-mixer/profile-sets audio/reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(bindir)
