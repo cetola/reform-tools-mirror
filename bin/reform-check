@@ -206,7 +206,7 @@ END
       echo "W: $path doesn't exist in current \$HOME" >&2
     elif ! cmp --quiet "/etc/skel/$path" "$HOME/$path"; then
       echo "W: local version of $path has modifications:" >&2
-      diff -u "/etc/skel/$path" "$HOME/$path" || true
+      diff --color --unified "/etc/skel/$path" "$HOME/$path" || true
     fi
   done
   echo "I: Running reform-check as the normal user only diffs your current"
