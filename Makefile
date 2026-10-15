@@ -115,8 +115,6 @@ install-indep: $(MAN1)
 	$(INSTALLDATA) -t $(DESTDIR)$(libdir)/udev/rules.d udev/reform-ttymxc-wakeup.rules
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/pulseaudio/alsa-mixer/paths
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/pulseaudio/alsa-mixer/paths audio/analog-input-reform.conf
-	$(INSTALL)     -d $(DESTDIR)$(statedir)/lib/alsa
-	$(INSTALLDATA) -t $(DESTDIR)$(statedir)/lib/alsa audio/asound.state
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/pulseaudio/alsa-mixer/profile-sets
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/pulseaudio/alsa-mixer/profile-sets audio/reform.conf
 	$(INSTALL)     -d $(DESTDIR)$(bindir)
@@ -151,6 +149,12 @@ install-indep: $(MAN1)
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/rk3588-tlv320ai/
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/rk3588-tlv320ai/ audio/ucm2.conf.d/rk3588-tlv320ai/rk3588-tlv320aic3100.conf
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/rk3588-tlv320ai/ audio/ucm2.conf.d/rk3588-tlv320ai/HiFi.conf
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/MNTQuasar8550TL/
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/MNTQuasar8550TL/ audio/ucm2.conf.d/sm8550/MNTQuasar8550TL.conf
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/MNTQuasar8550TL/ audio/ucm2.conf.d/MNTQuasar8550TL/HiFi.conf
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/MNTQuasar8550WM/
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/MNTQuasar8550WM/ audio/ucm2.conf.d/sm8550/MNTQuasar8550WM.conf
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/MNTQuasar8550WM/ audio/ucm2.conf.d/MNTQuasar8550WM/HiFi.conf
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/wireplumber/wireplumber.conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/wireplumber/wireplumber.conf.d audio/reform-hdmi-audio-priority.conf
 	$(INSTALL)     -d $(DESTDIR)$(sysconfdir)/profile.d
