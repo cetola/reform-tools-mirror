@@ -248,10 +248,12 @@ END
     ;;
   esac
 
-  echo "I: Running reform-check as the normal user only diffs your current"
-  # shellcheck disable=SC2016
-  echo 'I: configuration in your $HOME against the contents in /etc/skel.'
-  echo "I: To run a system-wide check, run this script as the root user."
+  if [ -z "${SUDO_USER:-}" ]; then
+    echo "I: Running reform-check as the normal user only diffs your current"
+    # shellcheck disable=SC2016
+    echo 'I: configuration in your $HOME against the contents in /etc/skel.'
+    echo "I: To run a system-wide check, run this script as the root user."
+  fi
   exit 0
 fi
 
@@ -713,6 +715,13 @@ case "$MODEL" in "MNT Reform 2 with LS1028A Module")
   fi
   ;;
 esac
+
+# If this command was run as root via sudo, also perform the checks which would
+# be executed if the user had run this command without sudo for that user
+if [ -n "${SUDO_USER:-}" ]; then
+  echo "I: running $0 as user $SUDO_USER..."
+  runuser --whitelist-environment=SUDO_USER --login -- "$SUDO_USER" -i -c "$SCRIPT_DIR/$(basename "$0")"
+fi
 
 if [ "$OFFLINE" = "yes" ]; then
   echo "I: skipping the remaining checks because --offline was used" >&2
