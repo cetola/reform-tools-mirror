@@ -25,6 +25,35 @@ elif test "${board}" = "u200"; then
   setenv bootargs "${bootargs} console=ttyAML0,115200 pci=pcie_bus_perf libata.force=noncq nvme_core.default_ps_max_latency_us=0"
 elif test "${board}" = "ls1028a"; then
   setenv bootargs "${bootargs} console=ttyS0,115200 cma=512M@3G iommu.passthrough=1 arm-smmu.disable_bypass=0"
+elif test "${board}" = "nitrogen8mp"; then
+  # If fdt_addr_r was the old offset, then extlinux probably failed to load the
+  # kernel but u-boot remembers the kernel cmdline of the last entry and that
+  # one was the rescue option which contains the term "single". Reset bootargs.
+  if test "${fdt_addr_r}" = "0x43000000"; then
+    setenv bootargs "ro no_console_suspend pci=pcie_bus_perf cryptomgr.notests plymouth.ignore-serial-consoles pcie_aspm=off fbcon=font:TER16x32 nvme_core.default_ps_max_latency_us=0 cma=256MB console=ttymxc1"
+  fi
+
+  # Fix up destination addresses for kernel, dtb and initrd on imx8m+
+  # Updating u-boot on imx8m+ is risky because recovery is complicated if
+  # something fails. Thus, many users will (for good reason) never update their
+  # original u-boot on eMMC.
+  # We perform fix-ups of the hardcoded loading addresess here. The default
+  # offsets are:
+  # ${kernel_addr_r}  = 0x40480000
+  # ${fdt_addr_r}     = 0x43000000
+  # ${ramdisk_addr_r} = 0x43800000
+
+  # Avoid moving the kernel in RAM to the next 2 MiB boundary on every boot by
+  # placing it at a 2 MiB offset from the beginning.
+  setenv kernel_addr_r "0x40600000"
+
+  # Starting with kernel 7.3, the image became so large that given the chosen
+  # default offsets are not large enough anymore after the kernel was relocated
+  # to the next 2 MiB boundary from from 0x40480000 to 0x40600000 it ended at
+  # 0x43160000 thus overwriting the dtb.
+  # We bump the offsets of dtb and initrd by another 4 MiB
+  setenv fdt_addr_r "0x43400000"
+  setenv ramdisk_addr_r "0x43c00000"
 fi
 
 # console=tty1 needs to go at the end of the kernel cmdline because the luks
