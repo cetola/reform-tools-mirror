@@ -336,7 +336,14 @@ case "$MODEL" in
       if [ -n "$SYS_VER" ]; then
         echo "I: Version of system controller firmware: $SYS_VER" >&2
         if [ -n "$LATEST_SYS_VER" ] && [ "$LATEST_SYS_VER" != "$SYS_VER" ]; then
-          echo "I: Latest version of system controller firmware: $LATEST_SYS_VER" >&2
+          echo "W: There is a newer version of system controller firmware available: $LATEST_SYS_VER" >&2
+          # Read battery percentage because fwupd only lets you flash
+          # firmware if sufficient percentage is left.
+          BAT_PERC="$(dbus-send --print-reply=literal --system --dest=org.freedesktop.UPower /org/freedesktop/UPower/devices/battery_BAT0 org.freedesktop.DBus.Properties.Get string:org.freedesktop.UPower.Device string:Percentage | awk '{print $3}')"
+          case "$BAT_PERC" in
+            *[!0123456789]* | 0?* | "") echo "W: unable to read battery level" >&2 ;;
+            *) "I: Battery percentage: $BAT_PERC" >&2 ;;
+          esac
         fi
       else
         echo "W: unable to obtain version of system controller firmware -- firmware too old?" >&2
