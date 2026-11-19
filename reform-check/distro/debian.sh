@@ -190,7 +190,35 @@ backend_boot_tool_checks() {
       printf '%s\n' bootscr
       ;;
     yesyes)
-      echo "I: probably booting via /boot/extlinux/extlinux.conf (/boot/boot.scr also exists)" >&2
+      case "$MODEL" in
+        *" with i.MX8MP Module")
+          # On imx8m+ with old u-boot, the offsets are too small for Linux 7.3
+          # and later. Booting via extlinux.conf will fail and the system will
+          # fall back to using boot.scr where the offsets get fixed.
+          version=
+          if [ -e "/proc/device-tree/chosen/u-boot,version" ]; then
+            UBOOT_VERSION_RAW="$(read_nul_terminated_file /proc/device-tree/chosen/u-boot,version)"
+            # send stderr to /dev/null to suppress the line
+            # I: Version of upstream U-Boot: ...
+            version="$(parse_uboot_version "$UBOOT_VERSION_RAW" "$MODEL" 2>/dev/null)"
+          fi
+          if dpkg --compare-versions "$version" le "2026-01-28"; then
+            if linux-version compare "$(uname -r)" ge 7.3; then
+              echo "W: Linux 7.3 and later cannot boot on imx8m+ with old u-boot" >&2
+              echo "W: Even though extlinux.conf exists, u-boot probably failed to boot with it and used boot.scr instead" >&2
+            elif tr ' ' '\n' </proc/cmdline | grep --quiet --fixed-strings --line-regexp single; then
+              echo "W: Linux 7.3 and later cannot boot on imx8m+ with old u-boot, so extlinux.conf probably booted an older kernel in rescue mode" >&2
+            else
+              echo "I: probably booting via /boot/extlinux/extlinux.conf (/boot/boot.scr also exists)" >&2
+            fi
+          else
+            echo "I: probably booting via /boot/extlinux/extlinux.conf (/boot/boot.scr also exists)" >&2
+          fi
+          ;;
+        *)
+          echo "I: probably booting via /boot/extlinux/extlinux.conf (/boot/boot.scr also exists)" >&2
+          ;;
+      esac
       if [ "$HAVE_U_BOOT_MENU" = "no" ]; then
         echo "W: /boot/extlinux/extlinux.conf is not managed by u-boot-menu (not installed)" >&2
       fi
@@ -358,7 +386,7 @@ backend_repo_checks() {
           # Avoid contradictory guidance for the mutually exclusive i.MX8MP wifi packages.
           case "$PKG" in ezurio-qcacld-2.0-dkms | reform-qcacld2)
             case "$MODEL" in
-              "MNT Pocket Reform with i.MX8MP Module" | "MNT Reform 2 with i.MX8MP Module")
+              *" with i.MX8MP Module")
                 : # on imx8mp, inform about the absence of qcacld2
                 ;;
               *) continue ;; # elsewhere, don't inform about its absence
