@@ -155,6 +155,11 @@ install-indep: $(MAN1)
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/MNTQuasar8550WM/
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/MNTQuasar8550WM/ audio/ucm2.conf.d/sm8550/MNTQuasar8550WM.conf
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/MNTQuasar8550WM/ audio/ucm2.conf.d/MNTQuasar8550WM/HiFi.conf
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/MNT/reform2/fsl/
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/MNT/reform2/fsl/ audio/ucm2.conf.d/MNT/reform2/fsl/wm8960-audio.conf
+	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/MNT/reform2/fsl/ audio/ucm2.conf.d/MNT/reform2/fsl/HiFi.conf
+	$(INSTALL)     -d $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/fsl-asoc-card/
+	ln             -s ../MNT/reform2/fsl/wm8960-audio.conf $(DESTDIR)$(datadir)/alsa/ucm2/conf.d/fsl-asoc-card/wm8960-audio.conf
 	$(INSTALL)     -d $(DESTDIR)$(datadir)/wireplumber/wireplumber.conf.d
 	$(INSTALLDATA) -t $(DESTDIR)$(datadir)/wireplumber/wireplumber.conf.d audio/reform-hdmi-audio-priority.conf
 	$(INSTALL)     -d $(DESTDIR)$(sysconfdir)/profile.d
