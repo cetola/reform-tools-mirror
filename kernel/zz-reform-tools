@@ -3,9 +3,20 @@
 # Copyright 2024-2025 Johannes Schauer Marin Rodrigues <josch@mister-muffin.de>
 #
 # Populate /boot with all known dtbs.
-# The flash-kernel package is still needed to provide the /boot/dtb-$(uname -r)
-# symlink. That symlink is needed on platforms that do not set the `${fdtfile}`
-# u-boot environment variable.
+# The flash-kernel package is still needed for older platforms with old u-boot:
+#
+#  * provide the /boot/dtb-$(uname -r) symlink for old u-boot versions which do
+#    not set the `${fdtfile}` u-boot environment variable.
+#  * for newer u-boot versions that do set `${fdtfile}`, override `${fdtpath}`
+#    such that u-boot will still use the dtb-${fk_kvers} symlink instead if it
+#    was present (as created by flash-kernel). This is to support mediums that
+#    are supposed to boot on multiple devices like Debian installer
+#  * override `${bootargs}` for ancient u-boot on imx8m+, a311d and ls1028 (all
+#    long fixed)
+#  * bump dtb and initrd offsets by 4 MiB on imx8m+ where the default offsets
+#    grew too small with Debian kernel 7.3 and where upgrading u-boot is
+#    dangerous (because recovery from a wrong flash is very involved)
+#
 
 set -e
 

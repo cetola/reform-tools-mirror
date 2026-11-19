@@ -153,6 +153,12 @@ if ! backend_validate_options; then
   exit 1
 fi
 
+if [ ! -e /proc/device-tree/model ]; then
+  echo "E: /proc/device-tree/model does not exist" >&2
+  exit 1
+fi
+MODEL="$(read_nul_terminated_file /proc/device-tree/model)"
+
 if [ "$(id -u)" -ne 0 ]; then
   # check several versions of ~/.profile that older versions of reform-system-image placed into /etc/skel
   # shellcheck disable=SC2016
@@ -206,9 +212,42 @@ END
       echo "W: $path doesn't exist in current \$HOME" >&2
     elif ! cmp --quiet "/etc/skel/$path" "$HOME/$path"; then
       echo "W: local version of $path has modifications:" >&2
-      diff -u "/etc/skel/$path" "$HOME/$path" || true
+      diff --color --unified "/etc/skel/$path" "$HOME/$path" || true
     fi
   done
+
+  case "$MODEL" in "MNT "*" with RCORE"*" RK3588 Module")
+    if [ -z "${KWIN_FORCE_SW_CURSOR+x}" ]; then
+      echo "W: KWIN_FORCE_SW_CURSOR is unset but needed because the RK3588 VOP2 driver doesn't report or enforce the limitations for overlays on certain displays." >&2
+      echo "W: KWIN_FORCE_SW_CURSOR=1 is usually set in /etc/profile.d/reform-kwin.sh" >&2
+      if [ ! -e /etc/profile.d/reform-kwin.sh ]; then
+        echo "W: /etc/profile.d/reform-kwin.sh does not exist" >&2
+      elif ! grep --quiet --line-regexp --fixed-strings "export KWIN_FORCE_SW_CURSOR=1" /etc/profile.d/reform-kwin.sh; then
+        echo "W: /etc/profile.d/reform-kwin.sh exports KWIN_FORCE_SW_CURSOR=1" >&2
+        case "$SHELL" in /usr/bin/fish) echo "W: the fish shell does not process /etc/profile" >&2 ;; esac
+      fi
+    elif [ "$KWIN_FORCE_SW_CURSOR" != "1" ]; then
+      echo "W: KWIN_FORCE_SW_CURSOR is not set to 1 but $KWIN_FORCE_SW_CURSOR" >&2
+    fi
+    ;;
+  esac
+
+  case "$MODEL" in "MNT "*" with RCORE"*" RK3588 Module" | "MNT "*" with BPI-CM4 Module")
+    if [ -z "${PAN_MESA_DEBUG+x}" ]; then
+      echo "W: PAN_MESA_DEBUG is unset but enables OpenGL 3.3 from 3.1 (but doesn't change OpenGL ES) on Mali GPUs" >&2
+      echo "W: PAN_MESA_DEBUG=gl3 is usually set in /etc/profile.d/reform-mali.sh" >&2
+      if [ ! -e /etc/profile.d/reform-mali.sh ]; then
+        echo "W: /etc/profile.d/reform-mali.sh does not exist" >&2
+      elif ! grep --quiet --line-regexp --fixed-strings "export PAN_MESA_DEBUG=gl3" /etc/profile.d/reform-mali.sh; then
+        echo "W: /etc/profile.d/reform-mali.sh exports PAN_MESA_DEBUG=gl3" >&2
+        case "$SHELL" in /usr/bin/fish) echo "W: the fish shell does not process /etc/profile" >&2 ;; esac
+      fi
+    elif [ "$PAN_MESA_DEBUG" != "gl3" ]; then
+      echo "W: PAN_MESA_DEBUG is not set to gl3 but $PAN_MESA_DEBUG" >&2
+    fi
+    ;;
+  esac
+
   echo "I: Running reform-check as the normal user only diffs your current"
   # shellcheck disable=SC2016
   echo 'I: configuration in your $HOME against the contents in /etc/skel.'
@@ -220,12 +259,6 @@ if ! backend_preflight_checks; then
   echo "E: running distro backend preflight checks failed" >&2
   exit 1
 fi
-
-if [ ! -e /proc/device-tree/model ]; then
-  echo "E: /proc/device-tree/model does not exist" >&2
-  exit 1
-fi
-MODEL="$(read_nul_terminated_file /proc/device-tree/model)"
 
 # shellcheck source=/dev/null
 if [ -e "./machines/$MODEL.conf" ]; then

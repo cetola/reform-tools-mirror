@@ -43,11 +43,6 @@ xkb-options = ['compose:rctrl', 'lv3:ralt_switch']
 [org.gnome.mutter.wayland.keybindings]
 restore-shortcuts = @as []
 
-# Fractional scaling reduces the rendering performance.
-# Remove 'scale-monitor-framebuffer' from the list.
-[org.gnome.mutter:GNOME]
-experimental-features=['xwayland-native-scaling']
-
 # Don't attach modal windows, it's annoying when some windows can't be moved individually
 [org.gnome.mutter]
 attach-modal-dialogs = false
