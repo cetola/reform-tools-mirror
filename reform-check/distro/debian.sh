@@ -387,7 +387,11 @@ backend_repo_checks() {
           case "$PKG" in ezurio-qcacld-2.0-dkms | reform-qcacld2)
             case "$MODEL" in
               *" with i.MX8MP Module")
-                : # on imx8mp, inform about the absence of qcacld2
+                # On imx8mp, inform about the absence of qcacld2 if the current
+                # kernel is too old
+                if linux-version compare "$(uname -r)" ge 7.3; then
+                  continue
+                fi
                 ;;
               *) continue ;; # elsewhere, don't inform about its absence
             esac
