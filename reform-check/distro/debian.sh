@@ -204,10 +204,10 @@ backend_boot_tool_checks() {
           fi
           if dpkg --compare-versions "$version" le "2026-01-28"; then
             if linux-version compare "$(uname -r)" ge 7.3; then
-              echo "W: Linux 7.3 and later cannot boot on imx8m+ with old u-boot" >&2
+              echo "W: Linux 7.3 and later cannot boot on imx8m+ with u-boot 2026-01-28 and older" >&2
               echo "W: Even though extlinux.conf exists, u-boot probably failed to boot with it and used boot.scr instead" >&2
             elif tr ' ' '\n' </proc/cmdline | grep --quiet --fixed-strings --line-regexp single; then
-              echo "W: Linux 7.3 and later cannot boot on imx8m+ with old u-boot, so extlinux.conf probably booted an older kernel in rescue mode" >&2
+              echo "W: Linux 7.3 and later cannot boot on imx8m+ with u-boot 2026-01-28 and older, so extlinux.conf probably booted an older kernel in rescue mode" >&2
             else
               echo "I: probably booting via /boot/extlinux/extlinux.conf (/boot/boot.scr also exists)" >&2
             fi
