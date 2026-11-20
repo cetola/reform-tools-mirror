@@ -190,7 +190,6 @@ case "$(cat /proc/device-tree/model)" in
     ;;
   "MNT Pocket Reform with i.MX8MP Module")
     init_qca9377_wifi || echo "W: init_qca9377_wifi failed" >&2
-    init_tlv320aic3100 0
     ;;
   "MNT Pocket Reform with BPI-CM4 Module")
     init_a311d
