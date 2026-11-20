@@ -412,7 +412,13 @@ if [ -e "/sys/bus/spi/drivers/reform2_lpc/spi${SPINUM}.0/firmware" ]; then
     ;;
   esac
 else
-  echo "W: /sys/bus/spi/drivers/reform2_lpc/spi1.0/firmware does not exist -- is the reform2_lpc module loaded?" >&2
+  case "$MODEL" in "MNT Pocket Reform with "*" Module")
+    : # nothing to do because Pocket Reform uses mntsc instead of reform2_lpc
+    ;;
+  *)
+    echo "W: /sys/bus/spi/drivers/reform2_lpc/spi1.0/firmware does not exist -- is the reform2_lpc module loaded?" >&2
+    ;;
+  esac
 fi
 
 if [ -e "/proc/device-tree/chosen/u-boot,version" ]; then
