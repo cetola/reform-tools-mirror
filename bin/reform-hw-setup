@@ -91,6 +91,62 @@ init_tlv320aic3100() {
   amixer -c "$1" sset 'HP Right' on
 }
 
+init_qca9377_wifi() {
+  # If the kernel is new enough, ath10k_sdio will work.
+  # To not load ath10k_sdio on older kernels, it is still blacklisted.
+  # Manually loading ath10k_sdio will ignore the blacklist.
+  if linux-version compare "$(uname -r)" ge 7.3.0; then
+    echo "I: Using ath10k_sdio for wifi" >&2
+    if test -e /proc/modules && grep --quiet '^qcacld2 ' /proc/modules; then
+      echo "I: Removing qcacld2 module" >&2
+      rmmod qcacld2
+    fi
+    modprobe ath10k_sdio
+    echo "I: successfully loaded ath10k_sdio" >&2
+    return 0
+  fi
+  echo "I: Using qcacld2 for wifi" >&2
+
+  if test -e /proc/modules && grep --quiet '^qcacld2 ' /proc/modules; then
+    echo "I: Module qcacld2 is already loaded" >&2
+    return 0
+  fi
+
+  # load out-of-tree Wi-Fi driver
+  KERNVER_EXACT=$(dpkg-query --show --showformat '${Version}' "linux-image-$(uname -r)")
+  modprobe cfg80211
+
+  # without "-f", insmod will fail with "Invalid module format" even though
+  # the kernel version matches
+  echo "I: Try to load exact match wifi driver: ${KERNVER_EXACT}" >&2
+  if [ -f "/opt/reform-qcacld2/qcacld2-${KERNVER_EXACT}.ko" ]; then
+    echo "I: Found exact match for kernel ${KERNVER_EXACT}" >&2
+    if insmod -f "/opt/reform-qcacld2/qcacld2-${KERNVER_EXACT}.ko"; then
+      echo "I: Successfully loaded exact match driver" >&2
+      return 0
+    else
+      echo "W: Failed to load exact match driver. Try other available driver" >&2
+    fi
+  fi
+
+  # Find other potential qcacld2 drivers
+  potential_drivers=$(find /opt/reform-qcacld2/qcacld2-*.ko -maxdepth 1 -type f -print0 | sort -Vzr)
+
+  # Try to load available drivers, starting with the highest version number, until one works
+  for driver in $potential_drivers; do
+    echo "I: Attempting to load wifi driver: $driver" >&2
+    if insmod -f "$driver"; then
+      echo "I: Successfully loaded driver: $driver" >&2
+      return 0
+    else
+      echo "W: Failed to load driver: $driver, trying next" >&2
+    fi
+  done
+
+  echo "E: Failed to load any compatible qcacld2 driver" >&2
+  return 1
+
+}
 case "$(cat /proc/device-tree/model)" in
   "MNT Reform 2" | "MNT Reform 2 HDMI")
     # Workaround for WM8960 sometimes not coming out of reset
@@ -133,6 +189,7 @@ case "$(cat /proc/device-tree/model)" in
     dmesg -n 7
     ;;
   "MNT Pocket Reform with i.MX8MP Module")
+    init_qca9377_wifi || echo "W: init_qca9377_wifi failed" >&2
     init_tlv320aic3100 0
     ;;
   "MNT Pocket Reform with BPI-CM4 Module")
@@ -141,6 +198,7 @@ case "$(cat /proc/device-tree/model)" in
     ;;
   "MNT Reform 2 with i.MX8MP Module")
     init_wm8960 0
+    init_qca9377_wifi || echo "W: init_qca9377_wifi failed" >&2
     ;;
   "MNT Reform 2 with RCORE RK3588 Module")
     init_wm8960 rk3588wm8960
