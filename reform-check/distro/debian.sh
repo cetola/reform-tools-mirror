@@ -606,7 +606,7 @@ backend_render_access_checks() {
       fi
     fi
   else
-    echo "I: not executed with sudo -- cannot do tests for the user who ran sudo" >&2
+    echo "I: not executed with sudo -- cannot do tests for the regular user" >&2
   fi
 }
 
